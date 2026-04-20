@@ -119,12 +119,12 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 entry_type='stars_topup',
                 note=f'Stars top up: {code}',
             )
-            render_screen(bot, message, 'wallet', notice_text=f'Пополнение зачислено: <b>{pack.sparks}</b> {UserService.internal_currency_label(message.from_user.id)}.')
+            render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=pack.sparks, internal_name=UserService.internal_currency_label(message.from_user.id)))
             return
         if kind == 'vip' and code in VIP_STARS_PLANS:
             plan = VIP_STARS_PLANS[code]
             VipService.purchase_plan_with_stars(message.from_user.id, plan.plan_code)
-            render_screen(bot, message, 'vip', notice_text='VIP активирован после оплаты Stars.')
+            render_screen(bot, message, 'vip', notice_text=UserService.t(message.from_user.id, 'vip_stars_success'))
             return
 
     @bot.message_handler(func=lambda message: True, content_types=['text'])

@@ -280,7 +280,7 @@ def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'wallet_topup_button'),
-            callback_data=pack_callback(version, 'topup_stars', 'spk_900'),
+            callback_data=pack_callback(version, 'topup_stars', 'spk_760'),
         ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'menu_vip'),
@@ -537,11 +537,11 @@ def vip_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
         )
     markup.add(
         InlineKeyboardButton(
-            text=f"VIP 7 Stars · {VIP_STARS_PLANS['vipstars7'].stars} XTR",
+            text=f"VIP 7 дней · {VIP_STARS_PLANS['vipstars7'].stars} ⭐",
             callback_data=pack_callback(version, 'vip_stars', 'vipstars7'),
         ),
         InlineKeyboardButton(
-            text=f"VIP 30 Stars · {VIP_STARS_PLANS['vipstars30'].stars} XTR",
+            text=f"VIP 30 дней · {VIP_STARS_PLANS['vipstars30'].stars} ⭐",
             callback_data=pack_callback(version, 'vip_stars', 'vipstars30'),
         ),
     )
@@ -578,7 +578,7 @@ def rewards_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     for pack_code, pack in SPARKS_PACKS.items():
         markup.add(
             InlineKeyboardButton(
-                text=f"{pack.sparks} {UserService.internal_currency_label(user_id)} · {pack.stars} XTR",
+                text=f"{pack.sparks} {UserService.internal_currency_label(user_id)} · {pack.stars} ⭐",
                 callback_data=pack_callback(version, 'topup_stars', pack_code),
             )
         )
@@ -593,15 +593,8 @@ def rewards_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     for idx, gift in enumerate(gifts):
         markup.add(
             InlineKeyboardButton(
-                text=f"{gift['emoji']} Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}",
+                text=f"{gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}",
                 callback_data=pack_callback(version, 'redeem_gift', str(idx)),
-            )
-        )
-    for stars_amount, offer in RedemptionService.cashout_offers().items():
-        markup.add(
-            InlineKeyboardButton(
-                text=f"Заявка на вывод {stars_amount} XTR · {offer['sparks_cost']} {UserService.internal_currency_label(user_id)}",
-                callback_data=pack_callback(version, 'cashout_req', str(stars_amount)),
             )
         )
     markup.add(

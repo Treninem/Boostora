@@ -86,6 +86,7 @@ def _send_stars_invoice(bot: telebot.TeleBot, call: CallbackQuery, *, title: str
         title=title,
         description=description,
         invoice_payload=payload,
+        provider_token='',
         currency='XTR',
         prices=prices,
         start_parameter=payload[:64],
@@ -300,6 +301,41 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, call, campaign_card_screen_key(campaign_id), notice_key=result_key)
                 return
     
+
+            if parsed.action == 'topup_stars':
+                pack = SPARKS_PACKS.get(parsed.value)
+                if not pack:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'payment_pack_not_found'), show_alert=False)
+                    render_current(bot, call, notice_key='payment_pack_not_found')
+                    return
+                bot.answer_callback_query(call.id)
+                _send_stars_invoice(
+                    bot,
+                    call,
+                    title=pack.title,
+                    description=pack.description,
+                    payload=make_payload('sparks', pack.code, call.from_user.id),
+                    amount_stars=pack.stars,
+                )
+                return
+
+            if parsed.action == 'vip_stars':
+                plan = VIP_STARS_PLANS.get(parsed.value)
+                if not plan:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'vip_plan_not_found'), show_alert=False)
+                    render_screen(bot, call, 'vip', notice_key='vip_plan_not_found')
+                    return
+                bot.answer_callback_query(call.id)
+                _send_stars_invoice(
+                    bot,
+                    call,
+                    title=plan.title,
+                    description=plan.description,
+                    payload=make_payload('vip', plan.code, call.from_user.id),
+                    amount_stars=plan.stars,
+                )
+                return
+
             if parsed.action == 'vip_buy':
                 ok, result_key = VipService.purchase_plan(call.from_user.id, parsed.value)
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=False)
@@ -352,7 +388,7 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                         username = getattr(call.from_user, 'username', None) or '-'
                         bot.send_message(
                             UserService.owner_id(),
-                            f"Новая заявка на вывод #{redemption_id}\nПользователь: {call.from_user.id} (@{username})\nПакет: {stars_amount} XTR",
+                            f"Новая заявка на вывод #{redemption_id}\nПользователь: {call.from_user.id} (@{username})\nПакет: {stars_amount} ⭐",
                         )
                     except Exception:
                         pass

@@ -5,18 +5,14 @@ from app.services.telegram_monetization import TelegramMonetizationService
 from app.services.wallets import WalletService
 
 PREMIUM_PLANS = {
-    3: {'stars': 1000, 'sparks_cost': 14500, 'label': 'Telegram Premium 3 мес.'},
-    6: {'stars': 1500, 'sparks_cost': 21500, 'label': 'Telegram Premium 6 мес.'},
-    12: {'stars': 2500, 'sparks_cost': 35000, 'label': 'Telegram Premium 12 мес.'},
+    3: {'stars': 1000, 'sparks_cost': 22000, 'label': 'Telegram Premium 3 мес.'},
+    6: {'stars': 1500, 'sparks_cost': 31500, 'label': 'Telegram Premium 6 мес.'},
+    12: {'stars': 2500, 'sparks_cost': 50000, 'label': 'Telegram Premium 12 мес.'},
 }
 
-CASHOUT_PACKS = {
-    100: {'sparks_cost': 1650},
-    250: {'sparks_cost': 4000},
-    500: {'sparks_cost': 7750},
-}
+CASHOUT_PACKS = {}
 
-GIFT_SPARKS_PER_STAR = 14
+GIFT_SPARKS_PER_STAR = 18
 
 
 class RedemptionService:

@@ -24,15 +24,15 @@ class VipStarsPlan:
 
 
 SPARKS_PACKS = {
-    "spk_425": SparksPack("spk_425", 50, 425, f"425 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_900": SparksPack("spk_900", 100, 900, f"900 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_2350": SparksPack("spk_2350", 250, 2350, f"2350 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_4900": SparksPack("spk_4900", 500, 4900, f"4900 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
+    "spk_360": SparksPack("spk_360", 50, 360, f"360 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
+    "spk_760": SparksPack("spk_760", 100, 760, f"760 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
+    "spk_2000": SparksPack("spk_2000", 250, 2000, f"2000 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
+    "spk_4200": SparksPack("spk_4200", 500, 4200, f"4200 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
 }
 
 VIP_STARS_PLANS = {
-    "vipstars7": VipStarsPlan("vipstars7", 79, "vip_7", "VIP 7 дней", "Покупка VIP на 7 дней за Stars"),
-    "vipstars30": VipStarsPlan("vipstars30", 249, "vip_30", "VIP 30 дней", "Покупка VIP на 30 дней за Stars"),
+    "vipstars7": VipStarsPlan("vipstars7", 69, "vip_7", "VIP 7 дней", "Покупка VIP на 7 дней за Stars"),
+    "vipstars30": VipStarsPlan("vipstars30", 199, "vip_30", "VIP 30 дней", "Покупка VIP на 30 дней за Stars"),
 }
 
 

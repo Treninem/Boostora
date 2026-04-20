@@ -51,6 +51,30 @@ from app.utils.ui import render_managed_screen
 
 logger = logging.getLogger(__name__)
 
+TRANSACTION_TYPE_KEYS = {
+    'signup_bonus': 'tx_signup_bonus',
+    'task_reward_hold': 'tx_task_reward_hold',
+    'hold_release': 'tx_hold_release',
+    'campaign_funding': 'tx_campaign_funding',
+    'campaign_funding_bonus': 'tx_campaign_funding_bonus',
+    'stars_topup': 'tx_stars_topup',
+    'vip_purchase': 'tx_vip_purchase',
+    'reward_purchase': 'tx_reward_purchase',
+    'referral_reward': 'tx_referral_reward',
+    'gift_redeem': 'tx_gift_redeem',
+    'gift_refund': 'tx_gift_refund',
+    'premium_redeem': 'tx_premium_redeem',
+    'premium_refund': 'tx_premium_refund',
+}
+
+TRANSACTION_STATUS_KEYS = {
+    'completed': 'status_completed',
+    'hold': 'status_hold',
+    'pending': 'status_pending',
+    'active': 'status_active',
+    'rejected': 'status_rejected',
+}
+
 SCREEN_LANGUAGE = 'language'
 SCREEN_ROLE = 'role'
 SCREEN_REQUIRED_SUBSCRIPTION = 'required_subscription'
@@ -230,6 +254,17 @@ def _campaign_status_label(user_id: int, status: str) -> str:
 
 
 
+
+
+def _transaction_type_label(user_id: int, entry_type: str) -> str:
+    key = TRANSACTION_TYPE_KEYS.get(entry_type)
+    return UserService.t(user_id, key) if key else entry_type.replace('_', ' ')
+
+
+def _transaction_status_label(user_id: int, status: str) -> str:
+    key = TRANSACTION_STATUS_KEYS.get(status)
+    return UserService.t(user_id, key) if key else status
+
 def _perk_title(user_id: int, tier_code: str) -> str:
     if tier_code in VIP_PLANS:
         return UserService.t(user_id, str(VIP_PLANS[tier_code]['title_key']))
@@ -262,13 +297,16 @@ def _build_profile_text(user_id: int) -> str:
     return UserService.t(
         user_id,
         'profile_screen',
-        user_id=user_id,
+        profile_id=user_id,
         role=UserService.role_label(user_id, role),
         active_tasks=active_tasks,
         task_limit=task_limit,
         sparks=wallet['internal_balance'],
+        bonus=wallet['bonus_balance'],
+        campaign_balance=wallet['campaign_balance'],
         hold=wallet['hold_balance'],
         earned=wallet['lifetime_earned'],
+        redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
     )
 
@@ -332,12 +370,13 @@ def _build_wallet_text(user_id: int, released: int) -> str:
     return UserService.t(
         user_id,
         'wallet_screen',
-        available=wallet['available_balance'],
-        hold=wallet['hold_balance'],
         internal=wallet['internal_balance'],
+        bonus=wallet['bonus_balance'],
+        campaign_balance=wallet['campaign_balance'],
+        hold=wallet['hold_balance'],
+        redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
         earned=wallet['lifetime_earned'],
-        withdrawn=wallet['total_withdrawn'],
         released=released,
     )
 
@@ -357,10 +396,10 @@ def _build_history_text(user_id: int) -> str:
                 user_id,
                 'history_row',
                 date=created_at,
-                entry_type=str(row['entry_type']),
+                entry_type=_transaction_type_label(user_id, str(row['entry_type'])),
                 amount=int(row['amount']),
                 currency=currency_label,
-                status=str(row['status']),
+                status=_transaction_status_label(user_id, str(row['status'])),
             )
         )
     return UserService.t(user_id, 'history_screen', items='\n'.join(items))
@@ -499,6 +538,17 @@ def _build_vip_text(user_id: int) -> str:
         active_block = '\n'.join(active_lines)
     else:
         active_block = UserService.t(user_id, 'vip_no_active')
+    plans_block = '\n'.join(
+        UserService.t(
+            user_id,
+            'vip_plan_row',
+            title=UserService.t(user_id, str(plan['title_key'])),
+            desc=UserService.t(user_id, str(plan['desc_key'])),
+            price=int(plan['price']),
+            internal_name=UserService.internal_currency_label(user_id),
+        )
+        for plan in VIP_PLANS.values()
+    )
     return UserService.t(
         user_id,
         'vip_screen',
@@ -508,6 +558,9 @@ def _build_vip_text(user_id: int) -> str:
         priority=summary['priority_level'],
         ref_bonus=_format_percent(summary['referral_rate_bonus_bps'] / 100),
         internal_name=UserService.internal_currency_label(user_id),
+        plans_block=plans_block,
+        stars_7=79 if False else 69,
+        stars_30=199,
     )
 
 
@@ -527,8 +580,7 @@ def _build_rewards_text(user_id: int) -> str:
             )
         )
     premium_rows = [f"• {offer['label']} · {offer['sparks_cost']} {UserService.internal_currency_label(user_id)}" for _, offer in RedemptionService.premium_offers().items()]
-    gift_rows = [f"• {gift['emoji']} Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}" for gift in RedemptionService.list_gifts(limit=3)]
-    cashout_rows = [f"• Заявка на вывод {stars_amount} XTR · {offer['sparks_cost']} {UserService.internal_currency_label(user_id)}" for stars_amount, offer in RedemptionService.cashout_offers().items()]
+    gift_rows = [f"• {gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}" for gift in RedemptionService.list_gifts(limit=3)]
     return UserService.t(
         user_id,
         'rewards_screen',
@@ -537,7 +589,7 @@ def _build_rewards_text(user_id: int) -> str:
         items='\n'.join(items) if items else '—',
         premium_items='\n'.join(premium_rows) if premium_rows else UserService.t(user_id, 'redeem_catalog_unavailable'),
         gift_items='\n'.join(gift_rows) if gift_rows else UserService.t(user_id, 'redeem_catalog_unavailable'),
-        cashout_items='\n'.join(cashout_rows) if cashout_rows else '—',
+        cashout_items=UserService.t(user_id, 'redeem_cashout_manual'),
         redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
     )
@@ -762,7 +814,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_LANGUAGE,
             text=text,
@@ -775,7 +827,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ROLE,
             text=text,
@@ -788,7 +840,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REQUIRED_SUBSCRIPTION,
             text=text,
@@ -801,7 +853,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_BLOCKED,
             text=text,
@@ -831,7 +883,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_MAIN_MENU,
             text=text,
@@ -844,7 +896,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_PROFILE,
             text=text,
@@ -858,7 +910,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_TASKS,
             text=text,
@@ -873,7 +925,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -904,7 +956,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -917,7 +969,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_WALLET,
             text=text,
@@ -930,7 +982,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_HISTORY,
             text=text,
@@ -943,7 +995,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_VIP,
             text=text,
@@ -956,7 +1008,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REWARDS,
             text=text,
@@ -969,7 +1021,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REFERRALS,
             text=text,
@@ -983,7 +1035,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGNS,
             text=text,
@@ -996,7 +1048,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGN_CREATE,
             text=text,
@@ -1010,7 +1062,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1023,7 +1075,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGN_PREVIEW,
             text=text,
@@ -1041,7 +1093,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1054,7 +1106,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_STATS,
             text=text,
@@ -1067,7 +1119,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN,
             text=text,
@@ -1081,7 +1133,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_QUEUE,
             text=text,
@@ -1102,7 +1154,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1115,7 +1167,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_LOGS,
             text=text,
@@ -1132,7 +1184,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_REQUIRED_CHATS,
             text=text,
@@ -1148,7 +1200,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_REQUIRED_CHAT_ADD,
             text=text,
@@ -1162,7 +1214,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1176,7 +1228,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1190,7 +1242,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            user_id=user_id,
+            profile_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,

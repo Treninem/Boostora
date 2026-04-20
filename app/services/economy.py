@@ -1,39 +1,39 @@
 import math
 
-SIGNUP_BONUS_SPARKS = 320
+SIGNUP_BONUS_SPARKS = 300
 INTERNAL_CURRENCY_CODE = "BST"
-INTERNAL_CURRENCY_NAME_RU = "Искры"
+INTERNAL_CURRENCY_NAME_RU = "Искры✨"
 
 # Экономика:
 # - заказчик может ставить цену сам, но не ниже базовой рекомендуемой цены
 # - при повышении цены 75% добавки уходит исполнителю, 25% сервису
 # - объёмная скидка применяется только к базовой цене, а не к добровольной надбавке
 TASK_CATALOG = {
-    "channel_subscribe": {"client_floor_price": 18, "performer_reward": 13, "title": "Подписка на канал", "label_key": "campaign_task_type_channel_subscribe"},
-    "chat_join": {"client_floor_price": 16, "performer_reward": 11, "title": "Вступление в чат", "label_key": "campaign_task_type_chat_join"},
-    "post_view": {"client_floor_price": 5, "performer_reward": 3, "title": "Просмотр поста", "label_key": "campaign_task_type_post_view"},
-    "bot_start": {"client_floor_price": 15, "performer_reward": 10, "title": "Запуск бота", "label_key": "campaign_task_type_bot_start"},
-    "mini_app_open": {"client_floor_price": 22, "performer_reward": 16, "title": "Открытие Mini App", "label_key": "campaign_task_type_mini_app_open"},
-    "post_like": {"client_floor_price": 6, "performer_reward": 4, "title": "Лайк поста", "label_key": "campaign_task_type_post_like"},
-    "post_reaction": {"client_floor_price": 5, "performer_reward": 3, "title": "Реакция на пост", "label_key": "campaign_task_type_post_reaction"},
-    "story_view": {"client_floor_price": 5, "performer_reward": 3, "title": "Просмотр истории", "label_key": "campaign_task_type_story_view"},
-    "link_click": {"client_floor_price": 8, "performer_reward": 5, "title": "Переход по ссылке", "label_key": "campaign_task_type_link_click"},
-    "post_share": {"client_floor_price": 12, "performer_reward": 8, "title": "Репост поста", "label_key": "campaign_task_type_post_share"},
-    "post_comment": {"client_floor_price": 14, "performer_reward": 10, "title": "Комментарий под постом", "label_key": "campaign_task_type_post_comment"},
-    "poll_vote": {"client_floor_price": 7, "performer_reward": 5, "title": "Голос в опросе", "label_key": "campaign_task_type_poll_vote"},
+    "channel_subscribe": {"client_floor_price": 26, "performer_reward": 18, "title": "Подписка на канал", "label_key": "campaign_task_type_channel_subscribe"},
+    "chat_join": {"client_floor_price": 23, "performer_reward": 16, "title": "Вступление в чат", "label_key": "campaign_task_type_chat_join"},
+    "post_view": {"client_floor_price": 7, "performer_reward": 4, "title": "Просмотр поста", "label_key": "campaign_task_type_post_view"},
+    "bot_start": {"client_floor_price": 20, "performer_reward": 14, "title": "Запуск бота", "label_key": "campaign_task_type_bot_start"},
+    "mini_app_open": {"client_floor_price": 30, "performer_reward": 22, "title": "Открытие Mini App", "label_key": "campaign_task_type_mini_app_open"},
+    "post_like": {"client_floor_price": 9, "performer_reward": 6, "title": "Лайк поста", "label_key": "campaign_task_type_post_like"},
+    "post_reaction": {"client_floor_price": 8, "performer_reward": 5, "title": "Реакция на пост", "label_key": "campaign_task_type_post_reaction"},
+    "story_view": {"client_floor_price": 8, "performer_reward": 5, "title": "Просмотр истории", "label_key": "campaign_task_type_story_view"},
+    "link_click": {"client_floor_price": 12, "performer_reward": 8, "title": "Переход по ссылке", "label_key": "campaign_task_type_link_click"},
+    "post_share": {"client_floor_price": 16, "performer_reward": 11, "title": "Репост поста", "label_key": "campaign_task_type_post_share"},
+    "post_comment": {"client_floor_price": 20, "performer_reward": 14, "title": "Комментарий под постом", "label_key": "campaign_task_type_post_comment"},
+    "poll_vote": {"client_floor_price": 10, "performer_reward": 7, "title": "Голос в опросе", "label_key": "campaign_task_type_poll_vote"},
 }
 
 DISCOUNT_TIERS = (
-    (1000, 8),
-    (500, 6),
+    (1000, 7),
+    (500, 5),
     (250, 4),
     (100, 3),
     (50, 2),
     (25, 1),
 )
 
-CUSTOM_PRICE_PERFORMER_SHARE = 0.75
-MIN_SERVICE_FEE = 1
+CUSTOM_PRICE_PERFORMER_SHARE = 0.8
+MIN_SERVICE_FEE = 2
 
 
 def get_discount_percent(quantity: int) -> int:

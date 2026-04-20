@@ -7,7 +7,7 @@ from app.services.wallets import WalletService
 VIP_PLANS = {
     'vip_7': {
         'days': 7,
-        'price': 900,
+        'price': 820,
         'hold_speed_percent': 25,
         'active_task_limit_bonus': 2,
         'priority_level': 1,
@@ -17,7 +17,7 @@ VIP_PLANS = {
     },
     'vip_30': {
         'days': 30,
-        'price': 2800,
+        'price': 2600,
         'hold_speed_percent': 50,
         'active_task_limit_bonus': 5,
         'priority_level': 2,

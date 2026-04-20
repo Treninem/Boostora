@@ -68,8 +68,11 @@ class UserService:
     @staticmethod
     def t(user_id: int, key: str, **kwargs) -> str:
         language = UserService.get_language(user_id)
-        template = TEXTS.get(language, TEXTS['ru']).get(key) or TEXTS['en'].get(key) or TEXTS['ru'][key]
-        return template.format(**kwargs)
+        template = TEXTS.get(language, TEXTS['ru']).get(key) or TEXTS['en'].get(key) or TEXTS['ru'].get(key) or key
+        class _SafeDict(dict):
+            def __missing__(self, item):
+                return '{' + item + '}'
+        return template.format_map(_SafeDict(**kwargs))
 
     @staticmethod
     def role_label(user_id: int, role: str) -> str:
