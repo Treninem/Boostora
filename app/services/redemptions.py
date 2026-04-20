@@ -12,7 +12,7 @@ PREMIUM_PLANS = {
 
 CASHOUT_PACKS = {}
 
-GIFT_SPARKS_PER_STAR = 18
+GIFT_SPARKS_PER_STAR = 19
 
 
 class RedemptionService:
@@ -21,7 +21,7 @@ class RedemptionService:
         return WalletService.has_paid_stars_topup(user_id)
 
     @staticmethod
-    def list_gifts(limit: int = 3) -> list[dict]:
+    def list_gifts(limit: int = 10) -> list[dict]:
         gifts = TelegramMonetizationService.get_available_gifts()
         for item in gifts:
             item['sparks_cost'] = int(item['star_count']) * GIFT_SPARKS_PER_STAR

@@ -301,9 +301,12 @@ def _build_profile_text(user_id: int) -> str:
         role=UserService.role_label(user_id, role),
         active_tasks=active_tasks,
         task_limit=task_limit,
+        available=wallet['available_balance'],
         sparks=wallet['internal_balance'],
+        internal=wallet['internal_balance'],
         bonus=wallet['bonus_balance'],
         campaign_balance=wallet['campaign_balance'],
+        withdrawn=wallet['total_withdrawn'],
         hold=wallet['hold_balance'],
         earned=wallet['lifetime_earned'],
         redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
@@ -370,9 +373,11 @@ def _build_wallet_text(user_id: int, released: int) -> str:
     return UserService.t(
         user_id,
         'wallet_screen',
+        available=wallet['available_balance'],
         internal=wallet['internal_balance'],
         bonus=wallet['bonus_balance'],
         campaign_balance=wallet['campaign_balance'],
+        withdrawn=wallet['total_withdrawn'],
         hold=wallet['hold_balance'],
         redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
@@ -390,7 +395,12 @@ def _build_history_text(user_id: int) -> str:
     for row in rows[:10]:
         created_at = str(row['created_at']).replace('T', ' ')[:16]
         currency_code = str(row['currency_code'])
-        currency_label = UserService.internal_currency_label(user_id) if currency_code == 'BST' else currency_code
+        if currency_code == 'BST':
+            currency_label = UserService.internal_currency_label(user_id)
+        elif currency_code == 'XTR':
+            currency_label = '⭐'
+        else:
+            currency_label = currency_code
         items.append(
             UserService.t(
                 user_id,
@@ -580,7 +590,10 @@ def _build_rewards_text(user_id: int) -> str:
             )
         )
     premium_rows = [f"• {offer['label']} · {offer['sparks_cost']} {UserService.internal_currency_label(user_id)}" for _, offer in RedemptionService.premium_offers().items()]
-    gift_rows = [f"• {gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}" for gift in RedemptionService.list_gifts(limit=3)]
+    gift_rows = [
+        f"• {gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)} · {gift['star_count']}⭐"
+        for gift in RedemptionService.list_gifts(limit=10)
+    ]
     return UserService.t(
         user_id,
         'rewards_screen',

@@ -951,3 +951,75 @@ for _lang, _mapping in TEXTS.items():
         _mapping.setdefault('status_pending', 'pending')
         _mapping.setdefault('status_active', 'active')
         _mapping.setdefault('status_rejected', 'rejected')
+
+
+# Final support overrides after bugfixes.
+TEXTS['ru'].update({
+    'internal_currency_name': 'Искры✨',
+    'menu_profile': 'Профиль',
+    'menu_wallet': 'Кошелёк👛',
+    'menu_campaigns': 'Создать задание',
+    'profile_screen': '<b>Профиль</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Кошелёк👛</b>\n\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\nОсвобождено холдов сейчас: <b>{released}</b>',
+    'history_screen': '<b>История операций</b>\n\n{items}',
+    'history_row': '• {date} · {entry_type} · {amount} {currency} · {status}',
+    'tx_signup_bonus': 'Стартовый бонус',
+    'tx_task_reward_hold': 'Награда за задание в холде',
+    'tx_hold_release': 'Освобождение холда',
+    'tx_campaign_funding': 'Запуск задания',
+    'tx_campaign_funding_bonus': 'Запуск задания из бонусных Искр',
+    'tx_stars_topup': 'Пополнение за Stars',
+    'tx_vip_purchase': 'Покупка VIP',
+    'tx_reward_purchase': 'Покупка бонуса',
+    'tx_referral_reward': 'Реферальная награда',
+    'tx_gift_redeem': 'Обмен на подарок Telegram',
+    'tx_gift_refund': 'Возврат за подарок Telegram',
+    'tx_premium_redeem': 'Обмен на Telegram Premium',
+    'tx_premium_refund': 'Возврат за Premium',
+    'status_completed': 'завершено',
+    'status_hold': 'в холде',
+    'status_pending': 'ожидает',
+    'status_active': 'активно',
+    'status_rejected': 'отклонено',
+    'wallet_topup_button': 'Пополнить Искры за ⭐',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\n<b>Что даёт VIP</b>\n• ускоряет выход из холда\n• увеличивает лимит активных заданий\n• даёт приоритет в очереди\n• усиливает реферальную ставку\n\n<b>Ваши текущие бонусы</b>\n• Ускорение холда: <b>{hold_speed}%</b>\n• Доп. лимит активных заданий: <b>+{task_bonus}</b>\n• Приоритет очереди: <b>{priority}</b>\n• Бонус к реферальной ставке: <b>+{ref_bonus}%</b>\n\n<b>Тарифы</b>\n{plans_block}\n\nМожно купить за {internal_name} или за Telegram Stars: 7 дней — <b>{stars_7}⭐</b>, 30 дней — <b>{stars_30}⭐</b>.',
+    'vip_plan_row': '• <b>{title}</b> — {price} {internal_name}\n  {desc}',
+    'vip_plan_7_desc': 'Холд быстрее на 25%, +2 активных задания, приоритет 1, +2% к реферальной ставке.',
+    'vip_plan_30_desc': 'Холд быстрее на 50%, +5 активных заданий, приоритет 2, +5% к реферальной ставке.',
+    'rewards_screen': '<b>Искры✨, Premium и подарки</b>\n\nИскры для обмена: <b>{balance}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\n\n<b>Бонусы</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Подарки Telegram</b>\n{gift_items}\n\nПополнение ниже — за Telegram Stars.',
+    'redeem_cashout_manual': 'Общий автоматический вывод звёзд не показывается. Доступны реальные Telegram Premium и Telegram Gifts.',
+    'redeem_catalog_unavailable': 'Каталог Telegram сейчас недоступен.',
+    'gift_redeem_success': 'Подарок Telegram отправлен на ваш аккаунт.',
+    'premium_redeem_success': 'Telegram Premium отправлен на ваш аккаунт.',
+    'stars_topup_success': 'Пополнение зачислено: <b>{amount}</b> {internal_name}.',
+    'vip_stars_success': 'VIP активирован после оплаты Stars.',
+    'redeem_access_yes': 'открыт',
+    'redeem_access_no': 'нужно хотя бы одно успешное пополнение за ⭐',
+    'campaigns_screen': '<b>Ваши задания</b>\n\nВсего: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>',
+    'campaigns_empty': '<b>Ваши задания</b>\n\nПока заданий нет. Нажмите кнопку ниже, чтобы создать первое.',
+    'campaign_create_button': 'Создать задание',
+    'campaign_create_intro': '<b>Создать задание</b>\n\nВыберите тип задания для новой кампании.',
+    'campaign_input_screen': '<b>Создать задание</b>\n\nШаг: <b>{step}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБаза за 1: <b>{floor}</b> {internal_name}\nТекущая цена за 1: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}',
+    'campaign_price_prompt': 'Отправьте цену за 1 выполнение. Минимум: <b>{floor}</b> {currency}. Можно поставить выше, чтобы ускорить выполнение.',
+    'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБазовая цена за 1: <b>{floor}</b> {internal_name}\nВаша цена за 1: <b>{unit_price}</b> {internal_name}\nБазовая награда исполнителю: <b>{reward_floor}</b> {internal_name}\nИтоговая награда исполнителю: <b>{reward}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nОриентир скорости: <b>{speed}%</b> от базы\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nИтого к списанию: <b>{budget}</b> {internal_name}',
+    'campaign_card_screen': '<b>Задание #{campaign_id}</b>\n\nНазвание: <b>{title}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nЦена заказчика за 1: <b>{unit_price}</b> {internal_name}\nКоличество: <b>{quantity}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nБюджет: <b>{budget_total}</b> {internal_name}\nПотрачено: <b>{budget_spent}</b> {internal_name}\nВ резерве: <b>{budget_reserved}</b> {internal_name}\nОстаток: <b>{budget_remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fee_total}</b> {internal_name}\nБаланс списан: <b>{funded}</b>\nСтатус: <b>{status}</b>',
+    'campaign_stats_screen': '<b>Аналитика</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nОбщий бюджет: <b>{budget}</b> {internal_name}\nПотрачено: <b>{spent}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nОстаток: <b>{remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fees}</b> {internal_name}\nФонд выплат исполнителям: <b>{rewards}</b> {internal_name}',
+    'campaign_balance_low': 'Недостаточно Искр✨ для запуска задания.',
+})
+
+TEXTS['en'].update({
+    'internal_currency_name': 'Sparks✨',
+    'menu_campaigns': 'Create task',
+    'menu_wallet': 'Wallet👛',
+    'profile_screen': '<b>Profile</b>\n\nID: <code>{profile_id}</code>\nRole: <b>{role}</b>\nActive tasks: <b>{active_tasks}/{task_limit}</b>\nRedeemable Sparks: <b>{internal}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nTotal launch balance: <b>{campaign_balance}</b> {internal_name}\nIn hold: <b>{hold}</b> {internal_name}\nLifetime earned: <b>{earned}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Wallet👛</b>\n\nRedeemable Sparks: <b>{internal}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nTotal launch balance: <b>{campaign_balance}</b> {internal_name}\nIn hold: <b>{hold}</b> {internal_name}\nLifetime earned: <b>{earned}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>\nReleased now: <b>{released}</b>',
+    'wallet_topup_button': 'Top up Sparks with ⭐',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\n<b>What VIP gives</b>\n• faster hold release\n• more active task slots\n• queue priority\n• stronger referral rate\n\n<b>Your current bonuses</b>\n• Hold speed: <b>{hold_speed}%</b>\n• Extra active task slots: <b>+{task_bonus}</b>\n• Queue priority: <b>{priority}</b>\n• Referral bonus: <b>+{ref_bonus}%</b>\n\n<b>Plans</b>\n{plans_block}\n\nYou can buy VIP with {internal_name} or Telegram Stars: 7 days — <b>{stars_7}⭐</b>, 30 days — <b>{stars_30}⭐</b>.',
+    'rewards_screen': '<b>Sparks✨, Premium and gifts</b>\n\nRedeemable Sparks: <b>{balance}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>\n\n<b>Boosts</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Telegram Gifts</b>\n{gift_items}\n\nThe packs below are paid with Telegram Stars.',
+    'redeem_cashout_manual': 'General automatic star withdrawal is hidden. Real Telegram Premium and Telegram Gifts are available.',
+})
+
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        _mapping.setdefault('internal_currency_name', 'Sparks✨')
+        _mapping.setdefault('wallet_topup_button', 'Top up Sparks with ⭐')

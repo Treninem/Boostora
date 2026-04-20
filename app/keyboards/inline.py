@@ -589,11 +589,11 @@ def rewards_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
                 callback_data=pack_callback(version, 'redeem_premium', str(months)),
             )
         )
-    gifts = RedemptionService.list_gifts(limit=3)
+    gifts = RedemptionService.list_gifts(limit=10)
     for idx, gift in enumerate(gifts):
         markup.add(
             InlineKeyboardButton(
-                text=f"{gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)}",
+                text=f"{gift['emoji']} Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)} · {gift['star_count']}⭐",
                 callback_data=pack_callback(version, 'redeem_gift', str(idx)),
             )
         )
