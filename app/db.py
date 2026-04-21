@@ -1,4 +1,3 @@
-import os
 import shutil
 import sqlite3
 from contextlib import contextmanager
@@ -219,6 +218,16 @@ CREATE TABLE IF NOT EXISTS redemptions (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS invoice_messages (
+    user_id INTEGER PRIMARY KEY,
+    chat_id INTEGER NOT NULL,
+    invoice_message_id INTEGER NOT NULL,
+    helper_message_id INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
 
 CREATE TABLE IF NOT EXISTS observed_messages (
     chat_ref TEXT NOT NULL,
@@ -244,6 +253,28 @@ CREATE TABLE IF NOT EXISTS activity_events (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+
+
+
+CREATE TABLE IF NOT EXISTS ad_broadcasts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    creator_user_id INTEGER NOT NULL,
+    ad_text TEXT NOT NULL,
+    target_url TEXT NOT NULL,
+    schedule_code TEXT NOT NULL,
+    interval_hours INTEGER NOT NULL DEFAULT 0,
+    repeats_total INTEGER NOT NULL DEFAULT 1,
+    sent_runs INTEGER NOT NULL DEFAULT 0,
+    next_run_at TEXT,
+    last_run_at TEXT,
+    stars_price INTEGER NOT NULL DEFAULT 0,
+    pay_required INTEGER NOT NULL DEFAULT 1,
+    is_admin INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (creator_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS bot_chats (
     chat_id INTEGER PRIMARY KEY,
@@ -279,6 +310,7 @@ CREATE INDEX IF NOT EXISTS idx_activity_events_user_type_created ON activity_eve
 CREATE INDEX IF NOT EXISTS idx_activity_events_chat_message ON activity_events(chat_ref, message_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_events_poll_id ON activity_events(poll_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bot_chats_active ON bot_chats(is_active, can_post, chat_type, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ad_broadcasts_status_due ON ad_broadcasts(status, next_run_at, created_at);
 
 '''
 
@@ -325,7 +357,6 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, 'campaigns', 'is_funded', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'wallets', 'bonus_balance', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'holds', 'currency_code', "TEXT NOT NULL DEFAULT 'XTR'")
-
 
 
 
@@ -387,7 +418,6 @@ def _ensure_valid_target_db() -> None:
     _quarantine_invalid_db(target)
 
 
-
 def _candidate_restore_paths() -> list[Path]:
     db_name = Path(settings.db_path).name
     candidates = [
@@ -396,6 +426,7 @@ def _candidate_restore_paths() -> list[Path]:
         Path.home() / '.boostora-data' / db_name,
         Path('/data') / db_name,
         Path('/storage') / db_name,
+        Path('/var/data/boostora') / db_name,
         Path('/app') / db_name,
         Path('/app/storage') / db_name,
         Path('boostora.db'),

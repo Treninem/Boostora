@@ -10,8 +10,13 @@ from app.keyboards.inline import (
     admin_logs_keyboard,
     admin_required_chats_keyboard,
     admin_queue_keyboard,
+    admin_bot_chats_keyboard,
+    admin_users_keyboard,
     admin_submission_keyboard,
     blocked_keyboard,
+    broadcast_input_keyboard,
+    broadcast_preview_keyboard,
+    broadcast_schedule_keyboard,
     campaign_card_keyboard,
     campaign_input_keyboard,
     campaign_preview_keyboard,
@@ -23,6 +28,7 @@ from app.keyboards.inline import (
     proof_wait_keyboard,
     referrals_keyboard,
     rewards_keyboard,
+    exchange_keyboard,
     role_keyboard,
     section_keyboard,
     stats_keyboard,
@@ -30,11 +36,14 @@ from app.keyboards.inline import (
     task_detail_keyboard,
     tasks_keyboard,
     topup_custom_keyboard,
+    topup_packages_keyboard,
     vip_keyboard,
     wallet_keyboard,
 )
 from app.services.admin import AdminService
+from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.admin_logs import AdminLogService
+from app.services.bot_chats import BotChatService
 from app.services.campaigns import CampaignService
 from app.services.client_campaigns import MODE_CONFIRM, MODE_PRICE, ClientCampaignService
 from app.services.performer import PerformerService, normalize_target_url
@@ -87,6 +96,7 @@ SCREEN_SUBMISSION_PREFIX = 'submission:'
 SCREEN_PROOF_WAIT_PREFIX = 'proof_wait:'
 SCREEN_WALLET = 'wallet'
 SCREEN_TOPUP_CUSTOM = 'topup_custom'
+SCREEN_TOPUP_PACKAGES = 'topup_packages'
 SCREEN_HISTORY = 'history'
 SCREEN_CAMPAIGNS = 'campaigns'
 SCREEN_STATS = 'stats'
@@ -94,8 +104,13 @@ SCREEN_CAMPAIGN_CREATE = 'campaign_create'
 SCREEN_CAMPAIGN_PREVIEW = 'campaign_preview'
 SCREEN_CAMPAIGN_INPUT_PREFIX = 'campaign_input:'
 SCREEN_CAMPAIGN_CARD_PREFIX = 'campaign:'
+SCREEN_BROADCAST_TEXT = 'broadcast_text'
+SCREEN_BROADCAST_LINK = 'broadcast_link'
+SCREEN_BROADCAST_SCHEDULE = 'broadcast_schedule'
+SCREEN_BROADCAST_PREVIEW = 'broadcast_preview'
 SCREEN_VIP = 'vip'
 SCREEN_REWARDS = 'rewards'
+SCREEN_EXCHANGE = 'exchange'
 SCREEN_REFERRALS = 'referrals'
 SCREEN_BLOCKED = 'blocked'
 SCREEN_ADMIN = 'admin'
@@ -107,6 +122,8 @@ SCREEN_ADMIN_RISK_PREFIX = 'admin_risk:'
 SCREEN_ADMIN_BALANCE_PREFIX = 'admin_balance:'
 SCREEN_ADMIN_REQUIRED_CHATS = 'admin_required_chats'
 SCREEN_ADMIN_REQUIRED_CHAT_ADD = 'admin_required_chat_add'
+SCREEN_ADMIN_BOT_CHATS_PREFIX = 'admin_bot_chats:'
+SCREEN_ADMIN_USERS_PREFIX = 'admin_users:'
 
 SECTION_TO_SCREEN = {
     'profile': SCREEN_PROFILE,
@@ -117,6 +134,8 @@ SECTION_TO_SCREEN = {
     'stats': SCREEN_STATS,
     'vip': SCREEN_VIP,
     'rewards': SCREEN_REWARDS,
+    'exchange': SCREEN_EXCHANGE,
+    'topup_packages': SCREEN_TOPUP_PACKAGES,
     'referrals': SCREEN_REFERRALS,
     'admin': SCREEN_ADMIN,
     'admin_queue': SCREEN_ADMIN_QUEUE,
@@ -181,6 +200,56 @@ def campaign_card_screen_key(campaign_id: int) -> str:
     return f'{SCREEN_CAMPAIGN_CARD_PREFIX}{campaign_id}'
 
 
+def _build_broadcast_text_screen(user_id: int) -> str:
+    chats = AdBroadcastService.promotable_chat_count()
+    return UserService.t(user_id, 'broadcast_text_screen', chats=chats)
+
+
+def _build_broadcast_link_screen(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    return UserService.t(user_id, 'broadcast_link_screen', ad_text=str(draft.get('ad_text') or '—'))
+
+
+def _build_broadcast_schedule_text(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    chats = AdBroadcastService.promotable_chat_count()
+    repeats = int(draft.get('repeat_count') or 0)
+    if repeats in AdBroadcastService.list_repeat_options():
+        return UserService.t(
+            user_id,
+            'broadcast_schedule_frequency_screen',
+            chats=chats,
+            ad_text=str(draft.get('ad_text') or '—'),
+            link=str(draft.get('target_url') or '—'),
+            repeats=AdBroadcastService.list_repeat_options().get(repeats, repeats),
+        )
+    return UserService.t(
+        user_id,
+        'broadcast_schedule_count_screen',
+        chats=chats,
+        ad_text=str(draft.get('ad_text') or '—'),
+        link=str(draft.get('target_url') or '—'),
+    )
+
+
+def _build_broadcast_preview_text(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    schedule_code = str(draft.get('schedule_code') or '')
+    chats = AdBroadcastService.promotable_chat_count()
+    repeats, interval_hours = AdBroadcastService.parse_schedule_code(schedule_code)
+    price = AdBroadcastService.price_for(schedule_code, chats) if repeats is not None and interval_hours is not None else 0
+    return UserService.t(
+        user_id,
+        'broadcast_preview_screen',
+        chats=chats,
+        ad_text=str(draft.get('ad_text') or '—'),
+        link=str(draft.get('target_url') or '—'),
+        schedule=AdBroadcastService.schedule_label(schedule_code),
+        stars=price,
+        payment_mode=UserService.t(user_id, 'broadcast_payment_free' if draft.get('is_admin') else 'broadcast_payment_stars'),
+    )
+
+
 def admin_submission_screen_key(submission_id: int) -> str:
     return f'{SCREEN_ADMIN_SUBMISSION_PREFIX}{submission_id}'
 
@@ -195,6 +264,14 @@ def admin_risk_screen_key(user_id: int) -> str:
 
 def admin_balance_screen_key(user_id: int) -> str:
     return f'{SCREEN_ADMIN_BALANCE_PREFIX}{user_id}'
+
+
+def admin_bot_chats_screen_key(page: int = 1) -> str:
+    return f'{SCREEN_ADMIN_BOT_CHATS_PREFIX}{max(1, int(page))}'
+
+
+def admin_users_screen_key(page: int = 1) -> str:
+    return f'{SCREEN_ADMIN_USERS_PREFIX}{max(1, int(page))}'
 
 
 
@@ -231,6 +308,14 @@ def _screen_suffix(screen_key: str, prefix: str) -> str | None:
     if not screen_key.startswith(prefix):
         return None
     return screen_key.split(':', 1)[1].strip() or None
+
+
+def _safe_page(raw_value: str | None) -> int:
+    try:
+        page = int(str(raw_value or '1'))
+    except Exception:
+        page = 1
+    return max(page, 1)
 
 
 
@@ -786,6 +871,44 @@ def _build_admin_required_chat_add_text(user_id: int) -> str:
     return UserService.t(user_id, 'admin_required_chat_add_prompt')
 
 
+def _build_admin_bot_chats_text(user_id: int, page: int) -> tuple[str, list, int]:
+    total = BotChatService.count_all_chats()
+    per_page = 10
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), total_pages)
+    rows = BotChatService.list_all_chats(limit=per_page, offset=(page - 1) * per_page)
+    if not rows:
+        items = UserService.t(user_id, 'admin_bot_chats_empty')
+    else:
+        lines = []
+        for row in rows:
+            title = str(row['title'] or SubscriptionService.display_name(str(row['chat_ref'] or row['chat_id'])))
+            ref = str(row['chat_ref'] or row['chat_id'])
+            chat_type = str(row['chat_type'] or 'chat')
+            lines.append(UserService.t(user_id, 'admin_bot_chat_row', title=title[:60], ref=ref, chat_type=chat_type))
+        items = '\n'.join(lines)
+    return UserService.t(user_id, 'admin_bot_chats_screen', items=items, page=page, total_pages=total_pages, total=total), rows, total_pages
+
+
+
+def _build_admin_users_text(user_id: int, page: int) -> tuple[str, list, int]:
+    total = UserService.count_users()
+    per_page = 10
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), total_pages)
+    rows = UserService.list_users(limit=per_page, offset=(page - 1) * per_page)
+    if not rows:
+        items = UserService.t(user_id, 'admin_users_empty')
+    else:
+        lines = []
+        for row in rows:
+            username = str(row['username'] or '').strip()
+            display = f'@{username}' if username else f"ID {int(row['user_id'])}"
+            lines.append(UserService.t(user_id, 'admin_user_row', display=display, user_id=int(row['user_id']), status=str(row['status']), sparks=int(row['internal_balance'] or 0), bonus=int(row['bonus_balance'] or 0)))
+        items = '\n'.join(lines)
+    return UserService.t(user_id, 'admin_users_screen', items=items, page=page, total_pages=total_pages, total=total), rows, total_pages
+
+
 def _build_admin_input_text(user_id: int, kind: str, target_id: int) -> str:
     if kind == 'reject':
         return UserService.t(user_id, 'admin_reject_prompt', submission_id=target_id)
@@ -890,6 +1013,8 @@ def render_screen(
 
     if (
         screen_key in {SCREEN_ADMIN, SCREEN_ADMIN_QUEUE, SCREEN_ADMIN_LOGS, SCREEN_ADMIN_REQUIRED_CHATS, SCREEN_ADMIN_REQUIRED_CHAT_ADD}
+        or screen_key.startswith(SCREEN_ADMIN_BOT_CHATS_PREFIX)
+        or screen_key.startswith(SCREEN_ADMIN_USERS_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_SUBMISSION_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_REJECT_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_RISK_PREFIX)
@@ -1004,6 +1129,19 @@ def render_screen(
         )
         return
 
+    if screen_key == SCREEN_TOPUP_PACKAGES:
+        text = _prepend_notice(user_id, UserService.t(user_id, 'topup_packages_screen', internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_TOPUP_PACKAGES,
+            text=text,
+            reply_markup_builder=lambda version: topup_packages_keyboard(user_id, version),
+        )
+        return
+
     if screen_key == SCREEN_TOPUP_CUSTOM:
         text = _prepend_notice(user_id, UserService.t(user_id, 'topup_custom_screen', rate=6, internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
         render_managed_screen(
@@ -1056,6 +1194,19 @@ def render_screen(
         )
         return
 
+    if screen_key == SCREEN_EXCHANGE:
+        text = _prepend_notice(user_id, _build_rewards_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_EXCHANGE,
+            text=text,
+            reply_markup_builder=lambda version: exchange_keyboard(user_id, version),
+        )
+        return
+
     if screen_key == SCREEN_REFERRALS:
         text = _prepend_notice(user_id, _build_referrals_text(user_id), notice_key, notice_text)
         render_managed_screen(
@@ -1066,6 +1217,39 @@ def render_screen(
             screen_key=SCREEN_REFERRALS,
             text=text,
             reply_markup_builder=lambda version: referrals_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_TEXT:
+        text = _prepend_notice(user_id, _build_broadcast_text_screen(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_TEXT, text=text,
+            reply_markup_builder=lambda version: broadcast_input_keyboard(user_id, version, is_admin=bool((AdBroadcastService.get_draft(user_id) or {}).get('is_admin'))),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_LINK:
+        text = _prepend_notice(user_id, _build_broadcast_link_screen(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_LINK, text=text,
+            reply_markup_builder=lambda version: broadcast_input_keyboard(user_id, version, is_admin=bool((AdBroadcastService.get_draft(user_id) or {}).get('is_admin'))),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_SCHEDULE:
+        text = _prepend_notice(user_id, _build_broadcast_schedule_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_SCHEDULE, text=text,
+            reply_markup_builder=lambda version: broadcast_schedule_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_PREVIEW:
+        draft = AdBroadcastService.get_draft(user_id) or {}
+        text = _prepend_notice(user_id, _build_broadcast_preview_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_PREVIEW, text=text,
+            reply_markup_builder=lambda version: broadcast_preview_keyboard(user_id, version, is_admin=bool(draft.get('is_admin'))),
         )
         return
 
@@ -1212,6 +1396,44 @@ def render_screen(
             screen_key=SCREEN_ADMIN_LOGS,
             text=text,
             reply_markup_builder=lambda version: admin_logs_keyboard(user_id, version),
+        )
+        return
+
+    admin_bot_chats_page = _screen_suffix(screen_key, SCREEN_ADMIN_BOT_CHATS_PREFIX)
+    if admin_bot_chats_page is not None:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        page = _safe_page(admin_bot_chats_page)
+        text, rows, total_pages = _build_admin_bot_chats_text(user_id, page)
+        text = _prepend_notice(user_id, text, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=admin_bot_chats_screen_key(page),
+            text=text,
+            reply_markup_builder=lambda version: admin_bot_chats_keyboard(user_id, version, rows, page=page, total_pages=total_pages),
+        )
+        return
+
+    admin_users_page = _screen_suffix(screen_key, SCREEN_ADMIN_USERS_PREFIX)
+    if admin_users_page is not None:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        page = _safe_page(admin_users_page)
+        text, rows, total_pages = _build_admin_users_text(user_id, page)
+        text = _prepend_notice(user_id, text, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=admin_users_screen_key(page),
+            text=text,
+            reply_markup_builder=lambda version: admin_users_keyboard(user_id, version, rows, page=page, total_pages=total_pages),
         )
         return
 

@@ -23,8 +23,10 @@ from app.router import (
     submission_screen_key,
 )
 from app.services.admin import AdminService
+from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.client_campaigns import ClientCampaignService, MODE_PRICE, MODE_QUANTITY, MODE_REWARD, MODE_TARGET
 from app.services.input_sessions import InputSessionService
+from app.services.invoice_messages import InvoiceMessageService
 from app.services.payments import BASE_SPARKS_PER_STAR, SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, parse_payload
 from app.services.performer import PerformerService
 from app.services.referrals import ReferralService
@@ -77,12 +79,29 @@ def _is_cancel_text(text: str) -> bool:
     return raw in {'отмена', 'cancel', '/cancel', 'назад'}
 
 
+def _delete_pending_invoice(bot: telebot.TeleBot, user_id: int) -> None:
+    row = InvoiceMessageService.get(user_id)
+    if not row:
+        return
+    try:
+        bot.delete_message(chat_id=int(row['chat_id']), message_id=int(row['invoice_message_id']))
+    except Exception:
+        pass
+    try:
+        if row['helper_message_id'] is not None:
+            bot.delete_message(chat_id=int(row['chat_id']), message_id=int(row['helper_message_id']))
+    except Exception:
+        pass
+    InvoiceMessageService.clear(user_id)
+
+
 def _send_direct_stars_invoice(bot: telebot.TeleBot, user_id: int, *, title: str, description: str, payload: str, amount_stars: int) -> tuple[bool, str]:
     prices = [types.LabeledPrice(label=title[:32], amount=int(amount_stars))]
     kind, code, owner_id = parse_payload(payload) or ('pay', 'invoice', user_id)
     from app.services.payments import make_start_parameter
+    _delete_pending_invoice(bot, user_id)
     try:
-        bot.send_invoice(
+        sent = bot.send_invoice(
             chat_id=user_id,
             title=title[:32],
             description=description[:255],
@@ -92,6 +111,10 @@ def _send_direct_stars_invoice(bot: telebot.TeleBot, user_id: int, *, title: str
             prices=prices,
             start_parameter=make_start_parameter(kind, code, owner_id),
         )
+        try:
+            InvoiceMessageService.set(user_id, int(sent.chat.id), int(sent.message_id))
+        except Exception:
+            pass
         return True, 'payment_invoice_sent'
     except Exception:
         return False, 'payment_invoice_failed'
@@ -131,6 +154,7 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
     def handle_cancel(message: Message) -> None:
         UserService.ensure_user(message.from_user)
         InputSessionService.clear_session(message.from_user.id)
+        _delete_pending_invoice(bot, message.from_user.id)
         _try_delete_user_message(bot, message)
         _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
         render_entry(bot, message)
@@ -166,6 +190,8 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
     @bot.message_handler(content_types=['successful_payment'])
     def handle_successful_payment(message: Message) -> None:
         UserService.ensure_user(message.from_user)
+        _delete_pending_invoice(bot, message.from_user.id)
+        _try_delete_user_message(bot, message)
         payment = message.successful_payment
         parsed = parse_payload(payment.invoice_payload)
         if parsed is None:
@@ -192,6 +218,16 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 note=f'Stars custom top up: {sparks_amount}',
             )
             render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=sparks_amount, internal_name=UserService.internal_currency_label(message.from_user.id)))
+            return
+        if kind == 'broadcast' and code.isdigit():
+            order_id = int(code)
+            ok, result_key = AdBroadcastService.activate_paid_order(order_id, message.from_user.id)
+            if ok:
+                sent, _failed = AdBroadcastService.dispatch_order(bot, order_id, support_username=settings.support_username)
+                AdBroadcastService.clear_draft(message.from_user.id)
+                render_screen(bot, message, 'campaigns', notice_text=UserService.t(message.from_user.id, 'broadcast_paid_sent_notice', sent=sent))
+            else:
+                render_screen(bot, message, 'broadcast_preview', notice_key=result_key)
             return
         if kind == 'vip' and code in VIP_STARS_PLANS:
             plan = VIP_STARS_PLANS[code]
@@ -239,9 +275,16 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
         session = InputSessionService.get_session(message.from_user.id)
         if _is_cancel_text(message.text or ''):
+            draft = AdBroadcastService.get_draft(message.from_user.id) if session and str(session['mode'] or '').startswith('broadcast_') else {}
             InputSessionService.clear_session(message.from_user.id)
+            _delete_pending_invoice(bot, message.from_user.id)
             _try_delete_user_message(bot, message)
-            render_entry(bot, message)
+            if draft.get('is_admin'):
+                render_screen(bot, message, 'admin', notice_key='input_cancelled')
+            elif session and str(session['mode'] or '').startswith('broadcast_'):
+                render_screen(bot, message, 'campaigns', notice_key='input_cancelled')
+            else:
+                render_entry(bot, message)
             return
         if session and str(session['mode']) == 'submit_proof' and session['payload']:
             submission_id = int(session['payload'])
@@ -337,6 +380,18 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, message, SCREEN_ADMIN_REQUIRED_CHAT_ADD, notice_key=result_key)
             return
 
+        if mode == BROADCAST_MODE_TEXT:
+            _try_delete_user_message(bot, message)
+            ok, result_key = AdBroadcastService.consume_text(message.from_user.id, message.text or '')
+            render_screen(bot, message, 'broadcast_link' if ok else 'broadcast_text', notice_key=result_key)
+            return
+
+        if mode == BROADCAST_MODE_LINK:
+            _try_delete_user_message(bot, message)
+            ok, result_key = AdBroadcastService.consume_link(message.from_user.id, message.text or '')
+            render_screen(bot, message, 'broadcast_schedule' if ok else 'broadcast_link', notice_key=result_key)
+            return
+
         if mode == 'topup_custom_sparks':
             _try_delete_user_message(bot, message)
             raw = (message.text or '').strip().replace(' ', '')
@@ -400,7 +455,9 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             'Создать задание': lambda: render_screen(bot, message, 'campaigns'),
             'Аналитика': lambda: render_screen(bot, message, 'stats'),
             'VIP': lambda: render_screen(bot, message, 'vip'),
-            'Искры✨ и обмен': lambda: render_screen(bot, message, 'rewards'),
+            'Купить Искры✨': lambda: render_screen(bot, message, 'topup_packages'),
+            'Обмен Искр': lambda: render_screen(bot, message, 'exchange'),
+            'Искры✨ и обмен': lambda: render_screen(bot, message, 'exchange'),
             'Рефералы': lambda: render_screen(bot, message, 'referrals'),
         }
         action = text_map.get(text_value)

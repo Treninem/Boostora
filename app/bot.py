@@ -4,6 +4,7 @@ import tempfile
 import threading
 import time
 
+import requests
 import telebot
 from telebot.apihelper import ApiTelegramException
 
@@ -12,9 +13,16 @@ from app.db import init_db
 from app.handlers.start import register_start_handlers
 from app.handlers.callbacks import register_callback_handlers
 from app.services.promo import PromoService
+from app.services.ad_broadcasts import AdBroadcastService
 
 
 LOGGER = logging.getLogger(__name__)
+
+ALLOWED_UPDATES = [
+    'message', 'callback_query', 'pre_checkout_query', 'chat_member',
+    'message_reaction', 'message_reaction_count', 'poll_answer',
+    'channel_post', 'my_chat_member', 'edited_channel_post'
+]
 
 
 def _lock_path() -> str:
@@ -52,6 +60,10 @@ def configure_logging() -> None:
         level=logging.INFO,
         format='%(asctime)s | %(levelname)s | %(name)s | %(message)s'
     )
+    # Keep third-party polling noise low; transient network timeouts are handled by our retry loop.
+    logging.getLogger('TeleBot').setLevel(logging.ERROR)
+    logging.getLogger('telebot').setLevel(logging.ERROR)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
 
 
 def create_bot() -> telebot.TeleBot:
@@ -62,7 +74,6 @@ def create_bot() -> telebot.TeleBot:
 
 
 
-
 def _start_promo_worker(bot: telebot.TeleBot) -> threading.Event:
     stop_event = threading.Event()
 
@@ -70,6 +81,7 @@ def _start_promo_worker(bot: telebot.TeleBot) -> threading.Event:
         while not stop_event.is_set():
             try:
                 PromoService.run_due_promotions(bot)
+                AdBroadcastService.run_due_orders(bot, support_username=settings.support_username)
             except Exception:
                 LOGGER.exception('Promo worker error')
             stop_event.wait(300)
@@ -78,12 +90,52 @@ def _start_promo_worker(bot: telebot.TeleBot) -> threading.Event:
     thread.start()
     return stop_event
 
+
 def _prepare_bot(bot: telebot.TeleBot) -> None:
     try:
         bot.remove_webhook()
         LOGGER.info('Webhook removed before polling start')
     except Exception as exc:
         LOGGER.warning('Could not remove webhook before polling: %s', exc)
+
+
+def _poll_forever(bot: telebot.TeleBot) -> None:
+    """Run polling with our own retry loop so transient Telegram/API timeouts do not spam stack traces or kill the bot."""
+    backoff_seconds = 5
+    while True:
+        try:
+            bot.polling(
+                non_stop=False,
+                skip_pending=True,
+                timeout=20,
+                long_polling_timeout=20,
+                allowed_updates=ALLOWED_UPDATES,
+            )
+            return
+        except ApiTelegramException as exc:
+            description = str(exc)
+            if 'terminated by other getUpdates request' in description:
+                LOGGER.warning(
+                    'Polling conflict detected: another bot instance is still using getUpdates. Retrying in %s seconds.',
+                    backoff_seconds,
+                )
+                time.sleep(backoff_seconds)
+                continue
+            LOGGER.exception('Telegram API error during polling. Retrying in %s seconds.', backoff_seconds)
+            time.sleep(backoff_seconds)
+            continue
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError) as exc:
+            LOGGER.warning('Telegram network timeout during polling: %s. Retrying in %s seconds.', exc, backoff_seconds)
+            time.sleep(backoff_seconds)
+            continue
+        except requests.exceptions.RequestException as exc:
+            LOGGER.warning('Telegram request error during polling: %s. Retrying in %s seconds.', exc, backoff_seconds)
+            time.sleep(backoff_seconds)
+            continue
+        except Exception:
+            LOGGER.exception('Unexpected polling error. Retrying in %s seconds.', backoff_seconds)
+            time.sleep(backoff_seconds)
+            continue
 
 
 def run() -> None:
@@ -104,32 +156,8 @@ def run() -> None:
         promo_stop_event = _start_promo_worker(bot)
         LOGGER.info('Boostora bot started')
         try:
-            bot.infinity_polling(
-                skip_pending=True,
-                timeout=30,
-                long_polling_timeout=30,
-                allowed_updates=[
-                    'message', 'callback_query', 'pre_checkout_query', 'chat_member',
-                    'message_reaction', 'message_reaction_count', 'poll_answer',
-                    'channel_post', 'my_chat_member', 'edited_channel_post'
-                ],
-            )
-        except ApiTelegramException as exc:
+            _poll_forever(bot)
+        finally:
             promo_stop_event.set()
-            description = str(exc)
-            if 'terminated by other getUpdates request' in description:
-                LOGGER.warning(
-                    'Polling conflict detected: another bot instance is still using getUpdates. '
-                    'Retrying in 5 seconds.'
-                )
-                time.sleep(5)
-                continue
-            raise
-        except Exception:
-            promo_stop_event.set()
-            LOGGER.exception('Unexpected polling error. Retrying in 5 seconds.')
-            time.sleep(5)
-            continue
-        promo_stop_event.set()
         break
     _release_single_instance_lock(lock_fd)
