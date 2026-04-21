@@ -28,6 +28,7 @@ from app.router import (
     task_screen_key,
 )
 from app.services.admin import AdminService
+from app.services.ad_broadcasts import AdBroadcastService
 from app.services.campaigns import CampaignService
 from app.services.client_campaigns import ClientCampaignService
 from app.services.input_sessions import InputSessionService
@@ -263,9 +264,14 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
             if parsed.action == 'cancel_input':
                 session = InputSessionService.get_session(call.from_user.id)
                 mode = str(session['mode']) if session else ''
+                draft = AdBroadcastService.get_draft(call.from_user.id) if mode.startswith('broadcast_') else {}
                 InputSessionService.clear_session(call.from_user.id)
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'input_cancelled'))
                 submission_id = _safe_int(parsed.value)
+                if mode.startswith('broadcast_'):
+                    target_screen = 'admin' if draft.get('is_admin') else SECTION_TO_SCREEN['campaigns']
+                    render_screen(bot, call, target_screen, notice_key='input_cancelled')
+                    return
                 if mode.startswith('campaign_'):
                     render_screen(bot, call, SECTION_TO_SCREEN['campaigns'], notice_key='input_cancelled')
                     return
@@ -278,6 +284,69 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, call, submission_screen_key(submission_id), notice_key='input_cancelled')
                 return
     
+            if parsed.action == 'ad_new':
+                is_admin_mode = parsed.value == 'admin'
+                if is_admin_mode and not _ensure_admin(bot, call):
+                    return
+                if (not is_admin_mode) and not _ensure_client_role(bot, call):
+                    return
+                AdBroadcastService.clear_draft(call.from_user.id)
+                ok, result_key = AdBroadcastService.start_draft(call.from_user.id, is_admin=is_admin_mode)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                render_screen(bot, call, 'broadcast_text' if ok else ('admin' if is_admin_mode else 'campaigns'), notice_key=result_key)
+                return
+
+            if parsed.action == 'ad_sched':
+                value = str(parsed.value or '')
+                if value.startswith('repeat:'):
+                    ok, result_key = AdBroadcastService.set_repeat_count(call.from_user.id, _safe_int(value.split(':', 1)[1]) or 0)
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                    render_screen(bot, call, 'broadcast_schedule', notice_key=result_key)
+                    return
+                if value.startswith('freq:'):
+                    ok, result_key = AdBroadcastService.set_interval_hours(call.from_user.id, _safe_int(value.split(':', 1)[1]) or 0)
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                    render_screen(bot, call, 'broadcast_preview' if ok else 'broadcast_schedule', notice_key=result_key)
+                    return
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'broadcast_draft_missing'), show_alert=True)
+                render_screen(bot, call, 'broadcast_schedule', notice_key='broadcast_draft_missing')
+                return
+
+            if parsed.action == 'ad_pay':
+                ok, result_key, order_id = AdBroadcastService.create_pending_order(call.from_user.id)
+                if not ok or order_id is None:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=True)
+                    render_screen(bot, call, 'broadcast_preview', notice_key=result_key)
+                    return
+                order = AdBroadcastService.get_order(order_id)
+                stars = int(order['stars_price']) if order else 0
+                ok_send, notice_key = _send_stars_invoice(
+                    bot,
+                    call,
+                    title='Реклама во все чаты',
+                    description=UserService.t(call.from_user.id, 'broadcast_invoice_desc', stars=stars),
+                    payload=make_payload('broadcast', str(order_id), call.from_user.id),
+                    amount_stars=stars,
+                )
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, notice_key or 'payment_invoice_sent'), show_alert=not ok_send)
+                render_screen(bot, call, 'broadcast_preview', notice_key=notice_key or 'payment_invoice_sent')
+                return
+
+            if parsed.action == 'ad_send':
+                if not _ensure_admin(bot, call):
+                    return
+                ok, result_key, order_id = AdBroadcastService.create_admin_order(call.from_user.id)
+                if ok and order_id is not None:
+                    sent, _failed = AdBroadcastService.dispatch_order(bot, order_id, support_username=UserService.t(call.from_user.id, 'support_username_fallback'))
+                    AdBroadcastService.clear_draft(call.from_user.id)
+                    notice = UserService.t(call.from_user.id, 'broadcast_admin_sent_notice', sent=sent)
+                    bot.answer_callback_query(call.id, notice, show_alert=False)
+                    render_screen(bot, call, 'admin', notice_text=notice)
+                    return
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=True)
+                render_screen(bot, call, 'broadcast_preview', notice_key=result_key)
+                return
+
             if parsed.action == 'camp_new':
                 if not _ensure_client_role(bot, call):
                     return
@@ -312,6 +381,13 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 return
     
             if parsed.action == 'camp_cancel':
+                mode = AdBroadcastService.get_mode(call.from_user.id) or ''
+                draft = AdBroadcastService.get_draft(call.from_user.id) if mode.startswith('broadcast_') else {}
+                if mode.startswith('broadcast_'):
+                    AdBroadcastService.clear_draft(call.from_user.id)
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'campaign_create_cancelled'))
+                    render_screen(bot, call, 'admin' if draft.get('is_admin') else SECTION_TO_SCREEN['campaigns'], notice_key='campaign_create_cancelled')
+                    return
                 if not _ensure_client_role(bot, call):
                     return
                 ClientCampaignService.clear_draft(call.from_user.id)
@@ -399,7 +475,7 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 _delete_pending_invoice(bot, call.from_user.id)
                 InputSessionService.clear_session(call.from_user.id)
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'payment_invoice_cancelled'))
-                target_section = parsed.value if parsed.value in {'wallet', 'vip', 'rewards'} else 'wallet'
+                target_section = parsed.value if parsed.value in {'wallet', 'vip', 'rewards', 'broadcast_preview', 'topup_packages'} else 'wallet'
                 render_screen(bot, call, target_section, notice_key='payment_invoice_cancelled')
                 return
 

@@ -13,6 +13,7 @@ from app.db import init_db
 from app.handlers.start import register_start_handlers
 from app.handlers.callbacks import register_callback_handlers
 from app.services.promo import PromoService
+from app.services.ad_broadcasts import AdBroadcastService
 
 
 LOGGER = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ def _start_promo_worker(bot: telebot.TeleBot) -> threading.Event:
         while not stop_event.is_set():
             try:
                 PromoService.run_due_promotions(bot)
+                AdBroadcastService.run_due_orders(bot, support_username=settings.support_username)
             except Exception:
                 LOGGER.exception('Promo worker error')
             stop_event.wait(300)

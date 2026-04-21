@@ -2,6 +2,7 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.config import settings
 from app.services.bot_chats import BotChatService
+from app.services.ad_broadcasts import AdBroadcastService
 from app.services.client_campaigns import TASK_TYPES
 from app.services.payments import PACK_STAR_LEVELS, SPARKS_PACKS, VIP_STARS_PLANS
 from app.services.redemptions import RedemptionService
@@ -344,8 +345,12 @@ def proof_wait_keyboard(user_id: int, version: int, submission_id: int) -> Inlin
 
 
 def campaigns_keyboard(user_id: int, version: int, campaigns) -> InlineKeyboardMarkup:
-    markup = InlineKeyboardMarkup(row_width=1)
+    markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'broadcast_create_button'),
+            callback_data=pack_callback(version, 'ad_new', 'user'),
+        ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'campaign_create_button'),
             callback_data=pack_callback(version, 'camp_new', 'start'),
@@ -671,6 +676,72 @@ def admin_users_keyboard(user_id: int, version: int, users, *, page: int, total_
     markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')))
     return markup
 
+
+def broadcast_input_keyboard(user_id: int, version: int, *, is_admin: bool = False) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'campaign_cancel_button'),
+            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'menu_admin') if is_admin else UserService.t(user_id, 'back_to_campaigns'),
+            callback_data=pack_callback(version, 'go', 'admin' if is_admin else 'campaigns'),
+        ),
+    )
+    return markup
+
+
+def broadcast_schedule_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    repeats = int(draft.get('repeat_count') or 0)
+    if repeats in AdBroadcastService.list_repeat_options():
+        for interval_hours in AdBroadcastService.list_interval_options(repeats):
+            code = f'freq:{interval_hours}'
+            label = AdBroadcastService.schedule_label(AdBroadcastService.build_schedule_code(repeats, interval_hours))
+            markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'ad_sched', code)))
+    else:
+        for repeats_count, label in AdBroadcastService.list_repeat_options().items():
+            markup.add(InlineKeyboardButton(text=str(label), callback_data=pack_callback(version, 'ad_sched', f'repeat:{repeats_count}')))
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'campaign_cancel_button'),
+            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'back_to_campaigns'),
+            callback_data=pack_callback(version, 'go', 'campaigns'),
+        ),
+    )
+    return markup
+
+
+def broadcast_preview_keyboard(user_id: int, version: int, *, is_admin: bool = False) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    action = 'ad_send' if is_admin else 'ad_pay'
+    confirm_text = UserService.t(user_id, 'broadcast_send_now_button' if is_admin else 'broadcast_pay_button')
+    markup.add(InlineKeyboardButton(text=confirm_text, callback_data=pack_callback(version, action, 'confirm')))
+    if (not is_admin) and InvoiceMessageService.get(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'cancel_invoice_button'),
+                callback_data=pack_callback(version, 'cancel_invoice', 'broadcast_preview'),
+            )
+        )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'campaign_cancel_button'),
+            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'back_to_campaigns'),
+            callback_data=pack_callback(version, 'go', 'campaigns' if not is_admin else 'admin'),
+        ),
+    )
+    return markup
+
+
 def referrals_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
@@ -727,6 +798,12 @@ def admin_home_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
             text=UserService.t(user_id, 'admin_users_button'),
             callback_data=pack_callback(version, 'go', 'admin_users:1'),
         ),
+    )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_broadcast_button'),
+            callback_data=pack_callback(version, 'ad_new', 'admin'),
+        )
     )
     if UserService.is_owner(user_id):
         markup.add(

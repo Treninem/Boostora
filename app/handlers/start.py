@@ -23,6 +23,7 @@ from app.router import (
     submission_screen_key,
 )
 from app.services.admin import AdminService
+from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.client_campaigns import ClientCampaignService, MODE_PRICE, MODE_QUANTITY, MODE_REWARD, MODE_TARGET
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
@@ -218,6 +219,16 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             )
             render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=sparks_amount, internal_name=UserService.internal_currency_label(message.from_user.id)))
             return
+        if kind == 'broadcast' and code.isdigit():
+            order_id = int(code)
+            ok, result_key = AdBroadcastService.activate_paid_order(order_id, message.from_user.id)
+            if ok:
+                sent, _failed = AdBroadcastService.dispatch_order(bot, order_id, support_username=settings.support_username)
+                AdBroadcastService.clear_draft(message.from_user.id)
+                render_screen(bot, message, 'campaigns', notice_text=UserService.t(message.from_user.id, 'broadcast_paid_sent_notice', sent=sent))
+            else:
+                render_screen(bot, message, 'broadcast_preview', notice_key=result_key)
+            return
         if kind == 'vip' and code in VIP_STARS_PLANS:
             plan = VIP_STARS_PLANS[code]
             VipService.purchase_plan_with_stars(message.from_user.id, plan.plan_code)
@@ -264,10 +275,16 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
         session = InputSessionService.get_session(message.from_user.id)
         if _is_cancel_text(message.text or ''):
+            draft = AdBroadcastService.get_draft(message.from_user.id) if session and str(session['mode'] or '').startswith('broadcast_') else {}
             InputSessionService.clear_session(message.from_user.id)
             _delete_pending_invoice(bot, message.from_user.id)
             _try_delete_user_message(bot, message)
-            render_entry(bot, message)
+            if draft.get('is_admin'):
+                render_screen(bot, message, 'admin', notice_key='input_cancelled')
+            elif session and str(session['mode'] or '').startswith('broadcast_'):
+                render_screen(bot, message, 'campaigns', notice_key='input_cancelled')
+            else:
+                render_entry(bot, message)
             return
         if session and str(session['mode']) == 'submit_proof' and session['payload']:
             submission_id = int(session['payload'])
@@ -361,6 +378,18 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, message, SCREEN_ADMIN_REQUIRED_CHATS, notice_key=result_key)
             else:
                 render_screen(bot, message, SCREEN_ADMIN_REQUIRED_CHAT_ADD, notice_key=result_key)
+            return
+
+        if mode == BROADCAST_MODE_TEXT:
+            _try_delete_user_message(bot, message)
+            ok, result_key = AdBroadcastService.consume_text(message.from_user.id, message.text or '')
+            render_screen(bot, message, 'broadcast_link' if ok else 'broadcast_text', notice_key=result_key)
+            return
+
+        if mode == BROADCAST_MODE_LINK:
+            _try_delete_user_message(bot, message)
+            ok, result_key = AdBroadcastService.consume_link(message.from_user.id, message.text or '')
+            render_screen(bot, message, 'broadcast_schedule' if ok else 'broadcast_link', notice_key=result_key)
             return
 
         if mode == 'topup_custom_sparks':

@@ -14,6 +14,9 @@ from app.keyboards.inline import (
     admin_users_keyboard,
     admin_submission_keyboard,
     blocked_keyboard,
+    broadcast_input_keyboard,
+    broadcast_preview_keyboard,
+    broadcast_schedule_keyboard,
     campaign_card_keyboard,
     campaign_input_keyboard,
     campaign_preview_keyboard,
@@ -38,6 +41,7 @@ from app.keyboards.inline import (
     wallet_keyboard,
 )
 from app.services.admin import AdminService
+from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.admin_logs import AdminLogService
 from app.services.bot_chats import BotChatService
 from app.services.campaigns import CampaignService
@@ -100,6 +104,10 @@ SCREEN_CAMPAIGN_CREATE = 'campaign_create'
 SCREEN_CAMPAIGN_PREVIEW = 'campaign_preview'
 SCREEN_CAMPAIGN_INPUT_PREFIX = 'campaign_input:'
 SCREEN_CAMPAIGN_CARD_PREFIX = 'campaign:'
+SCREEN_BROADCAST_TEXT = 'broadcast_text'
+SCREEN_BROADCAST_LINK = 'broadcast_link'
+SCREEN_BROADCAST_SCHEDULE = 'broadcast_schedule'
+SCREEN_BROADCAST_PREVIEW = 'broadcast_preview'
 SCREEN_VIP = 'vip'
 SCREEN_REWARDS = 'rewards'
 SCREEN_EXCHANGE = 'exchange'
@@ -190,6 +198,56 @@ def campaign_input_screen_key(step: str) -> str:
 
 def campaign_card_screen_key(campaign_id: int) -> str:
     return f'{SCREEN_CAMPAIGN_CARD_PREFIX}{campaign_id}'
+
+
+def _build_broadcast_text_screen(user_id: int) -> str:
+    chats = AdBroadcastService.promotable_chat_count()
+    return UserService.t(user_id, 'broadcast_text_screen', chats=chats)
+
+
+def _build_broadcast_link_screen(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    return UserService.t(user_id, 'broadcast_link_screen', ad_text=str(draft.get('ad_text') or '—'))
+
+
+def _build_broadcast_schedule_text(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    chats = AdBroadcastService.promotable_chat_count()
+    repeats = int(draft.get('repeat_count') or 0)
+    if repeats in AdBroadcastService.list_repeat_options():
+        return UserService.t(
+            user_id,
+            'broadcast_schedule_frequency_screen',
+            chats=chats,
+            ad_text=str(draft.get('ad_text') or '—'),
+            link=str(draft.get('target_url') or '—'),
+            repeats=AdBroadcastService.list_repeat_options().get(repeats, repeats),
+        )
+    return UserService.t(
+        user_id,
+        'broadcast_schedule_count_screen',
+        chats=chats,
+        ad_text=str(draft.get('ad_text') or '—'),
+        link=str(draft.get('target_url') or '—'),
+    )
+
+
+def _build_broadcast_preview_text(user_id: int) -> str:
+    draft = AdBroadcastService.get_draft(user_id) or {}
+    schedule_code = str(draft.get('schedule_code') or '')
+    chats = AdBroadcastService.promotable_chat_count()
+    repeats, interval_hours = AdBroadcastService.parse_schedule_code(schedule_code)
+    price = AdBroadcastService.price_for(schedule_code, chats) if repeats is not None and interval_hours is not None else 0
+    return UserService.t(
+        user_id,
+        'broadcast_preview_screen',
+        chats=chats,
+        ad_text=str(draft.get('ad_text') or '—'),
+        link=str(draft.get('target_url') or '—'),
+        schedule=AdBroadcastService.schedule_label(schedule_code),
+        stars=price,
+        payment_mode=UserService.t(user_id, 'broadcast_payment_free' if draft.get('is_admin') else 'broadcast_payment_stars'),
+    )
 
 
 def admin_submission_screen_key(submission_id: int) -> str:
@@ -1159,6 +1217,39 @@ def render_screen(
             screen_key=SCREEN_REFERRALS,
             text=text,
             reply_markup_builder=lambda version: referrals_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_TEXT:
+        text = _prepend_notice(user_id, _build_broadcast_text_screen(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_TEXT, text=text,
+            reply_markup_builder=lambda version: broadcast_input_keyboard(user_id, version, is_admin=bool((AdBroadcastService.get_draft(user_id) or {}).get('is_admin'))),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_LINK:
+        text = _prepend_notice(user_id, _build_broadcast_link_screen(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_LINK, text=text,
+            reply_markup_builder=lambda version: broadcast_input_keyboard(user_id, version, is_admin=bool((AdBroadcastService.get_draft(user_id) or {}).get('is_admin'))),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_SCHEDULE:
+        text = _prepend_notice(user_id, _build_broadcast_schedule_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_SCHEDULE, text=text,
+            reply_markup_builder=lambda version: broadcast_schedule_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_BROADCAST_PREVIEW:
+        draft = AdBroadcastService.get_draft(user_id) or {}
+        text = _prepend_notice(user_id, _build_broadcast_preview_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_BROADCAST_PREVIEW, text=text,
+            reply_markup_builder=lambda version: broadcast_preview_keyboard(user_id, version, is_admin=bool(draft.get('is_admin'))),
         )
         return
 
