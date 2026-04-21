@@ -65,23 +65,51 @@ def _normalize_default_required_chat_ref(raw_value: str) -> str:
     return value
 
 
+def _is_writable_dir(path: Path) -> bool:
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / '.boostora_write_test'
+        probe.write_text('ok', encoding='utf-8')
+        probe.unlink(missing_ok=True)
+        return True
+    except Exception:
+        return False
 
 
 def _resolve_data_dir() -> str:
     explicit = os.getenv('BOT_DATA_DIR', '').strip()
     if explicit:
-        return explicit
-    if Path('/data').exists():
-        return '/data'
-    return 'storage'
+        explicit_path = Path(explicit).expanduser()
+        explicit_path.mkdir(parents=True, exist_ok=True)
+        return str(explicit_path)
+
+    home_data = Path.home() / '.boostora-data'
+    candidates = [
+        Path('/data'),
+        Path('/storage'),
+        Path('/var/data/boostora'),
+        home_data,
+    ]
+
+    for candidate in candidates:
+        if candidate.exists() and _is_writable_dir(candidate):
+            return str(candidate)
+
+    if _is_writable_dir(home_data):
+        return str(home_data)
+
+    fallback = Path('storage')
+    fallback.mkdir(parents=True, exist_ok=True)
+    return str(fallback)
 
 
 def _resolve_db_path(raw_value: str, data_dir: str) -> str:
     value = (raw_value or '').strip() or 'boostora.db'
-    path = Path(value)
+    path = Path(value).expanduser()
     if path.is_absolute():
         return str(path)
     return str(Path(data_dir) / path.name)
+
 
 def _normalize_default_required_chat_link(raw_value: str) -> str:
     value = (raw_value or '').strip()

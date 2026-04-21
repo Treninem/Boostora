@@ -13,5 +13,6 @@ def main_reply_keyboard(user_id: int):
     else:
         markup.row(KeyboardButton('Профиль'), KeyboardButton('Задания'))
         markup.row(KeyboardButton('Кошелёк👛'), KeyboardButton('История'))
+    markup.row(KeyboardButton('VIP'), KeyboardButton('Искры✨ и обмен'))
     markup.row(KeyboardButton('Рефералы'), KeyboardButton('Меню'))
     return markup

@@ -64,3 +64,17 @@ PYTHONPATH=. BOT_TOKEN=123:abc python scripts/autocheck_promo_persistence_smoke_
 - Для `Запуск бота` используйте ссылку с `?start=`.
 - Для `Открытие Mini App` используйте ссылку с `?startapp=` и интеграцию `Telegram.WebApp.sendData(...)`.
 - Пример Mini App лежит в `miniapp_example/index.html`.
+
+
+## Сохранение данных при обновлении через GitHub
+
+Эта сборка по умолчанию хранит базу вне каталога с кодом и старается использовать:
+
+1. `BOT_DATA_DIR`, если он указан
+2. `/data`
+3. `/storage`
+4. `/var/data/boostora`
+5. `~/.boostora-data`
+
+Если после GitHub-обновления основной файл БД не найден, бот пытается восстановить его из более старой копии или из backup-файлов.
+Рекомендуемое значение для Bothost: `BOT_DATA_DIR=/root/.boostora-data` или постоянная папка хостинга, если она у вас есть.

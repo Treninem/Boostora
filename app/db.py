@@ -218,16 +218,6 @@ CREATE TABLE IF NOT EXISTS redemptions (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS invoice_messages (
-    user_id INTEGER PRIMARY KEY,
-    chat_id INTEGER NOT NULL,
-    invoice_message_id INTEGER NOT NULL,
-    helper_message_id INTEGER,
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-
 
 CREATE TABLE IF NOT EXISTS observed_messages (
     chat_ref TEXT NOT NULL,
@@ -253,28 +243,6 @@ CREATE TABLE IF NOT EXISTS activity_events (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-
-
-
-CREATE TABLE IF NOT EXISTS ad_broadcasts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    creator_user_id INTEGER NOT NULL,
-    ad_text TEXT NOT NULL,
-    target_url TEXT NOT NULL,
-    schedule_code TEXT NOT NULL,
-    interval_hours INTEGER NOT NULL DEFAULT 0,
-    repeats_total INTEGER NOT NULL DEFAULT 1,
-    sent_runs INTEGER NOT NULL DEFAULT 0,
-    next_run_at TEXT,
-    last_run_at TEXT,
-    stars_price INTEGER NOT NULL DEFAULT 0,
-    pay_required INTEGER NOT NULL DEFAULT 1,
-    is_admin INTEGER NOT NULL DEFAULT 0,
-    status TEXT NOT NULL DEFAULT 'draft',
-    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (creator_user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
 
 CREATE TABLE IF NOT EXISTS bot_chats (
     chat_id INTEGER PRIMARY KEY,
@@ -310,7 +278,6 @@ CREATE INDEX IF NOT EXISTS idx_activity_events_user_type_created ON activity_eve
 CREATE INDEX IF NOT EXISTS idx_activity_events_chat_message ON activity_events(chat_ref, message_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activity_events_poll_id ON activity_events(poll_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bot_chats_active ON bot_chats(is_active, can_post, chat_type, updated_at DESC);
-CREATE INDEX IF NOT EXISTS idx_ad_broadcasts_status_due ON ad_broadcasts(status, next_run_at, created_at);
 
 '''
 
@@ -362,6 +329,84 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
 
 
 
+def _candidate_restore_paths() -> list[Path]:
+    db_name = Path(settings.db_path).name
+    candidates = [
+        Path(settings.db_path),
+        Path(settings.data_dir) / db_name,
+        Path.home() / '.boostora-data' / db_name,
+        Path('/data') / db_name,
+        Path('/storage') / db_name,
+        Path('/app') / db_name,
+        Path('/app/storage') / db_name,
+        Path('boostora.db'),
+        Path('storage') / db_name,
+    ]
+    backups_dir = Path(settings.data_dir) / 'backups'
+    if backups_dir.exists():
+        candidates.extend(sorted(backups_dir.glob(f"{Path(db_name).stem}_*{Path(db_name).suffix}.bak"), reverse=True))
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+        except Exception:
+            key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def ensure_persistent_db_file() -> None:
+    target = Path(settings.db_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists() and target.stat().st_size > 0:
+        return
+
+    best_source: Path | None = None
+    best_mtime = -1.0
+    for candidate in _candidate_restore_paths():
+        if candidate == target:
+            continue
+        try:
+            if candidate.exists() and candidate.is_file() and candidate.stat().st_size > 0:
+                mtime = candidate.stat().st_mtime
+                if mtime > best_mtime:
+                    best_mtime = mtime
+                    best_source = candidate
+        except Exception:
+            continue
+
+    if best_source is None:
+        return
+
+    try:
+        shutil.copy2(best_source, target)
+    except Exception:
+        return
+
+
+def mirror_db_to_legacy_locations() -> None:
+    source = Path(settings.db_path)
+    if not source.exists():
+        return
+
+    legacy_candidates = [
+        Path('/app/storage') / source.name,
+        Path('storage') / source.name,
+    ]
+    for candidate in legacy_candidates:
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            if candidate.resolve() == source.resolve():
+                continue
+            shutil.copy2(source, candidate)
+        except Exception:
+            continue
+
+
 def create_startup_backup(max_files: int = 5) -> None:
     db_path = Path(settings.db_path)
     if not db_path.exists():
@@ -381,11 +426,13 @@ def create_startup_backup(max_files: int = 5) -> None:
         except Exception:
             pass
 def init_db() -> None:
+    ensure_persistent_db_file()
     create_startup_backup()
     with get_connection() as connection:
         connection.executescript(SCHEMA)
         _run_migrations(connection)
         connection.executescript(INDEXES)
+    mirror_db_to_legacy_locations()
 
 
 
@@ -404,19 +451,24 @@ def fetch_all(query: str, params: Sequence[Any] = ()) -> list[sqlite3.Row]:
 def execute(query: str, params: Sequence[Any] = ()) -> int:
     with get_connection() as connection:
         cursor = connection.execute(query, params)
-        return int(cursor.lastrowid or 0)
+        result = int(cursor.lastrowid or 0)
+    mirror_db_to_legacy_locations()
+    return result
 
 
 
 def execute_many(query: str, params_list: list[Sequence[Any]]) -> None:
     with get_connection() as connection:
         connection.executemany(query, params_list)
+    mirror_db_to_legacy_locations()
 
 
 
 def run_in_transaction(callback: Callable[[sqlite3.Connection], T]) -> T:
     with get_connection() as connection:
-        return callback(connection)
+        result = callback(connection)
+    mirror_db_to_legacy_locations()
+    return result
 
 
 

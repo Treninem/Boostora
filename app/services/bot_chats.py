@@ -106,37 +106,3 @@ class BotChatService:
             ORDER BY COALESCE(last_seen_at, updated_at) DESC, chat_id DESC
             '''
         )
-
-
-    @staticmethod
-    def count_all_chats() -> int:
-        row = db.fetch_one(
-            """
-            SELECT COUNT(*) AS cnt
-            FROM bot_chats
-            WHERE is_active = 1
-            """
-        )
-        return int(row['cnt'] or 0) if row else 0
-
-    @staticmethod
-    def list_all_chats(limit: int = 10, offset: int = 0):
-        return db.fetch_all(
-            """
-            SELECT * FROM bot_chats
-            WHERE is_active = 1
-            ORDER BY COALESCE(last_seen_at, updated_at) DESC, chat_id DESC
-            LIMIT ? OFFSET ?
-            """,
-            (limit, offset),
-        )
-
-    @staticmethod
-    def chat_link(row) -> str | None:
-        username = str(row['username'] or '').strip()
-        if username:
-            return f'https://t.me/{username}'
-        chat_ref = str(row['chat_ref'] or '').strip()
-        if chat_ref.startswith('@'):
-            return f'https://t.me/{chat_ref[1:]}'
-        return None

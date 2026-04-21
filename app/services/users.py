@@ -105,24 +105,3 @@ class UserService:
         if UserService.is_admin(user_id):
             return True
         return UserService.get_status(user_id) != 'blocked'
-
-
-    @staticmethod
-    def count_users() -> int:
-        row = db.fetch_one('SELECT COUNT(*) AS cnt FROM users')
-        return int(row['cnt'] or 0) if row else 0
-
-    @staticmethod
-    def list_users(limit: int = 10, offset: int = 0):
-        return db.fetch_all(
-            """
-            SELECT u.*, COALESCE(w.available_balance, 0) AS available_balance,
-                   COALESCE(w.internal_balance, 0) AS internal_balance,
-                   COALESCE(w.bonus_balance, 0) AS bonus_balance
-            FROM users u
-            LEFT JOIN wallets w ON w.user_id = u.user_id
-            ORDER BY u.created_at DESC, u.user_id DESC
-            LIMIT ? OFFSET ?
-            """,
-            (limit, offset),
-        )
