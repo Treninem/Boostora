@@ -31,16 +31,19 @@ TEXTS = {
         'refresh_screen': 'Обновить',
         'required_subscription_text': 'Чтобы продолжить, подпишитесь на обязательный чат и затем нажмите кнопку проверки.',
         'open_required_chat': 'Открыть чат',
+        'open_required_chat_named': 'Открыть: {name}',
         'check_subscription': 'Проверить подписку',
         'subscription_missing': 'Сначала вступите в обязательный чат, затем повторите проверку.',
         'subscription_success': 'Подписка подтверждена.',
         'subscription_not_required_here': 'Внутри обязательного чата дополнительная проверка не нужна.',
+        'subscription_check_unavailable': 'Автопроверка подписки сейчас недоступна. Бот продолжит работу без блокировки. Проверьте REQUIRED_CHAT_ID и права бота в чате.',
+        'generic_ui_error': 'Произошла ошибка интерфейса. Экран обновлён.',
         'language_updated': 'Язык обновлён.',
         'role_updated': 'Роль обновлена.',
         'stale_screen': 'Этот экран уже неактуален. Используйте последнее сообщение бота.',
         'screen_refreshed': 'Экран обновлён.',
         'section_stub': '<b>{title}</b>\n\nРаздел подключён к общей навигации {brand}. Следующий этап наполнит его рабочей логикой.\n\nТекущая роль: <b>{role}</b>.',
-        'profile_screen': '<b>Профиль исполнителя</b>\n\nID: <code>{user_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nБаланс доступный: <b>{available}</b> XTR\nВ холде: <b>{hold}</b> XTR\nВсего заработано: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Профиль исполнителя</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nБаланс доступный: <b>{available}</b> XTR\nВ холде: <b>{hold}</b> XTR\nВсего заработано: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Доступные задания</b>\n\nАктивных сейчас: <b>{active_tasks}/{task_limit}</b>\nНиже показаны задания, которые ещё можно взять.',
         'tasks_empty': '<b>Доступные задания</b>\n\nСейчас новых заданий нет. Обновите экран позже.',
         'task_row': '• {title} · {reward} XTR',
@@ -89,16 +92,19 @@ TEXTS = {
         'refresh_screen': 'Refresh',
         'required_subscription_text': 'To continue, join the required chat and then press the verification button.',
         'open_required_chat': 'Open chat',
+        'open_required_chat_named': 'Open: {name}',
         'check_subscription': 'Check subscription',
         'subscription_missing': 'Join the required chat first, then try the verification again.',
         'subscription_success': 'Subscription confirmed.',
         'subscription_not_required_here': 'Inside the required chat this check is not needed.',
+        'subscription_check_unavailable': 'Automatic subscription check is unavailable right now. The bot will continue without blocking. Check REQUIRED_CHAT_ID and the bot permissions in the chat.',
+        'generic_ui_error': 'An interface error occurred. The screen was refreshed.',
         'language_updated': 'Language updated.',
         'role_updated': 'Role updated.',
         'stale_screen': 'This screen is outdated. Use the latest bot message.',
         'screen_refreshed': 'Screen refreshed.',
         'section_stub': '<b>{title}</b>\n\nThis section is already wired into the shared {brand} navigation. A later stage will fill it with working logic.\n\nCurrent role: <b>{role}</b>.',
-        'profile_screen': '<b>Performer profile</b>\n\nID: <code>{user_id}</code>\nRole: <b>{role}</b>\nActive tasks: <b>{active_tasks}/{task_limit}</b>\nAvailable balance: <b>{available}</b> XTR\nIn hold: <b>{hold}</b> XTR\nLifetime earned: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Performer profile</b>\n\nID: <code>{profile_id}</code>\nRole: <b>{role}</b>\nActive tasks: <b>{active_tasks}/{task_limit}</b>\nAvailable balance: <b>{available}</b> XTR\nIn hold: <b>{hold}</b> XTR\nLifetime earned: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Available tasks</b>\n\nActive now: <b>{active_tasks}/{task_limit}</b>\nTasks below can still be taken.',
         'tasks_empty': '<b>Available tasks</b>\n\nThere are no new tasks right now. Refresh later.',
         'task_row': '• {title} · {reward} XTR',
@@ -151,12 +157,14 @@ TEXTS = {
         'subscription_missing': 'Bitte tritt zuerst dem Pflicht-Chat bei und versuche die Prüfung erneut.',
         'subscription_success': 'Abo bestätigt.',
         'subscription_not_required_here': 'Innerhalb des Pflicht-Chats ist diese Prüfung nicht nötig.',
+        'subscription_check_unavailable': 'Die automatische Abo-Prüfung ist derzeit nicht verfügbar. Der Bot blockiert dich nicht. Prüfe REQUIRED_CHAT_ID und die Rechte des Bots im Chat.',
+        'generic_ui_error': 'Ein Oberflächenfehler ist aufgetreten. Der Bildschirm wurde aktualisiert.',
         'language_updated': 'Sprache aktualisiert.',
         'role_updated': 'Rolle aktualisiert.',
         'stale_screen': 'Dieser Bildschirm ist veraltet. Nutze die letzte Bot-Nachricht.',
         'screen_refreshed': 'Bildschirm aktualisiert.',
         'section_stub': '<b>{title}</b>\n\nDieser Bereich ist bereits an die gemeinsame Navigation von {brand} angeschlossen. In einer späteren Phase kommt die Arbeitslogik hinzu.\n\nAktuelle Rolle: <b>{role}</b>.',
-        'profile_screen': '<b>Ausführenden-Profil</b>\n\nID: <code>{user_id}</code>\nRolle: <b>{role}</b>\nAktive Aufgaben: <b>{active_tasks}/{task_limit}</b>\nVerfügbar: <b>{available}</b> XTR\nIm Hold: <b>{hold}</b> XTR\nGesamt verdient: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Ausführenden-Profil</b>\n\nID: <code>{profile_id}</code>\nRolle: <b>{role}</b>\nAktive Aufgaben: <b>{active_tasks}/{task_limit}</b>\nVerfügbar: <b>{available}</b> XTR\nIm Hold: <b>{hold}</b> XTR\nGesamt verdient: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Verfügbare Aufgaben</b>\n\nAktiv jetzt: <b>{active_tasks}/{task_limit}</b>\nDie folgenden Aufgaben können noch übernommen werden.',
         'tasks_empty': '<b>Verfügbare Aufgaben</b>\n\nIm Moment gibt es keine neuen Aufgaben.',
         'task_row': '• {title} · {reward} XTR',
@@ -209,12 +217,14 @@ TEXTS = {
         'subscription_missing': 'Primero únete al chat obligatorio y luego repite la verificación.',
         'subscription_success': 'Suscripción confirmada.',
         'subscription_not_required_here': 'Dentro del chat obligatorio no hace falta esta comprobación.',
+        'subscription_check_unavailable': 'La verificación automática de la suscripción no está disponible ahora. El bot seguirá funcionando sin bloquearte. Revisa REQUIRED_CHAT_ID y los permisos del bot en el chat.',
+        'generic_ui_error': 'Se produjo un error de interfaz. La pantalla se actualizó.',
         'language_updated': 'Idioma actualizado.',
         'role_updated': 'Rol actualizado.',
         'stale_screen': 'Esta pantalla ya no es válida. Usa el último mensaje del bot.',
         'screen_refreshed': 'Pantalla actualizada.',
         'section_stub': '<b>{title}</b>\n\nEsta sección ya está conectada a la navegación compartida de {brand}. En una etapa posterior recibirá la lógica funcional.\n\nRol actual: <b>{role}</b>.',
-        'profile_screen': '<b>Perfil del ejecutor</b>\n\nID: <code>{user_id}</code>\nRol: <b>{role}</b>\nTareas activas: <b>{active_tasks}/{task_limit}</b>\nDisponible: <b>{available}</b> XTR\nEn retención: <b>{hold}</b> XTR\nGanado total: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Perfil del ejecutor</b>\n\nID: <code>{profile_id}</code>\nRol: <b>{role}</b>\nTareas activas: <b>{active_tasks}/{task_limit}</b>\nDisponible: <b>{available}</b> XTR\nEn retención: <b>{hold}</b> XTR\nGanado total: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Tareas disponibles</b>\n\nActivas ahora: <b>{active_tasks}/{task_limit}</b>\nLas tareas siguientes aún se pueden tomar.',
         'tasks_empty': '<b>Tareas disponibles</b>\n\nAhora no hay tareas nuevas.',
         'task_row': '• {title} · {reward} XTR',
@@ -267,12 +277,14 @@ TEXTS = {
         'subscription_missing': 'Entre primeiro no chat obrigatório e depois tente a verificação novamente.',
         'subscription_success': 'Inscrição confirmada.',
         'subscription_not_required_here': 'Dentro do chat obrigatório essa verificação não é necessária.',
+        'subscription_check_unavailable': 'A verificação automática da inscrição não está disponível agora. O bot continuará sem bloquear você. Verifique REQUIRED_CHAT_ID e as permissões do bot no chat.',
+        'generic_ui_error': 'Ocorreu um erro de interface. A tela foi atualizada.',
         'language_updated': 'Idioma atualizado.',
         'role_updated': 'Papel atualizado.',
         'stale_screen': 'Esta tela já está desatualizada. Use a mensagem mais recente do bot.',
         'screen_refreshed': 'Tela atualizada.',
         'section_stub': '<b>{title}</b>\n\nEsta seção já está ligada à navegação compartilhada do {brand}. Uma etapa posterior adicionará a lógica funcional.\n\nPapel atual: <b>{role}</b>.',
-        'profile_screen': '<b>Perfil do executor</b>\n\nID: <code>{user_id}</code>\nPapel: <b>{role}</b>\nTarefas ativas: <b>{active_tasks}/{task_limit}</b>\nDisponível: <b>{available}</b> XTR\nEm hold: <b>{hold}</b> XTR\nTotal ganho: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Perfil do executor</b>\n\nID: <code>{profile_id}</code>\nPapel: <b>{role}</b>\nTarefas ativas: <b>{active_tasks}/{task_limit}</b>\nDisponível: <b>{available}</b> XTR\nEm hold: <b>{hold}</b> XTR\nTotal ganho: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Tarefas disponíveis</b>\n\nAtivas agora: <b>{active_tasks}/{task_limit}</b>\nAs tarefas abaixo ainda podem ser aceitas.',
         'tasks_empty': '<b>Tarefas disponíveis</b>\n\nNão há novas tarefas agora.',
         'task_row': '• {title} · {reward} XTR',
@@ -325,12 +337,14 @@ TEXTS = {
         'subscription_missing': 'Önce zorunlu sohbete katıl, sonra doğrulamayı tekrar dene.',
         'subscription_success': 'Abonelik doğrulandı.',
         'subscription_not_required_here': 'Zorunlu sohbetin içinde bu kontrol gerekli değil.',
+        'subscription_check_unavailable': 'Otomatik abonelik kontrolü şu anda kullanılamıyor. Bot seni engellemeden çalışmaya devam edecek. REQUIRED_CHAT_ID değerini ve botun sohbetteki izinlerini kontrol et.',
+        'generic_ui_error': 'Bir arayüz hatası oluştu. Ekran yenilendi.',
         'language_updated': 'Dil güncellendi.',
         'role_updated': 'Rol güncellendi.',
         'stale_screen': 'Bu ekran artık geçersiz. Botun son mesajını kullan.',
         'screen_refreshed': 'Ekran yenilendi.',
         'section_stub': '<b>{title}</b>\n\nBu bölüm zaten {brand} ortak gezintisine bağlandı. Sonraki bir aşama çalışan mantığı ekleyecek.\n\nGeçerli rol: <b>{role}</b>.',
-        'profile_screen': '<b>Görev yapan profili</b>\n\nID: <code>{user_id}</code>\nRol: <b>{role}</b>\nAktif görevler: <b>{active_tasks}/{task_limit}</b>\nKullanılabilir bakiye: <b>{available}</b> XTR\nHold bakiyesi: <b>{hold}</b> XTR\nToplam kazanç: <b>{earned}</b> XTR',
+        'profile_screen': '<b>Görev yapan profili</b>\n\nID: <code>{profile_id}</code>\nRol: <b>{role}</b>\nAktif görevler: <b>{active_tasks}/{task_limit}</b>\nKullanılabilir bakiye: <b>{available}</b> XTR\nHold bakiyesi: <b>{hold}</b> XTR\nToplam kazanç: <b>{earned}</b> XTR',
         'tasks_screen': '<b>Uygun görevler</b>\n\nŞu an aktif: <b>{active_tasks}/{task_limit}</b>\nAşağıdaki görevler hâlâ alınabilir.',
         'tasks_empty': '<b>Uygun görevler</b>\n\nŞu anda yeni görev yok.',
         'task_row': '• {title} · {reward} XTR',
@@ -378,7 +392,7 @@ _STAGE5_TEXTS_EN = {
     'campaign_task_type_mini_app_open': 'Open Mini App',
     'campaign_input_screen': '<b>Campaign setup</b>\n\nType: <b>{task_type}</b>\nTarget: <code>{target_url}</code>\nReward: <b>{reward}</b> XTR\nQuantity: <b>{quantity}</b>\n\n{step}',
     'campaign_target_prompt': 'Send the target link or @username in one message.',
-    'campaign_reward_prompt': 'Send the reward per completion as a whole number in XTR.',
+    'campaign_reward_prompt': 'Send the reward per completion as a whole number in Sparks✨.',
     'campaign_quantity_prompt': 'Send the number of required completions as a whole number.',
     'campaign_target_saved': 'Target saved.',
     'campaign_reward_saved': 'Reward saved.',
@@ -429,7 +443,7 @@ _STAGE5_TEXTS_RU = {
     'campaign_task_type_mini_app_open': 'Открытие Mini App',
     'campaign_input_screen': '<b>Настройка кампании</b>\n\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nНаграда: <b>{reward}</b> XTR\nКоличество: <b>{quantity}</b>\n\n{step}',
     'campaign_target_prompt': 'Отправьте ссылку на цель или @username одним сообщением.',
-    'campaign_reward_prompt': 'Отправьте награду за одно выполнение целым числом в XTR.',
+    'campaign_reward_prompt': 'Отправьте награду за одно выполнение целым числом в Искрах✨.',
     'campaign_quantity_prompt': 'Отправьте нужное количество выполнений целым числом.',
     'campaign_target_saved': 'Цель сохранена.',
     'campaign_reward_saved': 'Награда сохранена.',
@@ -568,6 +582,19 @@ _STAGE7_TEXTS_EN = {
     'admin_home_screen': '<b>Admin panel</b>\n\nManual review queue: <b>{queue}</b>\nBlocked users: <b>{blocked}</b>\nHigh-risk users: <b>{high_risk}</b>\nRejected submissions: <b>{rejected}</b>',
     'admin_queue_button': 'Review queue',
     'admin_logs_button': 'Admin logs',
+    'admin_required_chats_button': 'Required subscriptions',
+    'admin_required_chats_empty': '<b>Required subscriptions</b>\n\nThere are no required chats now. You can add up to <b>10</b>.',
+    'admin_required_chats_screen': '<b>Required subscriptions</b>\n\nConfigured: <b>{count}/{limit}</b>\n\n{items}',
+    'admin_required_chat_row': '• #{chat_id} · {name}\n  {link}',
+    'admin_required_chat_add_button': 'Add chat',
+    'admin_required_chat_remove_button': 'Remove: {name}',
+    'admin_required_chat_add_prompt': '<b>Add required chat</b>\n\nSend one line in one of these formats:\n<code>@publicchannel</code>\n<code>https://t.me/publicchannel</code>\n<code>-1001234567890 https://t.me/+invite</code>\n\nFor private groups send numeric chat ID first and invite link second.',
+    'admin_required_chat_added': 'Required chat added.',
+    'admin_required_chat_removed': 'Required chat removed.',
+    'admin_required_chat_exists': 'This chat is already in the required list.',
+    'admin_required_chat_limit_reached': 'The required list already has 10 chats.',
+    'admin_required_chat_invalid': 'Invalid format. Send @username, t.me link, or chat_id plus invite link.',
+    'admin_required_chat_not_found': 'Required chat not found.',
     'admin_queue_empty': '<b>Manual review queue</b>\n\nQueue is empty right now.',
     'admin_queue_screen': '<b>Manual review queue</b>\n\n{items}',
     'admin_queue_line': '• #{submission_id} · {title} · {performer} · sub risk {risk} / user risk {user_risk}',
@@ -591,8 +618,8 @@ _STAGE7_TEXTS_EN = {
     'admin_cannot_block_admin': 'You cannot block another admin.',
     'admin_user_blocked': 'User blocked.',
     'admin_user_unblocked': 'User unblocked.',
-    'admin_adjust_risk_prompt': '<b>Adjust risk score</b>\n\nTarget: <b>{target}</b> · <code>{user_id}</code>\nCurrent risk: <b>{current}</b>\n\nSend a signed integer, for example <code>+10</code> or <code>-15</code>.',
-    'admin_adjust_balance_prompt': '<b>Adjust available balance</b>\n\nTarget: <b>{target}</b> · <code>{user_id}</code>\n\nSend a signed integer in XTR, for example <code>+100</code> or <code>-50</code>.',
+    'admin_adjust_risk_prompt': '<b>Adjust risk score</b>\n\nTarget: <b>{target}</b> · <code>{target_user_id}</code>\nCurrent risk: <b>{current}</b>\n\nSend a signed integer, for example <code>+10</code> or <code>-15</code>.',
+    'admin_adjust_balance_prompt': '<b>Adjust available balance</b>\n\nTarget: <b>{target}</b> · <code>{target_user_id}</code>\n\nSend a signed integer in Sparks✨, for example <code>+100</code> or <code>-50</code>.',
     'admin_numeric_delta_invalid': 'Send a signed integer like +10 or -5.',
     'admin_risk_adjusted': 'Risk score updated.',
     'admin_balance_adjusted': 'Balance updated.',
@@ -614,6 +641,19 @@ _STAGE7_TEXTS_RU = {
     'admin_home_screen': '<b>Админка</b>\n\nВ очереди ручной проверки: <b>{queue}</b>\nЗаблокированных пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nВсего отклонённых выполнений: <b>{rejected}</b>',
     'admin_queue_button': 'Очередь проверок',
     'admin_logs_button': 'Логи админа',
+    'admin_required_chats_button': 'Обязательные подписки',
+    'admin_required_chats_empty': '<b>Обязательные подписки</b>\n\nСейчас обязательных чатов нет. Можно добавить до <b>10</b>.',
+    'admin_required_chats_screen': '<b>Обязательные подписки</b>\n\nНастроено: <b>{count}/{limit}</b>\n\n{items}',
+    'admin_required_chat_row': '• #{chat_id} · {name}\n  {link}',
+    'admin_required_chat_add_button': 'Добавить чат',
+    'admin_required_chat_remove_button': 'Удалить: {name}',
+    'admin_required_chat_add_prompt': '<b>Добавление обязательного чата</b>\n\nОтправьте одной строкой один из вариантов:\n<code>@publicchannel</code>\n<code>https://t.me/publicchannel</code>\n<code>-1001234567890 https://t.me/+invite</code>\n\nДля приватной группы сначала укажите числовой chat ID, а вторым значением инвайт-ссылку.',
+    'admin_required_chat_added': 'Обязательный чат добавлен.',
+    'admin_required_chat_removed': 'Обязательный чат удалён.',
+    'admin_required_chat_exists': 'Этот чат уже есть в списке обязательных.',
+    'admin_required_chat_limit_reached': 'В списке обязательных уже 10 чатов.',
+    'admin_required_chat_invalid': 'Неверный формат. Отправьте @username, ссылку t.me или chat_id вместе с invite link.',
+    'admin_required_chat_not_found': 'Обязательный чат не найден.',
     'admin_queue_empty': '<b>Очередь ручной проверки</b>\n\nСейчас очередь пуста.',
     'admin_queue_screen': '<b>Очередь ручной проверки</b>\n\n{items}',
     'admin_queue_line': '• #{submission_id} · {title} · {performer} · риск выполнения {risk} / риск пользователя {user_risk}',
@@ -637,8 +677,8 @@ _STAGE7_TEXTS_RU = {
     'admin_cannot_block_admin': 'Нельзя заблокировать другого администратора.',
     'admin_user_blocked': 'Пользователь заблокирован.',
     'admin_user_unblocked': 'Пользователь разблокирован.',
-    'admin_adjust_risk_prompt': '<b>Корректировка risk score</b>\n\nЦель: <b>{target}</b> · <code>{user_id}</code>\nТекущий риск: <b>{current}</b>\n\nОтправьте целое число со знаком, например <code>+10</code> или <code>-15</code>.',
-    'admin_adjust_balance_prompt': '<b>Корректировка доступного баланса</b>\n\nЦель: <b>{target}</b> · <code>{user_id}</code>\n\nОтправьте целое число со знаком в XTR, например <code>+100</code> или <code>-50</code>.',
+    'admin_adjust_risk_prompt': '<b>Корректировка risk score</b>\n\nЦель: <b>{target}</b> · <code>{target_user_id}</code>\nТекущий риск: <b>{current}</b>\n\nОтправьте целое число со знаком, например <code>+10</code> или <code>-15</code>.',
+    'admin_adjust_balance_prompt': '<b>Корректировка доступного баланса</b>\n\nЦель: <b>{target}</b> · <code>{target_user_id}</code>\n\nОтправьте целое число со знаком в Искрах✨, например <code>+100</code> или <code>-50</code>.',
     'admin_numeric_delta_invalid': 'Отправьте целое число со знаком, например +10 или -5.',
     'admin_risk_adjusted': 'Risk score обновлён.',
     'admin_balance_adjusted': 'Баланс обновлён.',
@@ -654,3 +694,581 @@ for _lang, _mapping in TEXTS.items():
     if _lang not in {'ru', 'en'}:
         for _key, _value in _STAGE7_TEXTS_EN.items():
             _mapping.setdefault(_key, _value)
+
+
+TEXTS['ru'].update({
+    'menu_campaigns': 'Создать задание',
+    'wallet_screen': """<b>Кошелёк</b>
+
+Искры для обмена: <b>{internal}</b> {internal_name}
+Бонус на запуск заданий: <b>{bonus}</b> {internal_name}
+Всего на запуск заданий: <b>{campaign_balance}</b> {internal_name}
+В холде: <b>{hold}</b> {internal_name}
+Всего заработано: <b>{earned}</b> {internal_name}
+Доступ к обмену: <b>{redeem_access}</b>
+Освобождено холдов сейчас: <b>{released}</b>""",
+    'campaign_create_intro': """<b>Создать задание</b>
+
+Выберите тип задания. Дальше бот попросит ссылку, количество и цену за 1 выполнение.
+
+Вы можете поставить цену сами, но не ниже базовой. Чем выше цена, тем выше награда исполнителю и тем быстрее обычно идёт выполнение.
+
+Стартовый бонус начисляется только на запуск заданий и не участвует в обмене/выводе.""",
+    'campaign_target_prompt': 'Отправьте ссылку, @username или t.me-ссылку цели задания.',
+    'campaign_quantity_prompt': 'Отправьте нужное количество выполнений целым числом. Базовая цена снижается от объёма автоматически.',
+    'campaign_price_prompt': 'Теперь отправьте цену за 1 выполнение в {currency}. Минимум: <b>{floor}</b>. Можно отправить <code>0</code> или <code>авто</code>, чтобы взять базовую цену.',
+    'campaign_input_screen': """<b>Создать задание</b>
+
+Шаг: <b>{step}</b>
+Тип: <b>{task_type}</b>
+Цель: <b>{target_url}</b>
+Количество: <b>{quantity}</b>
+База за 1: <b>{floor}</b> {internal_name}
+Текущая цена за 1: <b>{unit_price}</b> {internal_name}
+Награда исполнителю: <b>{reward}</b> {internal_name}""",
+    'campaign_preview_screen': """<b>Предпросмотр задания</b>
+
+Тип: <b>{task_type}</b>
+Цель: <b>{target_url}</b>
+Количество: <b>{quantity}</b>
+Базовая цена за 1: <b>{floor}</b> {internal_name}
+Ваша цена за 1: <b>{unit_price}</b> {internal_name}
+Базовая награда исполнителю: <b>{reward_floor}</b> {internal_name}
+Итоговая награда исполнителю: <b>{reward}</b> {internal_name}
+Скидка за объём: <b>{discount}%</b>
+Ориентир скорости: <b>{speed}%</b> от базовой
+Комиссия сервиса: <b>{fee}</b> {internal_name}
+Итого к списанию: <b>{budget}</b> {internal_name}""",
+    'campaigns_empty': """<b>Мои задания</b>
+
+У вас пока нет созданных заданий. Нажмите «Создать задание».""",
+    'campaigns_screen': """<b>Мои задания</b>
+
+Всего: <b>{total}</b>
+Активных: <b>{active}</b>
+На паузе: <b>{paused}</b>
+Черновиков: <b>{drafts}</b>""",
+    'campaign_create_button': 'Создать задание',
+    'back_to_campaigns': 'К моим заданиям',
+    'campaign_price_invalid': 'Введите целое число, 0 или слово «авто».',
+    'campaign_price_below_floor': 'Цена ниже базовой. Поставьте не меньше базовой цены.',
+    'campaign_price_saved': 'Цена сохранена. Проверьте предпросмотр.',
+    'rewards_screen': """<b>Обмен и пополнение</b>
+
+Искры для обмена: <b>{balance}</b> {internal_name}
+Бонусные Искры: <b>{bonus}</b> {internal_name}
+Доступ к обмену: <b>{redeem_access}</b>
+
+<b>Бусты</b>
+{items}
+
+<b>Telegram Premium</b>
+{premium_items}
+
+<b>Подарки Telegram</b>
+{gift_items}
+
+<b>Заявки на вывод</b>
+{cashout_items}
+
+Ниже доступны пакеты пополнения за Telegram Stars.""",
+    'redeem_access_yes': 'есть',
+    'redeem_access_no': 'нужен хотя бы 1 успешный платёж Stars',
+    'redeem_access_denied': 'Обмен доступен только после хотя бы одного успешного пополнения за Stars.',
+    'redeem_balance_low': 'Недостаточно Искр для этого обмена.',
+    'redeem_offer_not_found': 'Предложение больше недоступно. Обновите экран.',
+    'redeem_catalog_unavailable': 'Каталог Telegram сейчас недоступен.',
+    'redeem_telegram_failed': 'Telegram не подтвердил операцию. Искры возвращены обратно.',
+    'premium_redeem_success': 'Telegram Premium отправлен на ваш аккаунт.',
+    'gift_redeem_success': 'Подарок отправлен на ваш аккаунт.',
+    'cashout_request_created': 'Заявка на вывод создана и отправлена владельцу на ручную обработку.',
+    'reward_item_row': '• {title} · {price} {internal_name}',
+    'campaign_task_type_post_comment': 'Комментарий под постом',
+    'campaign_task_type_poll_vote': 'Голос в опросе',
+})
+
+TEXTS['en'].update({
+    'menu_campaigns': 'Create task',
+    'wallet_screen': """<b>Wallet</b>
+
+Redeemable Sparks: <b>{internal}</b> {internal_name}
+Bonus for launching tasks: <b>{bonus}</b> {internal_name}
+Total for task launch: <b>{campaign_balance}</b> {internal_name}
+In hold: <b>{hold}</b> {internal_name}
+Lifetime earned: <b>{earned}</b> {internal_name}
+Redeem access: <b>{redeem_access}</b>
+Released now: <b>{released}</b>""",
+    'campaign_price_invalid': 'Send an integer, 0 or auto.',
+    'campaign_price_below_floor': 'The price is below the base floor price.',
+    'campaign_price_saved': 'Price saved. Check the preview.',
+    'campaign_task_type_post_comment': 'Comment under post',
+    'campaign_task_type_poll_vote': 'Vote in poll',
+    'redeem_access_yes': 'available',
+    'redeem_access_no': 'need at least one successful Stars top-up',
+    'redeem_access_denied': 'Redeem is available only after at least one successful Stars top-up.',
+    'redeem_balance_low': 'Not enough Sparks for this redeem.',
+    'redeem_offer_not_found': 'Offer is no longer available. Refresh the screen.',
+    'redeem_catalog_unavailable': 'Telegram catalog is unavailable right now.',
+    'redeem_telegram_failed': 'Telegram did not confirm the operation. Sparks were refunded.',
+    'premium_redeem_success': 'Telegram Premium has been sent to your account.',
+    'gift_redeem_success': 'Gift has been sent to your account.',
+    'cashout_request_created': 'Cashout request created and sent to the owner for manual processing.',
+})
+
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        _mapping.setdefault('menu_campaigns', 'Create task')
+        _mapping.setdefault('campaign_price_invalid', 'Send an integer, 0 or auto.')
+        _mapping.setdefault('campaign_price_below_floor', 'The price is below the base floor price.')
+        _mapping.setdefault('campaign_price_saved', 'Price saved. Check the preview.')
+        _mapping.setdefault('redeem_access_yes', 'available')
+        _mapping.setdefault('redeem_access_no', 'need at least one successful Stars top-up')
+        _mapping.setdefault('redeem_access_denied', 'Redeem is available only after at least one successful Stars top-up.')
+        _mapping.setdefault('redeem_balance_low', 'Not enough Sparks for this redeem.')
+        _mapping.setdefault('redeem_offer_not_found', 'Offer is no longer available. Refresh the screen.')
+        _mapping.setdefault('redeem_catalog_unavailable', 'Telegram catalog is unavailable right now.')
+        _mapping.setdefault('redeem_telegram_failed', 'Telegram did not confirm the operation. Sparks were refunded.')
+        _mapping.setdefault('premium_redeem_success', 'Telegram Premium has been sent to your account.')
+        _mapping.setdefault('gift_redeem_success', 'Gift has been sent to your account.')
+        _mapping.setdefault('cashout_request_created', 'Cashout request created and sent to the owner for manual processing.')
+        _mapping.setdefault('campaign_task_type_post_comment', 'Comment under post')
+        _mapping.setdefault('campaign_task_type_poll_vote', 'Vote in poll')
+
+# Final runtime text overrides for the working production build.
+TEXTS['ru'].update({
+    'internal_currency_name': 'Искры✨',
+    'menu_campaigns': 'Создать задание',
+    'campaigns_screen': '<b>Ваши задания</b>\n\nВсего: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>',
+    'campaigns_empty': '<b>Ваши задания</b>\n\nПока заданий нет. Нажмите кнопку ниже, чтобы создать первое.',
+    'campaign_create_button': 'Создать задание',
+    'back_to_campaigns': 'К заданиям',
+    'profile_screen': '<b>Профиль</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nИскры для обмена: <b>{sparks}</b> {internal_name}\nБонус на запуск заданий: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Кошелёк👛</b>\n\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонус на запуск заданий: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\nОсвобождено холдов сейчас: <b>{released}</b>',
+    'wallet_topup_button': 'Пополнить за ⭐',
+    'task_row': '• {title} · {reward} {internal_name}',
+    'task_detail': '<b>{title}</b>\n\nТип: <b>{task_type}</b>\nНаграда: <b>{reward}</b> {internal_name}\nДоступно: <b>{remaining}</b>\n\nСтатус: <b>{status}</b>\n\nОткройте цель задания, затем возьмите его или отправьте подтверждение.',
+    'task_detail_manual_review': 'на ручной проверке',
+    'task_detail_rejected': 'отклонено',
+    'history_screen': '<b>История операций</b>\n\n{items}',
+    'history_row': '• {date} · {entry_type} · {amount} {currency} · {status}',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\nСуммарные бонусы сейчас:\n• Ускорение холда: <b>{hold_speed}%</b>\n• Доп. лимит активных заданий: <b>+{task_bonus}</b>\n• Приоритет очереди: <b>{priority}</b>\n• Бонус к реферальной ставке: <b>+{ref_bonus}%</b>\n\n<b>Что даёт VIP</b>\n{plans_block}\n\nМожно купить за {internal_name} или за Telegram Stars: 7 дней — <b>{stars_7}⭐</b>, 30 дней — <b>{stars_30}⭐</b>.',
+    'vip_plan_row': '• <b>{title}</b> — {price} {internal_name}\n  {desc}',
+    'rewards_screen': '<b>Искры✨ и обмен</b>\n\nИскры для обмена: <b>{balance}</b> {internal_name}\nБонусные Искры: <b>{bonus}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\n\n<b>Бонусы</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Подарки Telegram</b>\n{gift_items}\n\n<b>Вывод</b>\n{cashout_items}\n\nНиже доступны пакеты пополнения за Telegram Stars.',
+    'redeem_cashout_manual': 'Автоматический вывод звёзд ботом не показывается. Для обмена доступны Telegram Premium и Telegram Gifts. Общий вывод можно добавить позже как ручную заявку владельцу.',
+    'campaign_input_screen': '<b>Создать задание</b>\n\nШаг: <b>{step}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБаза за 1: <b>{floor}</b> {internal_name}\nТекущая цена за 1: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}',
+    'campaign_target_prompt': 'Отправьте ссылку, @username или tg:// ссылку цели.',
+    'campaign_quantity_prompt': 'Отправьте количество выполнений целым числом.',
+    'campaign_price_prompt': 'Отправьте цену за 1 выполнение. Минимум: <b>{floor}</b> {currency}. Можно поставить выше, чтобы задание выполнили быстрее.',
+    'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБазовая цена за 1: <b>{floor}</b> {internal_name}\nВаша цена за 1: <b>{unit_price}</b> {internal_name}\nБазовая награда исполнителю: <b>{reward_floor}</b> {internal_name}\nИтоговая награда исполнителю: <b>{reward}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nОриентир скорости: <b>{speed}%</b> от базы\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nИтого к списанию: <b>{budget}</b> {internal_name}',
+    'campaign_card_screen': '<b>Задание #{campaign_id}</b>\n\nНазвание: <b>{title}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nЦена заказчика за 1: <b>{unit_price}</b> {internal_name}\nКоличество: <b>{quantity}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nБюджет: <b>{budget_total}</b> {internal_name}\nПотрачено: <b>{budget_spent}</b> {internal_name}\nВ резерве: <b>{budget_reserved}</b> {internal_name}\nОстаток: <b>{budget_remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fee_total}</b> {internal_name}\nБаланс списан: <b>{funded}</b>\nСтатус: <b>{status}</b>',
+    'campaign_stats_screen': '<b>Аналитика</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nОбщий бюджет: <b>{budget}</b> {internal_name}\nПотрачено: <b>{spent}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nОстаток: <b>{remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fees}</b> {internal_name}\nФонд выплат исполнителям: <b>{rewards}</b> {internal_name}',
+    'campaign_balance_low': 'Недостаточно Искр✨ для запуска задания.',
+    'campaign_created_active': 'Задание создано и запущено.',
+    'campaign_created_draft': 'Задание сохранено в черновики.',
+    'campaign_launched': 'Задание запущено.',
+    'campaign_paused': 'Задание поставлено на паузу.',
+    'campaign_resumed': 'Задание снова активно.',
+    'campaign_status_draft': 'черновик',
+    'campaign_status_active': 'активно',
+    'campaign_status_paused': 'на паузе',
+    'campaign_status_completed': 'завершено',
+    'campaign_status_archived': 'в архиве',
+    'reward_item_row': '• {title} · {price} {internal_name}',
+    'vip_purchase_success': 'VIP успешно активирован.',
+    'vip_balance_low': 'Недостаточно Искр✨ для покупки VIP.',
+    'reward_purchase_success': 'Бонус успешно активирован.',
+    'reward_balance_low': 'Недостаточно Искр✨ для покупки бонуса.',
+    'payment_pack_not_found': 'Пакет пополнения не найден.',
+    'stars_topup_success': 'Пополнение зачислено: <b>{amount}</b> {internal_name}.',
+    'vip_stars_success': 'VIP активирован после оплаты Stars.',
+    'payment_invoice_sent': 'Telegram открыл счёт на оплату Stars.',
+    'payment_invoice_failed': 'Не удалось открыть счёт оплаты. Откройте кнопку в личном чате с ботом и попробуйте снова.',
+    'redeem_access_yes': 'открыт',
+    'redeem_access_no': 'нужно хотя бы одно успешное пополнение за ⭐',
+    'redeem_access_denied': 'Обмен доступен только после хотя бы одного успешного пополнения за ⭐.',
+    'redeem_balance_low': 'Недостаточно Искр✨ для обмена.',
+    'redeem_offer_not_found': 'Предложение больше недоступно. Обновите экран.',
+    'redeem_catalog_unavailable': 'Каталог Telegram сейчас недоступен.',
+    'redeem_telegram_failed': 'Telegram не подтвердил операцию. Искры вернулись на баланс.',
+    'premium_redeem_success': 'Telegram Premium успешно отправлен на ваш аккаунт.',
+    'gift_redeem_success': 'Подарок Telegram успешно отправлен на ваш аккаунт.',
+    'cashout_request_created': 'Заявка создана и отправлена владельцу для ручной обработки.',
+    'tx_signup_bonus': 'Стартовый бонус',
+    'tx_task_reward_hold': 'Награда за задание в холде',
+    'tx_hold_release': 'Освобождение холда',
+    'tx_campaign_funding': 'Запуск задания',
+    'tx_campaign_funding_bonus': 'Запуск задания из бонуса',
+    'tx_stars_topup': 'Пополнение за Stars',
+    'tx_vip_purchase': 'Покупка VIP',
+    'tx_reward_purchase': 'Покупка бонуса',
+    'tx_referral_reward': 'Реферальная награда',
+    'tx_gift_redeem': 'Обмен на подарок Telegram',
+    'tx_gift_refund': 'Возврат за подарок',
+    'tx_premium_redeem': 'Обмен на Telegram Premium',
+    'tx_premium_refund': 'Возврат за Premium',
+    'status_completed': 'завершено',
+    'status_hold': 'в холде',
+    'status_pending': 'ожидает',
+    'status_active': 'активно',
+    'status_rejected': 'отклонено',
+})
+
+TEXTS['en'].update({
+    'internal_currency_name': 'Sparks✨',
+    'menu_campaigns': 'Create task',
+    'wallet_topup_button': 'Top up with ⭐',
+    'payment_pack_not_found': 'Top-up pack not found.',
+    'stars_topup_success': 'Top-up credited: <b>{amount}</b> {internal_name}.',
+    'vip_stars_success': 'VIP activated after the Stars payment.',
+    'payment_invoice_sent': 'Telegram opened the Stars invoice.',
+    'payment_invoice_failed': 'Could not open the payment invoice. Open the button in the private chat with the bot and try again.',
+    'tx_signup_bonus': 'Signup bonus',
+    'tx_task_reward_hold': 'Task reward on hold',
+    'tx_hold_release': 'Hold release',
+    'tx_campaign_funding': 'Task launch',
+    'tx_campaign_funding_bonus': 'Task launch from bonus',
+    'tx_stars_topup': 'Stars top-up',
+    'tx_vip_purchase': 'VIP purchase',
+    'tx_reward_purchase': 'Boost purchase',
+    'tx_referral_reward': 'Referral reward',
+    'tx_gift_redeem': 'Telegram Gift redeem',
+    'tx_gift_refund': 'Gift refund',
+    'tx_premium_redeem': 'Telegram Premium redeem',
+    'tx_premium_refund': 'Premium refund',
+    'status_completed': 'completed',
+    'status_hold': 'on hold',
+    'status_pending': 'pending',
+    'status_active': 'active',
+    'status_rejected': 'rejected',
+})
+
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        _mapping.setdefault('internal_currency_name', 'Sparks✨')
+        _mapping.setdefault('menu_campaigns', 'Create task')
+        _mapping.setdefault('wallet_topup_button', 'Top up with ⭐')
+        _mapping.setdefault('payment_pack_not_found', 'Top-up pack not found.')
+        _mapping.setdefault('stars_topup_success', 'Top-up credited: <b>{amount}</b> {internal_name}.')
+        _mapping.setdefault('vip_stars_success', 'VIP activated after the Stars payment.')
+        _mapping.setdefault('status_completed', 'completed')
+        _mapping.setdefault('status_hold', 'on hold')
+        _mapping.setdefault('status_pending', 'pending')
+        _mapping.setdefault('status_active', 'active')
+        _mapping.setdefault('status_rejected', 'rejected')
+
+
+# Final support overrides after bugfixes.
+TEXTS['ru'].update({
+    'internal_currency_name': 'Искры✨',
+    'menu_profile': 'Профиль',
+    'menu_wallet': 'Кошелёк👛',
+    'menu_campaigns': 'Создать задание',
+    'profile_screen': '<b>Профиль</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Кошелёк👛</b>\n\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\nОсвобождено холдов сейчас: <b>{released}</b>',
+    'history_screen': '<b>История операций</b>\n\n{items}',
+    'history_row': '• {date} · {entry_type} · {amount} {currency} · {status}',
+    'tx_signup_bonus': 'Стартовый бонус',
+    'tx_task_reward_hold': 'Награда за задание в холде',
+    'tx_hold_release': 'Освобождение холда',
+    'tx_campaign_funding': 'Запуск задания',
+    'tx_campaign_funding_bonus': 'Запуск задания из бонусных Искр',
+    'tx_stars_topup': 'Пополнение за Stars',
+    'tx_vip_purchase': 'Покупка VIP',
+    'tx_reward_purchase': 'Покупка бонуса',
+    'tx_referral_reward': 'Реферальная награда',
+    'tx_gift_redeem': 'Обмен на подарок Telegram',
+    'tx_gift_refund': 'Возврат за подарок Telegram',
+    'tx_premium_redeem': 'Обмен на Telegram Premium',
+    'tx_premium_refund': 'Возврат за Premium',
+    'status_completed': 'завершено',
+    'status_hold': 'в холде',
+    'status_pending': 'ожидает',
+    'status_active': 'активно',
+    'status_rejected': 'отклонено',
+    'wallet_topup_button': 'Пополнить Искры за ⭐',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\n<b>Что даёт VIP</b>\n• ускоряет выход из холда\n• увеличивает лимит активных заданий\n• даёт приоритет в очереди\n• усиливает реферальную ставку\n\n<b>Ваши текущие бонусы</b>\n• Ускорение холда: <b>{hold_speed}%</b>\n• Доп. лимит активных заданий: <b>+{task_bonus}</b>\n• Приоритет очереди: <b>{priority}</b>\n• Бонус к реферальной ставке: <b>+{ref_bonus}%</b>\n\n<b>Тарифы</b>\n{plans_block}\n\nМожно купить за {internal_name} или за Telegram Stars: 7 дней — <b>{stars_7}⭐</b>, 30 дней — <b>{stars_30}⭐</b>.',
+    'vip_plan_row': '• <b>{title}</b> — {price} {internal_name}\n  {desc}',
+    'vip_plan_7_desc': 'Холд быстрее на 25%, +2 активных задания, приоритет 1, +2% к реферальной ставке.',
+    'vip_plan_30_desc': 'Холд быстрее на 50%, +5 активных заданий, приоритет 2, +5% к реферальной ставке.',
+    'rewards_screen': '<b>Искры✨, Premium и подарки</b>\n\nИскры для обмена: <b>{balance}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\n\n<b>Бонусы</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Подарки Telegram</b>\n{gift_items}\n\nПополнение ниже — за Telegram Stars.',
+    'redeem_cashout_manual': 'Общий автоматический вывод звёзд не показывается. Доступны реальные Telegram Premium и Telegram Gifts.',
+    'redeem_catalog_unavailable': 'Каталог Telegram сейчас недоступен.',
+    'gift_redeem_success': 'Подарок Telegram отправлен на ваш аккаунт.',
+    'premium_redeem_success': 'Telegram Premium отправлен на ваш аккаунт.',
+    'stars_topup_success': 'Пополнение зачислено: <b>{amount}</b> {internal_name}.',
+    'vip_stars_success': 'VIP активирован после оплаты Stars.',
+    'payment_invoice_sent': 'Telegram открыл счёт на оплату Stars.',
+    'payment_invoice_failed': 'Не удалось открыть счёт оплаты. Откройте кнопку в личном чате с ботом и попробуйте снова.',
+    'redeem_access_yes': 'открыт',
+    'redeem_access_no': 'нужно хотя бы одно успешное пополнение за ⭐',
+    'campaigns_screen': '<b>Ваши задания</b>\n\nВсего: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>',
+    'campaigns_empty': '<b>Ваши задания</b>\n\nПока заданий нет. Нажмите кнопку ниже, чтобы создать первое.',
+    'campaign_create_button': 'Создать задание',
+    'campaign_create_intro': '<b>Создать задание</b>\n\nВыберите тип задания для новой кампании.',
+    'campaign_input_screen': '<b>Создать задание</b>\n\nШаг: <b>{step}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБаза за 1: <b>{floor}</b> {internal_name}\nТекущая цена за 1: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}',
+    'campaign_price_prompt': 'Отправьте цену за 1 выполнение. Минимум: <b>{floor}</b> {currency}. Можно поставить выше, чтобы ускорить выполнение.',
+    'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nКоличество: <b>{quantity}</b>\nБазовая цена за 1: <b>{floor}</b> {internal_name}\nВаша цена за 1: <b>{unit_price}</b> {internal_name}\nБазовая награда исполнителю: <b>{reward_floor}</b> {internal_name}\nИтоговая награда исполнителю: <b>{reward}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nОриентир скорости: <b>{speed}%</b> от базы\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nИтого к списанию: <b>{budget}</b> {internal_name}',
+    'campaign_card_screen': '<b>Задание #{campaign_id}</b>\n\nНазвание: <b>{title}</b>\nТип: <b>{task_type}</b>\nЦель: <b>{target_url}</b>\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nЦена заказчика за 1: <b>{unit_price}</b> {internal_name}\nКоличество: <b>{quantity}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nБюджет: <b>{budget_total}</b> {internal_name}\nПотрачено: <b>{budget_spent}</b> {internal_name}\nВ резерве: <b>{budget_reserved}</b> {internal_name}\nОстаток: <b>{budget_remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fee_total}</b> {internal_name}\nБаланс списан: <b>{funded}</b>\nСтатус: <b>{status}</b>',
+    'campaign_stats_screen': '<b>Аналитика</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nОбщий бюджет: <b>{budget}</b> {internal_name}\nПотрачено: <b>{spent}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nОстаток: <b>{remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fees}</b> {internal_name}\nФонд выплат исполнителям: <b>{rewards}</b> {internal_name}',
+    'campaign_balance_low': 'Недостаточно Искр✨ для запуска задания.',
+})
+
+TEXTS['en'].update({
+    'internal_currency_name': 'Sparks✨',
+    'menu_campaigns': 'Create task',
+    'menu_wallet': 'Wallet👛',
+    'profile_screen': '<b>Profile</b>\n\nID: <code>{profile_id}</code>\nRole: <b>{role}</b>\nActive tasks: <b>{active_tasks}/{task_limit}</b>\nRedeemable Sparks: <b>{internal}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nTotal launch balance: <b>{campaign_balance}</b> {internal_name}\nIn hold: <b>{hold}</b> {internal_name}\nLifetime earned: <b>{earned}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Wallet👛</b>\n\nRedeemable Sparks: <b>{internal}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nTotal launch balance: <b>{campaign_balance}</b> {internal_name}\nIn hold: <b>{hold}</b> {internal_name}\nLifetime earned: <b>{earned}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>\nReleased now: <b>{released}</b>',
+    'wallet_topup_button': 'Top up Sparks with ⭐',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\n<b>What VIP gives</b>\n• faster hold release\n• more active task slots\n• queue priority\n• stronger referral rate\n\n<b>Your current bonuses</b>\n• Hold speed: <b>{hold_speed}%</b>\n• Extra active task slots: <b>+{task_bonus}</b>\n• Queue priority: <b>{priority}</b>\n• Referral bonus: <b>+{ref_bonus}%</b>\n\n<b>Plans</b>\n{plans_block}\n\nYou can buy VIP with {internal_name} or Telegram Stars: 7 days — <b>{stars_7}⭐</b>, 30 days — <b>{stars_30}⭐</b>.',
+    'rewards_screen': '<b>Sparks✨, Premium and gifts</b>\n\nRedeemable Sparks: <b>{balance}</b> {internal_name}\nBonus Sparks for launching tasks: <b>{bonus}</b> {internal_name}\nRedeem access: <b>{redeem_access}</b>\n\n<b>Boosts</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Telegram Gifts</b>\n{gift_items}\n\nThe packs below are paid with Telegram Stars.',
+    'redeem_cashout_manual': 'General automatic star withdrawal is hidden. Real Telegram Premium and Telegram Gifts are available.',
+})
+
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        _mapping.setdefault('internal_currency_name', 'Sparks✨')
+        _mapping.setdefault('wallet_topup_button', 'Top up Sparks with ⭐')
+
+
+# Final runtime-safe overrides
+_FINAL_RU_OVERRIDES = {
+    'internal_currency_name': 'Искры✨',
+    'bottom_nav_ready': 'Нижнее меню обновлено.',
+    'menu_campaigns': 'Создать задание',
+    'menu_stats': 'Аналитика',
+    'menu_wallet': 'Кошелёк👛',
+    'menu_history': 'История',
+    'menu_profile': 'Профиль',
+    'menu_tasks': 'Задания',
+    'menu_rewards': 'Искры✨ и обмен',
+    'campaign_unknown_type': 'Неизвестный тип',
+    'campaign_task_type_channel_subscribe': 'Подписка на канал',
+    'campaign_task_type_chat_join': 'Вступление в чат',
+    'campaign_task_type_post_view': 'Просмотр поста',
+    'campaign_task_type_bot_start': 'Запуск бота',
+    'campaign_task_type_mini_app_open': 'Открытие Mini App',
+    'campaign_task_type_post_like': 'Лайк поста',
+    'campaign_task_type_post_reaction': 'Реакция на пост',
+    'campaign_task_type_story_view': 'Просмотр истории',
+    'campaign_task_type_link_click': 'Переход по ссылке',
+    'campaign_task_type_post_share': 'Репост поста',
+    'campaign_task_type_post_comment': 'Комментарий под постом',
+    'campaign_task_type_poll_vote': 'Голос в опросе',
+    'main_menu': 'Главное меню <b>{brand}</b>\n\nЯзык: <b>{language}</b>\nРоль: <b>{role}</b>',
+    'profile_screen': '<b>Профиль</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>',
+    'wallet_screen': '<b>Кошелёк👛</b>\n\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\nОсвобождено из холда сейчас: <b>{released}</b>',
+    'tasks_screen': '<b>Доступные задания</b>\n\nАктивных сейчас: <b>{active_tasks}/{task_limit}</b>\nНиже показаны задания, которые ещё можно взять.',
+    'tasks_empty': '<b>Доступные задания</b>\n\nСейчас новых заданий нет. Зайдите позже или обновите экран.',
+    'task_detail': '<b>{title}</b>\n\nТип: <b>{task_type}</b>\nНаграда: <b>{reward}</b> {internal_name}\nОсталось: <b>{remaining}</b>\n\nСтатус: <b>{status}</b>\n\nСначала откройте цель задания, затем возьмите его и отправьте подтверждение.',
+    'proof_prompt': '<b>Подтверждение выполнения</b>\n\nОтправьте одним сообщением ссылку, @username, ID поста или краткое описание выполненного действия. Обычные задания автоматически уходят в холд, подозрительные — на ручную проверку.',
+    'history_screen': '<b>История операций</b>\n\n{items}',
+    'history_empty': 'Операций пока нет.',
+    'history_row': '• {date} · {entry_type} · {amount} {currency} · {status}',
+    'tx_signup_bonus': 'Стартовый бонус',
+    'tx_task_reward_hold': 'Награда за задание в холде',
+    'tx_hold_release': 'Освобождение холда',
+    'tx_campaign_funding': 'Запуск задания',
+    'tx_campaign_funding_bonus': 'Запуск задания из бонусных Искр',
+    'tx_stars_topup': 'Пополнение за Telegram Stars',
+    'tx_vip_purchase': 'Покупка VIP',
+    'tx_reward_purchase': 'Покупка бонуса',
+    'tx_referral_reward': 'Реферальная награда',
+    'tx_gift_redeem': 'Обмен на подарок Telegram',
+    'tx_gift_refund': 'Возврат после ошибки Telegram',
+    'tx_premium_redeem': 'Обмен на Telegram Premium',
+    'tx_premium_refund': 'Возврат после ошибки Premium',
+    'status_completed': 'завершено',
+    'status_hold': 'в холде',
+    'status_pending': 'в обработке',
+    'status_active': 'активно',
+    'status_rejected': 'отклонено',
+    'campaign_client_only': 'Этот раздел доступен только для роли заказчика.',
+    'campaigns_screen': '<b>Ваши задания</b>\n\nВсего: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\n\nНиже можно открыть карточку задания или создать новое.',
+    'campaigns_empty': '<b>Ваши задания</b>\n\nПока здесь пусто. Нажмите «Создать задание», чтобы запустить первую кампанию.',
+    'campaign_create_button': 'Создать задание',
+    'campaign_row': 'Задание #{campaign_id} · {title} · {status}',
+    'campaign_create_intro': '<b>Создать задание</b>\n\nВыберите тип задания.',
+    'campaign_input_screen': '<b>Создать задание</b>\n\nШаг: <b>{step}</b>\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nКоличество: <b>{quantity}</b>\nМинимум за 1: <b>{floor}</b> {internal_name}\nТекущая цена за 1: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}',
+    'campaign_target_prompt': 'Отправьте ссылку, @username или t.me-ссылку цели задания.',
+    'campaign_quantity_prompt': 'Отправьте количество выполнений целым числом.',
+    'campaign_price_prompt': 'Отправьте цену за 1 выполнение. Минимум: <b>{floor}</b> {currency}. Можно поставить выше, чтобы задание выполнили быстрее. Для базовой цены можно отправить <code>0</code>.',
+    'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nКоличество: <b>{quantity}</b>\nБазовая цена за 1: <b>{floor}</b> {internal_name}\nВаша цена за 1: <b>{unit_price}</b> {internal_name}\nБазовая награда исполнителю: <b>{reward_floor}</b> {internal_name}\nИтоговая награда исполнителю: <b>{reward}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nОриентир скорости: <b>{speed}%</b> от базы\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nИтого к списанию: <b>{budget}</b> {internal_name}',
+    'campaign_save_draft_button': 'Сохранить черновик',
+    'campaign_launch_now_button': 'Запустить сразу',
+    'campaign_create_cancelled': 'Создание задания отменено.',
+    'campaign_stats_screen': '<b>Аналитика</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nОбщий бюджет: <b>{budget}</b> {internal_name}\nПотрачено: <b>{spent}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nОстаток: <b>{remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fees}</b> {internal_name}\nФонд выплат исполнителям: <b>{rewards}</b> {internal_name}',
+    'vip_screen': '<b>VIP</b>\n\n{active_block}\n\nЧто даёт VIP сейчас:\n• Ускорение выхода из холда: <b>{hold_speed}%</b>\n• Дополнительные активные задания: <b>+{task_bonus}</b>\n• Приоритет очереди: <b>{priority}</b>\n• Бонус к реферальной ставке: <b>+{ref_bonus}%</b>\n\nДоступные планы:\n{plans_block}\n\nVIP можно купить за {internal_name} или за Telegram Stars.',
+    'vip_plan_row': '• <b>{title}</b> — {desc}\n  Цена: <b>{price}</b> {internal_name}',
+    'vip_no_active': 'Активного VIP пока нет.',
+    'vip_buy_button': 'Купить за {price} {internal_name}',
+    'vip_stars_success': 'VIP успешно оплачен через Telegram Stars.',
+    'rewards_screen': '<b>Искры✨ и обмен</b>\n\nИскры для обмена: <b>{balance}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\n\n<b>Бонусы</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Подарки Telegram</b>\n{gift_items}\n\nПакеты ниже оплачиваются через Telegram Stars.',
+    'reward_item_row': '• <b>{title}</b> — {price} {internal_name}',
+    'referrals_screen': '<b>Рефералы</b>\n\nВаша ссылка:\n<code>{link}</code>\n\nПриглашено: <b>{count}</b>\nЗаработано: <b>{earned}</b> {internal_name}\nТекущая реферальная ставка: <b>{rate}%</b>\n\n{items}',
+    'stars_topup_success': 'Пополнение зачислено: <b>{amount}</b> {internal_name}.',
+    'payment_invoice_sent': 'Telegram открыл счёт на оплату Stars. Завершите оплату в личном чате с ботом.',
+    'payment_invoice_failed': 'Не удалось открыть счёт оплаты Stars. Откройте бота в личном чате и попробуйте снова.',
+    'redeem_access_yes': 'открыт',
+    'redeem_access_no': 'нужно хотя бы одно успешное пополнение за ⭐',
+    'redeem_access_denied': 'Обмен доступен только после хотя бы одного успешного пополнения за Telegram Stars.',
+    'redeem_telegram_failed': 'Telegram не подтвердил операцию. Искры вернулись на баланс.',
+    'wallet_topup_button': 'Пополнить Искры за ⭐',
+}
+
+TEXTS['ru'].update(_FINAL_RU_OVERRIDES)
+TEXTS['en'].update({
+    'internal_currency_name': 'Sparks✨',
+    'payment_invoice_sent': 'Telegram opened the Stars invoice in the private chat with the bot.',
+})
+for _lang, _mapping in TEXTS.items():
+    _mapping.setdefault('bottom_nav_ready', 'Navigation is ready.')
+
+# Final runtime overrides for the current working build.
+TEXTS['ru'].update({
+    'internal_currency_name': 'Искры✨',
+    'menu_campaigns': 'Создать задание',
+    'menu_rewards': 'Искры✨ и обмен',
+    'campaign_create_button': 'Создать задание',
+    'campaigns_screen': '<b>Создать задание</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\n\nНажмите кнопку ниже, чтобы создать новое задание.',
+    'campaigns_empty': '<b>Создать задание</b>\n\nУ вас пока нет заданий. Нажмите кнопку ниже, чтобы создать первое задание.',
+    'campaign_create_intro': '<b>Создать задание</b>\n\nВыберите тип задания. Для подписок на канал и вступления в чат бот умеет проверять выполнение автоматически. Остальные типы отправляются на ручную модерацию без лишних сообщений от исполнителя.',
+    'campaign_target_prompt': 'Отправьте ссылку или @username цели задания. Для автопроверки подписок лучше использовать публичный @username или ссылку t.me.',
+    'campaign_quantity_prompt': 'Отправьте количество выполнений одним числом.',
+    'campaign_price_prompt': 'Отправьте цену за 1 выполнение в Искрах✨. Минимум: <b>{floor}</b> {currency}.',
+    'campaign_input_screen': '<b>Создание задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nКоличество: <b>{quantity}</b>\nЦена за 1 выполнение: <b>{unit_price}</b> {internal_name}\nМинимальная цена: <b>{floor}</b> {internal_name}\n\n{step}',
+    'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nКоличество: <b>{quantity}</b>\nЦена за 1 выполнение: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nБазовая награда: <b>{reward_floor}</b> {internal_name}\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nИндекс скорости: <b>{speed}%</b>\nИтоговый бюджет: <b>{budget}</b> {internal_name}\n\nСохраните как черновик или запустите сразу.',
+    'campaign_card_screen': '<b>Задание #{campaign_id}</b>\n\nНазвание: <b>{title}</b>\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nЦена за 1 выполнение: <b>{unit_price}</b> {internal_name}\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nКоличество: <b>{quantity}</b>\nВыполнено: <b>{completed}</b>\nОтклонено: <b>{rejected}</b>\nБюджет: <b>{budget_total}</b> {internal_name}\nПотрачено: <b>{budget_spent}</b> {internal_name}\nВ резерве: <b>{budget_reserved}</b> {internal_name}\nОстаток: <b>{budget_remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fee_total}</b> {internal_name}\nСтатус: <b>{status}</b>\nПополнено: <b>{funded}</b>',
+    'campaign_stats_screen': '<b>Аналитика</b>\n\nВсего заданий: <b>{total}</b>\nАктивных: <b>{active}</b>\nНа паузе: <b>{paused}</b>\nЧерновиков: <b>{drafts}</b>\nУспешных выполнений: <b>{completed}</b>\nОтклонённых: <b>{rejected}</b>\nОбщий бюджет: <b>{budget}</b> {internal_name}\nПотрачено: <b>{spent}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nОстаток: <b>{remaining}</b> {internal_name}\nКомиссия сервиса: <b>{fees}</b> {internal_name}\nФонд наград: <b>{rewards}</b> {internal_name}',
+    'profile_screen': '<b>Профиль</b>\n\nID: <code>{profile_id}</code>\nРоль: <b>{role}</b>\nАктивных заданий: <b>{active_tasks}/{task_limit}</b>\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>',
+    'tasks_screen': '<b>Задания</b>\n\nСейчас у вас активно: <b>{active_tasks}/{task_limit}</b>. Выберите задание ниже.',
+    'tasks_empty': '<b>Задания</b>\n\nСейчас новых заданий нет.',
+    'task_row': '• {title} · {reward} {internal_name}',
+    'task_detail': '<b>{title}</b>\n\nТип: <b>{task_type}</b>\nНаграда: <b>{reward}</b> {internal_name}\nОсталось мест: <b>{remaining}</b>\nСтатус: <b>{status}</b>\n\nОткройте цель, выполните действие и нажмите кнопку проверки. Для подписок бот проверяет выполнение автоматически. Остальные типы отправляются на ручную модерацию без ввода ссылки или текста.',
+    'submit_task_button': 'Проверить выполнение',
+    'task_detail_manual_review': 'на ручной проверке',
+    'task_detail_rejected': 'отклонено',
+    'proof_prompt': '<b>Проверка выполнения</b>\n\nЕсли Telegram позволяет проверить действие автоматически, бот сделает это сам. Если автопроверка недоступна для этого типа задания, выполнение уйдёт на ручную модерацию без дополнительного текста от вас.',
+    'task_auto_verified': 'Выполнение проверено автоматически. Награда отправлена в холд.',
+    'task_verification_failed': 'Бот не подтвердил выполнение. Сначала выполните задание полностью и попробуйте снова.',
+    'task_verify_unavailable': 'Автопроверка сейчас недоступна для этой цели. Выполнение отправлено на ручную модерацию.',
+    'proof_sent_manual_review': 'Выполнение отправлено на ручную модерацию.',
+    'proof_input_cancelled': 'Действие отменено.',
+    'input_cancelled': 'Действие отменено.',
+    'cancel_input_button': 'Отмена',
+    'wallet_topup_button': 'Пакеты Искр✨ за Stars',
+    'wallet_custom_topup_button': 'Своя сумма Искр✨',
+    'topup_custom_screen': '<b>Пополнение Искр✨</b>\n\nОтправьте одним сообщением, сколько Искр✨ хотите купить. Бот сам посчитает цену в Stars и выставит счёт.\n\nБазовый курс для своей суммы: <b>1 ⭐ = {rate} {internal_name}</b>. Пакеты ниже обычно выгоднее.',
+    'topup_custom_invalid': 'Укажите количество Искр✨ числом от 6 до 100000.',
+    'topup_custom_invoice_desc': 'Покупка {sparks} {internal_name} за {stars} ⭐.',
+    'wallet_screen': '<b>Кошелёк👛</b>\n\nИскры для обмена: <b>{internal}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nВсего на запуск заданий: <b>{campaign_balance}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nВсего заработано: <b>{earned}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\nОсвобождено из холда сейчас: <b>{released}</b>',
+    'history_screen': '<b>История операций</b>\n\n{items}',
+    'history_row': '• {date} · {entry_type} · {amount} {currency} · {status}',
+    'payment_invoice_sent': 'Счёт на оплату Stars отправлен. Если передумали, просто закройте окно оплаты.',
+    'payment_invoice_failed': 'Не удалось открыть счёт Stars. Проверьте, что вы нажимаете кнопку в личном чате с ботом.',
+    'vip_screen': '<b>VIP</b>\n\n<b>Что даёт VIP</b>\n• ускоряет выход наград из холда\n• увеличивает лимит активных заданий\n• повышает приоритет в очереди\n• усиливает реферальную ставку\n\n<b>Активные бонусы сейчас</b>\nСкорость холда: <b>{hold_speed}%</b>\nДоп. активные задания: <b>+{task_bonus}</b>\nПриоритет: <b>{priority}</b>\nБонус к рефералам: <b>{ref_bonus}</b>\n\n<b>Активные VIP</b>\n{active_block}\n\n<b>Покупка за Искры✨</b>\n{plans_block}\n\n<b>Покупка за Stars</b>\n• VIP 7 дней — <b>{stars_7} ⭐</b>\n• VIP 30 дней — <b>{stars_30} ⭐</b>',
+    'vip_no_active': 'Сейчас активного VIP нет.',
+    'vip_plan_row': '• {title} — {desc} · {price} {internal_name}',
+    'vip_active_row': '• {title} до {expires_at}',
+    'rewards_screen': '<b>Искры✨ и обмен</b>\n\nИскры для обмена: <b>{balance}</b> {internal_name}\nБонусные Искры для запуска: <b>{bonus}</b> {internal_name}\nДоступ к обмену: <b>{redeem_access}</b>\n\n<b>Бонусы за Искры✨</b>\n{items}\n\n<b>Telegram Premium</b>\n{premium_items}\n\n<b>Telegram подарки</b>\n{gift_items}\n\n<b>Вывод</b>\n{cashout_items}',
+    'redeem_cashout_manual': 'Вывод доступен владельцу проекта вручную после проверки. Сначала нужно хотя бы один раз пополнить баланс за Stars.',
+    'tx_signup_bonus': 'Стартовый бонус',
+    'tx_task_reward_hold': 'Награда за задание в холде',
+    'tx_hold_release': 'Выход из холда',
+    'tx_campaign_funding': 'Запуск задания',
+    'tx_campaign_funding_bonus': 'Запуск задания из бонуса',
+    'tx_stars_topup': 'Пополнение за Stars',
+    'tx_vip_purchase': 'Покупка VIP',
+    'tx_reward_purchase': 'Покупка бонуса',
+    'tx_referral_reward': 'Реферальная награда',
+    'tx_gift_redeem': 'Обмен на подарок',
+    'tx_gift_refund': 'Возврат за подарок',
+    'tx_premium_redeem': 'Обмен на Premium',
+    'tx_premium_refund': 'Возврат за Premium',
+    'status_completed': 'завершено',
+    'status_hold': 'в холде',
+    'status_pending': 'ожидает',
+    'status_active': 'активно',
+    'status_rejected': 'отклонено',
+    'campaign_task_type_channel_subscribe': 'Подписка на канал',
+    'campaign_task_type_chat_join': 'Вступление в чат',
+    'campaign_task_type_post_view': 'Просмотр поста',
+    'campaign_task_type_bot_start': 'Запуск бота',
+    'campaign_task_type_mini_app_open': 'Открытие Mini App',
+    'campaign_task_type_post_like': 'Лайк',
+    'campaign_task_type_post_reaction': 'Реакция',
+    'campaign_task_type_story_view': 'Просмотр истории',
+    'campaign_task_type_link_click': 'Переход по ссылке',
+    'campaign_task_type_post_share': 'Репост',
+    'campaign_task_type_post_comment': 'Комментарий',
+    'campaign_task_type_poll_vote': 'Голос в опросе',
+})
+
+TEXTS['en'].update({
+    'internal_currency_name': 'Sparks✨',
+    'wallet_custom_topup_button': 'Custom Sparks✨ amount',
+    'topup_custom_screen': '<b>Top up Sparks✨</b>\n\nSend one number with the amount of Sparks✨ you want to buy. The bot will calculate the price in Stars and send the invoice.\n\nBase custom rate: <b>1 ⭐ = {rate} {internal_name}</b>. Preset packs are usually cheaper.',
+    'topup_custom_invalid': 'Send a number from 6 to 100000.',
+    'topup_custom_invoice_desc': 'Purchase of {sparks} {internal_name} for {stars} ⭐.',
+    'input_cancelled': 'Action cancelled.',
+    'cancel_input_button': 'Cancel',
+    'task_auto_verified': 'Task verified automatically. Reward placed into hold.',
+    'task_verification_failed': 'The bot could not confirm task completion yet. Finish the task and try again.',
+    'task_verify_unavailable': 'Automatic verification is unavailable for this target right now. The task was sent to manual review.',
+})
+
+TEXTS['ru'].update({
+    'task_verify_manual_only': 'Это действие Telegram не умеет подтверждать автоматически. Задание отправлено на ручную модерацию.',
+    'task_comment_not_found': 'Комментарий пока не найден автоматически. Задание отправлено на ручную модерацию.',
+    'task_reaction_not_found': 'Реакция пока не найдена автоматически. Задание отправлено на ручную модерацию.',
+    'task_poll_vote_not_found': 'Голос в опросе пока не найден автоматически. Задание отправлено на ручную модерацию.',
+    'task_bot_start_not_found': 'Запуск бота пока не найден автоматически. Задание отправлено на ручную модерацию.',
+    'task_mini_app_not_found': 'Открытие Mini App пока не найдено автоматически. Задание отправлено на ручную модерацию.',
+    'bottom_nav_ready': 'Нижнее меню готово.',
+})
+
+TEXTS['en'].update({
+    'task_verify_manual_only': 'Telegram cannot confirm this action automatically. The task was sent to manual review.',
+    'task_comment_not_found': 'The comment was not found automatically yet. The task was sent to manual review.',
+    'task_reaction_not_found': 'The reaction was not found automatically yet. The task was sent to manual review.',
+    'task_poll_vote_not_found': 'The poll vote was not found automatically yet. The task was sent to manual review.',
+    'task_bot_start_not_found': 'The bot start was not found automatically yet. The task was sent to manual review.',
+    'task_mini_app_not_found': 'The Mini App opening was not found automatically yet. The task was sent to manual review.',
+    'bottom_nav_ready': 'Bottom menu is ready.',
+})
+
+
+for _lang in ('ru', 'en'):
+    TEXTS.setdefault(_lang, {})
+
+TEXTS['ru'].update({
+    'campaign_target_require_bot_in_chat': 'Бот должен состоять в целевом чате или канале, иначе проверка задания не будет надёжной.',
+    'campaign_target_require_admin_rights': 'Для реакций и контроля участников дайте боту админ-права в целевом чате.',
+    'campaign_target_require_post_link': 'Для этого типа нужен прямой линк на пост / сообщение, а не только @username.',
+    'campaign_target_require_bot_start': 'Укажите ссылку вида https://t.me/ИмяБота?start=метка. Без параметра start бот не сможет честно проверить запуск.',
+    'campaign_target_require_miniapp_senddata': 'Укажите ссылку Mini App с параметром startapp, например https://t.me/ИмяБота/app?startapp=promo42. Внутри Mini App после открытия нужно вызвать Telegram.WebApp.sendData(JSON.stringify({"boostora":"mini_app_open","hint":"promo42"})).',
+    'campaign_target_chat_ref_required': 'Для этого задания нужна ссылка или @username целевого чата / канала.',
+    'campaign_target_message_link_required': 'Для этого задания нужна прямая ссылка на конкретный пост или сообщение.',
+    'campaign_target_bot_not_in_chat': 'Бот должен быть добавлен в целевой чат или канал, иначе это задание создать нельзя.',
+    'campaign_target_admin_recommended': 'Цель сохранена. Для реакций и контроля участников лучше сразу выдать боту админ-права.',
+    'campaign_target_admin_required': 'Для этого типа задания бот должен быть администратором целевого чата или канала.',
+    'campaign_target_bot_start_invalid': 'Для запуска бота нужна ссылка с параметром start: https://t.me/ИмяБота?start=метка',
+    'campaign_target_mini_app_invalid': 'Для Mini App нужна ссылка с параметром startapp и интеграция Telegram.WebApp.sendData внутри приложения.',
+    'campaign_target_saved_miniapp': 'Цель сохранена. Не забудьте отправлять WebApp.sendData из Mini App, иначе автопроверка не сработает.',
+})
+
+TEXTS['en'].update({
+    'campaign_target_require_bot_in_chat': 'The bot must be inside the target chat or channel, otherwise verification will not be reliable.',
+    'campaign_target_require_admin_rights': 'For reactions and member control, grant the bot admin rights in the target chat.',
+    'campaign_target_require_post_link': 'This task type requires a direct link to a post or message, not only @username.',
+    'campaign_target_require_bot_start': 'Use a link like https://t.me/BotUsername?start=marker. Without the start parameter the bot cannot verify launch honestly.',
+    'campaign_target_require_miniapp_senddata': 'Use a Mini App link with startapp, for example https://t.me/BotUsername/app?startapp=promo42. Inside the Mini App call Telegram.WebApp.sendData(JSON.stringify({"boostora":"mini_app_open","hint":"promo42"})) after opening.',
+    'campaign_target_chat_ref_required': 'This task requires a target chat/channel link or @username.',
+    'campaign_target_message_link_required': 'This task requires a direct link to a specific post or message.',
+    'campaign_target_bot_not_in_chat': 'The bot must be added to the target chat or channel before this task can be created.',
+    'campaign_target_admin_recommended': 'Target saved. For reactions and member control it is better to grant the bot admin rights.',
+    'campaign_target_admin_required': 'For this task type the bot must be an administrator in the target chat or channel.',
+    'campaign_target_bot_start_invalid': 'Bot start tasks require a link with start parameter: https://t.me/BotUsername?start=marker',
+    'campaign_target_mini_app_invalid': 'Mini App tasks require a link with startapp and Telegram.WebApp.sendData integration inside the app.',
+    'campaign_target_saved_miniapp': 'Target saved. Do not forget to send WebApp.sendData from the Mini App, otherwise auto verification will fail.',
+})

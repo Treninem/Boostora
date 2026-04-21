@@ -1,5 +1,8 @@
+import os
+import shutil
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator, Sequence, TypeVar
 
@@ -29,6 +32,7 @@ CREATE TABLE IF NOT EXISTS wallets (
     available_balance INTEGER NOT NULL DEFAULT 0,
     hold_balance INTEGER NOT NULL DEFAULT 0,
     internal_balance INTEGER NOT NULL DEFAULT 0,
+    bonus_balance INTEGER NOT NULL DEFAULT 0,
     lifetime_earned INTEGER NOT NULL DEFAULT 0,
     total_withdrawn INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -61,6 +65,11 @@ CREATE TABLE IF NOT EXISTS campaigns (
     task_type TEXT NOT NULL,
     target_url TEXT NOT NULL,
     reward_amount INTEGER NOT NULL DEFAULT 0,
+    unit_price INTEGER NOT NULL DEFAULT 0,
+    reward_budget_total INTEGER NOT NULL DEFAULT 0,
+    service_fee_total INTEGER NOT NULL DEFAULT 0,
+    pricing_json TEXT,
+    is_funded INTEGER NOT NULL DEFAULT 0,
     total_quantity INTEGER NOT NULL DEFAULT 0,
     completed_quantity INTEGER NOT NULL DEFAULT 0,
     rejected_quantity INTEGER NOT NULL DEFAULT 0,
@@ -100,6 +109,7 @@ CREATE TABLE IF NOT EXISTS holds (
     user_id INTEGER NOT NULL,
     submission_id INTEGER,
     amount INTEGER NOT NULL,
+    currency_code TEXT NOT NULL DEFAULT 'XTR',
     status TEXT NOT NULL DEFAULT 'active',
     release_at TEXT NOT NULL,
     released_at TEXT,
@@ -181,6 +191,72 @@ CREATE TABLE IF NOT EXISTS input_sessions (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS required_chats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_ref TEXT NOT NULL UNIQUE,
+    join_link TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS app_meta (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS redemptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    reference TEXT,
+    stars_cost INTEGER NOT NULL DEFAULT 0,
+    sparks_cost INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'pending',
+    note TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+
+CREATE TABLE IF NOT EXISTS observed_messages (
+    chat_ref TEXT NOT NULL,
+    chat_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    message_kind TEXT NOT NULL DEFAULT 'message',
+    poll_id TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (chat_id, message_id)
+);
+
+CREATE TABLE IF NOT EXISTS activity_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    activity_type TEXT NOT NULL,
+    chat_ref TEXT,
+    chat_id INTEGER,
+    message_id INTEGER,
+    parent_message_id INTEGER,
+    poll_id TEXT,
+    target_value TEXT,
+    payload_json TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS bot_chats (
+    chat_id INTEGER PRIMARY KEY,
+    chat_ref TEXT NOT NULL,
+    title TEXT,
+    chat_type TEXT NOT NULL DEFAULT 'group',
+    username TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    can_post INTEGER NOT NULL DEFAULT 1,
+    last_seen_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 '''
 
 INDEXES = '''
@@ -196,6 +272,13 @@ CREATE INDEX IF NOT EXISTS idx_vip_user_active ON vip_subscriptions(user_id, is_
 CREATE INDEX IF NOT EXISTS idx_admin_logs_target ON admin_logs(target_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_risk_events_user_created ON risk_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ui_sessions_chat_message ON ui_sessions(chat_id, message_id);
+CREATE INDEX IF NOT EXISTS idx_required_chats_ref ON required_chats(chat_ref);
+CREATE INDEX IF NOT EXISTS idx_redemptions_user_status ON redemptions(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_observed_messages_chat_message ON observed_messages(chat_ref, message_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_user_type_created ON activity_events(user_id, activity_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_chat_message ON activity_events(chat_ref, message_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_poll_id ON activity_events(poll_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bot_chats_active ON bot_chats(is_active, can_post, chat_type, updated_at DESC);
 
 '''
 
@@ -235,14 +318,194 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, 'users', 'status', "TEXT NOT NULL DEFAULT 'active'")
     _ensure_column(connection, 'users', 'risk_score', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'users', 'referred_by_user_id', 'INTEGER')
+    _ensure_column(connection, 'campaigns', 'unit_price', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'campaigns', 'reward_budget_total', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'campaigns', 'service_fee_total', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'campaigns', 'pricing_json', 'TEXT')
+    _ensure_column(connection, 'campaigns', 'is_funded', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'wallets', 'bonus_balance', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'holds', 'currency_code', "TEXT NOT NULL DEFAULT 'XTR'")
 
 
 
-def init_db() -> None:
+
+
+def _looks_like_sqlite_file(path: Path) -> bool:
+    try:
+        if not path.exists() or not path.is_file():
+            return False
+        if path.stat().st_size == 0:
+            return False
+        with path.open('rb') as file:
+            header = file.read(16)
+        return header == b'SQLite format 3\x00'
+    except Exception:
+        return False
+
+
+def _is_valid_sqlite_database(path: Path) -> bool:
+    if not _looks_like_sqlite_file(path):
+        return False
+    try:
+        connection = sqlite3.connect(path)
+        try:
+            row = connection.execute('PRAGMA integrity_check').fetchone()
+            return bool(row) and str(row[0]).lower() == 'ok'
+        finally:
+            connection.close()
+    except Exception:
+        return False
+
+
+def _quarantine_invalid_db(path: Path) -> Path | None:
+    try:
+        if not path.exists():
+            return None
+        bad_dir = Path(settings.data_dir) / 'invalid-db'
+        bad_dir.mkdir(parents=True, exist_ok=True)
+        stamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        target = bad_dir / f"{path.stem}_{stamp}{path.suffix}.bad"
+        shutil.move(str(path), str(target))
+        return target
+    except Exception:
+        return None
+
+
+def _ensure_valid_target_db() -> None:
+    target = Path(settings.db_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        return
+    if target.stat().st_size == 0:
+        try:
+            target.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return
+    if _is_valid_sqlite_database(target):
+        return
+    _quarantine_invalid_db(target)
+
+
+
+def _candidate_restore_paths() -> list[Path]:
+    db_name = Path(settings.db_path).name
+    candidates = [
+        Path(settings.db_path),
+        Path(settings.data_dir) / db_name,
+        Path.home() / '.boostora-data' / db_name,
+        Path('/data') / db_name,
+        Path('/storage') / db_name,
+        Path('/app') / db_name,
+        Path('/app/storage') / db_name,
+        Path('boostora.db'),
+        Path('storage') / db_name,
+    ]
+    backups_dir = Path(settings.data_dir) / 'backups'
+    if backups_dir.exists():
+        candidates.extend(sorted(backups_dir.glob(f"{Path(db_name).stem}_*{Path(db_name).suffix}.bak"), reverse=True))
+    unique: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        try:
+            key = str(candidate.resolve()) if candidate.exists() else str(candidate)
+        except Exception:
+            key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(candidate)
+    return unique
+
+
+def ensure_persistent_db_file() -> None:
+    target = Path(settings.db_path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_valid_target_db()
+    if target.exists() and _is_valid_sqlite_database(target):
+        return
+
+    best_source: Path | None = None
+    best_mtime = -1.0
+    for candidate in _candidate_restore_paths():
+        if candidate == target:
+            continue
+        try:
+            if _is_valid_sqlite_database(candidate):
+                mtime = candidate.stat().st_mtime
+                if mtime > best_mtime:
+                    best_mtime = mtime
+                    best_source = candidate
+        except Exception:
+            continue
+
+    if best_source is None:
+        return
+
+    try:
+        shutil.copy2(best_source, target)
+    except Exception:
+        return
+
+
+def mirror_db_to_legacy_locations() -> None:
+    source = Path(settings.db_path)
+    if not _is_valid_sqlite_database(source):
+        return
+
+    legacy_candidates = [
+        Path('/app/storage') / source.name,
+        Path('storage') / source.name,
+    ]
+    for candidate in legacy_candidates:
+        try:
+            candidate.parent.mkdir(parents=True, exist_ok=True)
+            if candidate.resolve() == source.resolve():
+                continue
+            shutil.copy2(source, candidate)
+        except Exception:
+            continue
+
+
+def create_startup_backup(max_files: int = 5) -> None:
+    db_path = Path(settings.db_path)
+    if not _is_valid_sqlite_database(db_path):
+        return
+    backup_dir = Path(settings.data_dir) / 'backups'
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    backup_path = backup_dir / f"{db_path.stem}_{stamp}{db_path.suffix}.bak"
+    try:
+        shutil.copy2(db_path, backup_path)
+    except Exception:
+        return
+    backups = sorted(backup_dir.glob(f"{db_path.stem}_*{db_path.suffix}.bak"), reverse=True)
+    for extra in backups[max_files:]:
+        try:
+            extra.unlink()
+        except Exception:
+            pass
+def _apply_schema() -> None:
     with get_connection() as connection:
         connection.executescript(SCHEMA)
         _run_migrations(connection)
         connection.executescript(INDEXES)
+
+
+def init_db() -> None:
+    ensure_persistent_db_file()
+    create_startup_backup()
+    try:
+        _apply_schema()
+    except sqlite3.DatabaseError as error:
+        message = str(error).lower()
+        if 'file is not a database' not in message and 'database disk image is malformed' not in message:
+            raise
+        target = Path(settings.db_path)
+        _quarantine_invalid_db(target)
+        ensure_persistent_db_file()
+        _apply_schema()
+    mirror_db_to_legacy_locations()
 
 
 
@@ -261,19 +524,24 @@ def fetch_all(query: str, params: Sequence[Any] = ()) -> list[sqlite3.Row]:
 def execute(query: str, params: Sequence[Any] = ()) -> int:
     with get_connection() as connection:
         cursor = connection.execute(query, params)
-        return int(cursor.lastrowid or 0)
+        result = int(cursor.lastrowid or 0)
+    mirror_db_to_legacy_locations()
+    return result
 
 
 
 def execute_many(query: str, params_list: list[Sequence[Any]]) -> None:
     with get_connection() as connection:
         connection.executemany(query, params_list)
+    mirror_db_to_legacy_locations()
 
 
 
 def run_in_transaction(callback: Callable[[sqlite3.Connection], T]) -> T:
     with get_connection() as connection:
-        return callback(connection)
+        result = callback(connection)
+    mirror_db_to_legacy_locations()
+    return result
 
 
 

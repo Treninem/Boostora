@@ -2,12 +2,15 @@ from telebot.types import User
 
 from app import db
 from app.config import settings
+from app.services.economy import INTERNAL_CURRENCY_NAME_RU, SIGNUP_BONUS_SPARKS
+from app.services.wallets import WalletService
 from app.texts import LANGUAGES, ROLE_CLIENT, ROLE_PERFORMER, TEXTS
 
 
 class UserService:
     @staticmethod
     def ensure_user(telegram_user: User, referred_by_user_id: int | None = None) -> None:
+        existing = db.get_user(telegram_user.id)
         db.upsert_user(
             user_id=telegram_user.id,
             username=telegram_user.username,
@@ -16,6 +19,13 @@ class UserService:
             referred_by_user_id=referred_by_user_id,
         )
         db.ensure_wallet(telegram_user.id)
+        if existing is None:
+            WalletService.credit_bonus_balance(
+                telegram_user.id,
+                SIGNUP_BONUS_SPARKS,
+                entry_type='signup_bonus',
+                note='Welcome campaign bonus for first registration',
+            )
 
     @staticmethod
     def get_or_create_user(telegram_user: User, referred_by_user_id: int | None = None):
@@ -56,10 +66,13 @@ class UserService:
         return str(user['status']) if user and user['status'] else 'active'
 
     @staticmethod
-    def t(user_id: int, key: str, **kwargs) -> str:
-        language = UserService.get_language(user_id)
-        template = TEXTS.get(language, TEXTS['ru']).get(key) or TEXTS['en'].get(key) or TEXTS['ru'][key]
-        return template.format(**kwargs)
+    def t(viewer_id: int, key: str, **kwargs) -> str:
+        language = UserService.get_language(viewer_id)
+        template = TEXTS.get(language, TEXTS['ru']).get(key) or TEXTS['en'].get(key) or TEXTS['ru'].get(key) or key
+        class _SafeDict(dict):
+            def __missing__(self, item):
+                return '{' + item + '}'
+        return template.format_map(_SafeDict(**kwargs))
 
     @staticmethod
     def role_label(user_id: int, role: str) -> str:
@@ -73,6 +86,15 @@ class UserService:
     @staticmethod
     def internal_currency_label(user_id: int) -> str:
         return UserService.t(user_id, 'internal_currency_name')
+
+    @staticmethod
+    def owner_id() -> int | None:
+        return settings.admin_ids[0] if settings.admin_ids else None
+
+    @staticmethod
+    def is_owner(user_id: int) -> bool:
+        owner_id = UserService.owner_id()
+        return owner_id is not None and int(user_id) == int(owner_id)
 
     @staticmethod
     def is_admin(user_id: int) -> bool:
