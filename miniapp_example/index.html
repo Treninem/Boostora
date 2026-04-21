@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Boostora Mini App Example</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>body{font-family:Arial,sans-serif;padding:24px;background:#111;color:#fff}button{padding:12px 18px;border:0;border-radius:12px;font-size:16px}code{background:#222;padding:2px 6px;border-radius:6px}</style>
+</head>
+<body>
+  <h1>Boostora Mini App</h1>
+  <p>Пример интеграции для задания <b>Открытие Mini App</b>.</p>
+  <p>После открытия отправьте событие обратно в бота через <code>Telegram.WebApp.sendData(...)</code>.</p>
+  <button id="send">Отправить WebApp.sendData</button>
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) tg.ready();
+    document.getElementById('send').addEventListener('click', function () {
+      const hint = new URLSearchParams(window.location.search).get('startapp') || 'demo_hint';
+      const payload = { boostora: 'mini_app_open', hint, ts: Date.now() };
+      if (tg) {
+        tg.sendData(JSON.stringify(payload));
+        tg.close();
+      } else {
+        alert(JSON.stringify(payload));
+      }
+    });
+  </script>
+</body>
+</html>
