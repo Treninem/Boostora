@@ -1,80 +1,56 @@
-# Boostora — рабочая сборка
+# Boostora — этап 8
 
-## Что изменено в этой версии
-
-- автопроверка заданий стала строже:
-  - подписка на канал и вступление в чат — через `getChatMember`;
-  - комментарии — по сообщениям пользователя в отслеживаемом чате;
-  - реакции — по `message_reaction` updates;
-  - голосование в опросе — по `poll_answer` updates;
-  - запуск бота — по deep-link старту, который бот реально увидел;
-  - Mini App — по `web_app_data`, если Mini App отправляет событие обратно в бот.
-- типы действий, которые Telegram не отдаёт боту как надёжное персональное событие, не засчитываются «на слово» и отправляются на ручную модерацию.
-- база данных вынесена в отдельную папку данных и получает резервную копию на запуске.
-- добавлена аккуратная автопубликация рекламы в добавленных обязательных чатах с большим интервалом без спама.
+Финальная сборка проекта после доскональной проверки структуры, БД, пользовательских сценариев, админки, антифрода и упаковки под запуск на Bothost.
 
 ## Запуск
 
-1. Загрузите файлы в корень проекта.
-2. Создайте `.env` по примеру `.env.example`.
+1. Загрузите файлы в корень проекта на Bothost.
+2. Создайте `.env` на основе `.env.example`.
 3. Установите зависимости из `requirements.txt`.
 4. Команда запуска: `python3 main.py`
+5. Для админки используйте `/admin` от пользователя из `ADMIN_IDS`.
 
-## Рекомендуемый `.env`
+## Что входит в финальную сборку
 
-```env
-BOT_TOKEN=PASTE_BOT_TOKEN_HERE
-ADMIN_IDS=2097006037
-BOT_DATA_DIR=storage
-DB_PATH=boostora.db
-BRAND_NAME=Boostora
-SUPPORT_USERNAME=@BoostoraBot
-DEFAULT_HOLD_HOURS=24
-DEMO_HOLD_MINUTES=3
-ENABLE_DEMO_TOPUP=1
-ENABLE_XTR_PAYMENTS=1
-REQUIRED_CHAT_ID=@Boostorachat
-REQUIRED_CHAT_INVITE_LINK=https://t.me/Boostorachat
-PROMO_INTERVAL_HOURS=18
-RUN_COMMAND=python3 main.py
-```
+- стартовый поток `/start`;
+- выбор языка и роли;
+- обязательная подписка на чат;
+- inline-навигация с обновлением текущего сообщения;
+- кабинет исполнителя: задания, подтверждение, холды, кошелёк, история;
+- кабинет заказчика: кампании, статусы, аналитика;
+- VIP, награды, внутренняя валюта, рефералы;
+- админка, ручная модерация, блокировки, корректировки;
+- антифрод и перевод спорных кейсов в `manual_review`.
 
-## Сохранение данных
+## Что дополнительно вычищено на этапе 8
 
-- если `DB_PATH` указан относительным путём, бот сохраняет базу в `BOT_DATA_DIR`;
-- по умолчанию используется папка `storage`, а если на хосте есть `/data`, бот может использовать её автоматически;
-- на каждом запуске создаётся резервная копия SQLite в `BOT_DATA_DIR/backups`.
+- возвращён `.env.example` в архив;
+- удалены `__pycache__` и `.pyc` из финальной упаковки;
+- добавлены `__init__.py` в подпакеты для более чистой структуры;
+- усилена защита от битых и подменённых callback-данных;
+- скорректирована правка `risk_score`, чтобы значение не уходило ниже нуля;
+- добавлен `scripts/stage8_smoke_test.py`.
 
-## Ограничения Telegram
-
-Автопроверка работает только там, где Telegram действительно отдаёт боту подтверждаемое событие. Для реакций и изменений участников бот должен быть администратором чата и получать соответствующие update-типы.
-
-## Быстрая проверка
+## Быстрая локальная проверка
 
 ```bash
-PYTHONPATH=. BOT_TOKEN=123:abc python scripts/final_smoke_test.py
-PYTHONPATH=. BOT_TOKEN=123:abc python scripts/autocheck_promo_persistence_smoke_test.py
+python3 scripts/db_smoke_test.py
+python3 scripts/stage3_smoke_test.py
+python3 scripts/stage4_smoke_test.py
+python3 scripts/stage5_smoke_test.py
+python3 scripts/stage6_smoke_test.py
+python3 scripts/stage7_smoke_test.py
+python3 scripts/stage8_smoke_test.py
 ```
 
+Ожидаемый результат:
 
-## Проверка типов заданий
-
-- Для заданий по каналам, чатам, реакциям и комментариям бот должен быть добавлен в целевой чат или канал.
-- Для реакций, контроля участников и части служебных событий лучше выдать боту админ-права в целевом чате.
-- Для `Запуск бота` используйте ссылку с `?start=`.
-- Для `Открытие Mini App` используйте ссылку с `?startapp=` и интеграцию `Telegram.WebApp.sendData(...)`.
-- Пример Mini App лежит в `miniapp_example/index.html`.
-
-
-## Сохранение данных при обновлении через GitHub
-
-Эта сборка по умолчанию хранит базу вне каталога с кодом и старается использовать:
-
-1. `BOT_DATA_DIR`, если он указан
-2. `/data`
-3. `/storage`
-4. `/var/data/boostora`
-5. `~/.boostora-data`
-
-Если после GitHub-обновления основной файл БД не найден, бот пытается восстановить его из более старой копии или из backup-файлов.
-Рекомендуемое значение для Bothost: `BOT_DATA_DIR=/root/.boostora-data` или постоянная папка хостинга, если она у вас есть.
+```bash
+OK: stage 2 smoke test passed
+OK: stage 3 smoke test passed
+OK: stage 4 smoke test passed
+OK: stage 5 smoke test passed
+OK: stage 6 smoke test passed
+OK: stage 7 smoke test passed
+OK: stage 8 smoke test passed
+```

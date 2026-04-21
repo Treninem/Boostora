@@ -7,7 +7,7 @@ from app.services.wallets import WalletService
 VIP_PLANS = {
     'vip_7': {
         'days': 7,
-        'price': 820,
+        'price': 900,
         'hold_speed_percent': 25,
         'active_task_limit_bonus': 2,
         'priority_level': 1,
@@ -17,7 +17,7 @@ VIP_PLANS = {
     },
     'vip_30': {
         'days': 30,
-        'price': 2600,
+        'price': 2800,
         'hold_speed_percent': 50,
         'active_task_limit_bonus': 5,
         'priority_level': 2,
@@ -150,22 +150,6 @@ class VipService:
         )
         if not spent:
             return False, 'vip_balance_low'
-        VipService.create_subscription(
-            user_id,
-            plan_code,
-            int(plan['days']),
-            hold_speed_percent=int(plan['hold_speed_percent']),
-            active_task_limit_bonus=int(plan['active_task_limit_bonus']),
-            priority_level=int(plan['priority_level']),
-            referral_rate_bonus_bps=int(plan['referral_rate_bonus_bps']),
-        )
-        return True, 'vip_purchase_success'
-
-    @staticmethod
-    def purchase_plan_with_stars(user_id: int, plan_code: str) -> tuple[bool, str]:
-        plan = VIP_PLANS.get(plan_code)
-        if not plan:
-            return False, 'vip_plan_not_found'
         VipService.create_subscription(
             user_id,
             plan_code,

@@ -8,7 +8,6 @@ from app.keyboards.inline import (
     admin_home_keyboard,
     admin_input_keyboard,
     admin_logs_keyboard,
-    admin_required_chats_keyboard,
     admin_queue_keyboard,
     admin_submission_keyboard,
     blocked_keyboard,
@@ -29,16 +28,14 @@ from app.keyboards.inline import (
     subscription_keyboard,
     task_detail_keyboard,
     tasks_keyboard,
-    topup_custom_keyboard,
     vip_keyboard,
     wallet_keyboard,
 )
 from app.services.admin import AdminService
 from app.services.admin_logs import AdminLogService
 from app.services.campaigns import CampaignService
-from app.services.client_campaigns import MODE_CONFIRM, MODE_PRICE, ClientCampaignService
-from app.services.performer import PerformerService, normalize_target_url
-from app.services.redemptions import RedemptionService
+from app.services.client_campaigns import MODE_CONFIRM, ClientCampaignService
+from app.services.performer import PerformerService
 from app.services.referrals import ReferralService
 from app.services.rewards import RewardService
 from app.services.subscriptions import SubscriptionService
@@ -52,30 +49,6 @@ from app.utils.ui import render_managed_screen
 
 logger = logging.getLogger(__name__)
 
-TRANSACTION_TYPE_KEYS = {
-    'signup_bonus': 'tx_signup_bonus',
-    'task_reward_hold': 'tx_task_reward_hold',
-    'hold_release': 'tx_hold_release',
-    'campaign_funding': 'tx_campaign_funding',
-    'campaign_funding_bonus': 'tx_campaign_funding_bonus',
-    'stars_topup': 'tx_stars_topup',
-    'vip_purchase': 'tx_vip_purchase',
-    'reward_purchase': 'tx_reward_purchase',
-    'referral_reward': 'tx_referral_reward',
-    'gift_redeem': 'tx_gift_redeem',
-    'gift_refund': 'tx_gift_refund',
-    'premium_redeem': 'tx_premium_redeem',
-    'premium_refund': 'tx_premium_refund',
-}
-
-TRANSACTION_STATUS_KEYS = {
-    'completed': 'status_completed',
-    'hold': 'status_hold',
-    'pending': 'status_pending',
-    'active': 'status_active',
-    'rejected': 'status_rejected',
-}
-
 SCREEN_LANGUAGE = 'language'
 SCREEN_ROLE = 'role'
 SCREEN_REQUIRED_SUBSCRIPTION = 'required_subscription'
@@ -86,7 +59,6 @@ SCREEN_TASK_DETAIL_PREFIX = 'task:'
 SCREEN_SUBMISSION_PREFIX = 'submission:'
 SCREEN_PROOF_WAIT_PREFIX = 'proof_wait:'
 SCREEN_WALLET = 'wallet'
-SCREEN_TOPUP_CUSTOM = 'topup_custom'
 SCREEN_HISTORY = 'history'
 SCREEN_CAMPAIGNS = 'campaigns'
 SCREEN_STATS = 'stats'
@@ -105,8 +77,6 @@ SCREEN_ADMIN_SUBMISSION_PREFIX = 'admin_submission:'
 SCREEN_ADMIN_REJECT_PREFIX = 'admin_reject:'
 SCREEN_ADMIN_RISK_PREFIX = 'admin_risk:'
 SCREEN_ADMIN_BALANCE_PREFIX = 'admin_balance:'
-SCREEN_ADMIN_REQUIRED_CHATS = 'admin_required_chats'
-SCREEN_ADMIN_REQUIRED_CHAT_ADD = 'admin_required_chat_add'
 
 SECTION_TO_SCREEN = {
     'profile': SCREEN_PROFILE,
@@ -121,7 +91,6 @@ SECTION_TO_SCREEN = {
     'admin': SCREEN_ADMIN,
     'admin_queue': SCREEN_ADMIN_QUEUE,
     'admin_logs': SCREEN_ADMIN_LOGS,
-    'admin_required_chats': SCREEN_ADMIN_REQUIRED_CHATS,
 }
 
 TASK_TYPE_LABEL_KEYS = {
@@ -130,13 +99,6 @@ TASK_TYPE_LABEL_KEYS = {
     'post_view': 'campaign_task_type_post_view',
     'bot_start': 'campaign_task_type_bot_start',
     'mini_app_open': 'campaign_task_type_mini_app_open',
-    'post_like': 'campaign_task_type_post_like',
-    'post_reaction': 'campaign_task_type_post_reaction',
-    'story_view': 'campaign_task_type_story_view',
-    'link_click': 'campaign_task_type_link_click',
-    'post_share': 'campaign_task_type_post_share',
-    'post_comment': 'campaign_task_type_post_comment',
-    'poll_vote': 'campaign_task_type_poll_vote',
 }
 
 CAMPAIGN_STATUS_LABEL_KEYS = {
@@ -205,13 +167,6 @@ def _chat_id(target: Target) -> int:
 
 
 
-def _chat_username(target: Target) -> str | None:
-    if isinstance(target, CallbackQuery):
-        return getattr(target.message.chat, 'username', None)
-    return getattr(target.chat, 'username', None)
-
-
-
 def _user_id(target: Target) -> int:
     return int(target.from_user.id)
 
@@ -256,17 +211,6 @@ def _campaign_status_label(user_id: int, status: str) -> str:
 
 
 
-
-
-def _transaction_type_label(user_id: int, entry_type: str) -> str:
-    key = TRANSACTION_TYPE_KEYS.get(entry_type)
-    return UserService.t(user_id, key) if key else entry_type.replace('_', ' ')
-
-
-def _transaction_status_label(user_id: int, status: str) -> str:
-    key = TRANSACTION_STATUS_KEYS.get(status)
-    return UserService.t(user_id, key) if key else status
-
 def _perk_title(user_id: int, tier_code: str) -> str:
     if tier_code in VIP_PLANS:
         return UserService.t(user_id, str(VIP_PLANS[tier_code]['title_key']))
@@ -299,20 +243,13 @@ def _build_profile_text(user_id: int) -> str:
     return UserService.t(
         user_id,
         'profile_screen',
-        profile_id=user_id,
+        user_id=user_id,
         role=UserService.role_label(user_id, role),
         active_tasks=active_tasks,
         task_limit=task_limit,
         available=wallet['available_balance'],
-        sparks=wallet['internal_balance'],
-        internal=wallet['internal_balance'],
-        bonus=wallet['bonus_balance'],
-        campaign_balance=wallet['campaign_balance'],
-        withdrawn=wallet['total_withdrawn'],
         hold=wallet['hold_balance'],
         earned=wallet['lifetime_earned'],
-        redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
-        internal_name=UserService.internal_currency_label(user_id),
     )
 
 
@@ -359,10 +296,9 @@ def _build_task_detail_text(user_id: int, campaign_id: int) -> tuple[str, dict[s
         reward=int(campaign['reward_amount']),
         remaining=remaining,
         status=status_label,
-        internal_name=UserService.internal_currency_label(user_id),
     )
     return text, {
-        'target_url': normalize_target_url(str(campaign['target_url'])),
+        'target_url': str(campaign['target_url']),
         'can_take': can_take,
         'can_submit': can_submit,
         'submission_id': int(submission['id']) if submission else None,
@@ -376,14 +312,11 @@ def _build_wallet_text(user_id: int, released: int) -> str:
         user_id,
         'wallet_screen',
         available=wallet['available_balance'],
-        internal=wallet['internal_balance'],
-        bonus=wallet['bonus_balance'],
-        campaign_balance=wallet['campaign_balance'],
-        withdrawn=wallet['total_withdrawn'],
         hold=wallet['hold_balance'],
-        redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
+        internal=wallet['internal_balance'],
         internal_name=UserService.internal_currency_label(user_id),
         earned=wallet['lifetime_earned'],
+        withdrawn=wallet['total_withdrawn'],
         released=released,
     )
 
@@ -397,21 +330,16 @@ def _build_history_text(user_id: int) -> str:
     for row in rows[:10]:
         created_at = str(row['created_at']).replace('T', ' ')[:16]
         currency_code = str(row['currency_code'])
-        if currency_code == 'BST':
-            currency_label = UserService.internal_currency_label(user_id)
-        elif currency_code == 'XTR':
-            currency_label = '⭐'
-        else:
-            currency_label = currency_code
+        currency_label = UserService.internal_currency_label(user_id) if currency_code == 'BST' else currency_code
         items.append(
             UserService.t(
                 user_id,
                 'history_row',
                 date=created_at,
-                entry_type=_transaction_type_label(user_id, str(row['entry_type'])),
+                entry_type=str(row['entry_type']),
                 amount=int(row['amount']),
                 currency=currency_label,
-                status=_transaction_status_label(user_id, str(row['status'])),
+                status=str(row['status']),
             )
         )
     return UserService.t(user_id, 'history_screen', items='\n'.join(items))
@@ -433,50 +361,33 @@ def _build_campaigns_text(user_id: int, campaigns) -> str:
 
 
 
-
 def _build_campaign_input_text(user_id: int, step: str) -> str:
     draft = ClientCampaignService.get_draft(user_id) or {}
-    task_type_code = str(draft.get('task_type') or '')
     task_type = _task_type_label(user_id, str(draft.get('task_type') or '—'))
     target_url = str(draft.get('target_url') or '—')
-    quantity = str(draft.get('total_quantity') or '—')
-    reward_amount = str(draft.get('reward_amount') or draft.get('performer_floor_reward') or 'auto')
-    unit_price = str(draft.get('unit_price') or draft.get('client_floor_price') or 'auto')
-    floor_price = str(draft.get('client_floor_price') or '—')
-    target_prompt = UserService.t(user_id, 'campaign_target_prompt')
-    if task_type_code in {'channel_subscribe', 'chat_join', 'post_view', 'post_like', 'post_reaction', 'story_view', 'post_share', 'post_comment', 'poll_vote'}:
-        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_in_chat')
-    if task_type_code in {'channel_subscribe', 'chat_join', 'post_reaction', 'poll_vote'}:
-        target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_admin_rights')
-    if task_type_code in {'post_view', 'post_like', 'post_reaction', 'post_share', 'post_comment', 'poll_vote'}:
-        target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_post_link')
-    if task_type_code == 'bot_start':
-        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_start')
-    if task_type_code == 'mini_app_open':
-        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_miniapp_senddata')
+    reward_amount = str(draft.get('reward_amount') or '—')
+    total_quantity = str(draft.get('total_quantity') or '—')
+
     prompt_map = {
-        'target': target_prompt,
+        'target': UserService.t(user_id, 'campaign_target_prompt'),
+        'reward': UserService.t(user_id, 'campaign_reward_prompt'),
         'quantity': UserService.t(user_id, 'campaign_quantity_prompt'),
-        'price': UserService.t(user_id, 'campaign_price_prompt', floor=floor_price, currency=UserService.internal_currency_label(user_id)),
     }
     return UserService.t(
         user_id,
         'campaign_input_screen',
-        step=prompt_map.get(step, target_prompt),
+        step=prompt_map.get(step, UserService.t(user_id, 'campaign_target_prompt')),
         task_type=task_type,
         target_url=target_url,
         reward=reward_amount,
-        quantity=quantity,
-        unit_price=unit_price,
-        floor=floor_price,
-        internal_name=UserService.internal_currency_label(user_id),
+        quantity=total_quantity,
     )
 
 
 
 def _build_campaign_preview_text(user_id: int) -> str:
     draft = ClientCampaignService.get_draft(user_id)
-    if not draft:
+    if not draft or str(draft.get('mode') or '') != MODE_CONFIRM:
         return UserService.t(user_id, 'campaign_draft_missing')
     return UserService.t(
         user_id,
@@ -484,16 +395,10 @@ def _build_campaign_preview_text(user_id: int) -> str:
         task_type=_task_type_label(user_id, str(draft['task_type'])),
         target_url=str(draft['target_url']),
         reward=int(draft['reward_amount']),
-        reward_floor=int(draft['performer_floor_reward']),
         quantity=int(draft['total_quantity']),
-        unit_price=int(draft['unit_price']),
-        floor=int(draft['client_floor_price']),
-        fee=int(draft['service_fee_total']),
-        discount=int(draft['discount_percent']),
         budget=int(draft['budget_total']),
-        speed=int(draft.get('speed_index') or 100),
-        internal_name=UserService.internal_currency_label(user_id),
     )
+
 
 
 def _build_campaign_card_text(user_id: int, campaign_id: int) -> str:
@@ -515,10 +420,6 @@ def _build_campaign_card_text(user_id: int, campaign_id: int) -> str:
         budget_spent=int(campaign['budget_spent']),
         budget_reserved=int(campaign['budget_reserved']),
         budget_remaining=CampaignService.get_remaining_budget(campaign),
-        unit_price=int(campaign['unit_price'] or campaign['reward_amount']),
-        fee_total=int(campaign['service_fee_total'] or 0),
-        funded='yes' if int(campaign['is_funded'] or 0) == 1 else 'no',
-        internal_name=UserService.internal_currency_label(user_id),
         status=_campaign_status_label(user_id, str(campaign['status'])),
     )
 
@@ -539,9 +440,6 @@ def _build_stats_text(user_id: int) -> str:
         spent=stats['budget_spent'],
         reserved=stats['budget_reserved'],
         remaining=stats['budget_remaining'],
-        fees=stats['fees_total'],
-        rewards=stats['reward_budget_total'],
-        internal_name=UserService.internal_currency_label(user_id),
     )
 
 
@@ -562,17 +460,6 @@ def _build_vip_text(user_id: int) -> str:
         active_block = '\n'.join(active_lines)
     else:
         active_block = UserService.t(user_id, 'vip_no_active')
-    plans_block = '\n'.join(
-        UserService.t(
-            user_id,
-            'vip_plan_row',
-            title=UserService.t(user_id, str(plan['title_key'])),
-            desc=UserService.t(user_id, str(plan['desc_key'])),
-            price=int(plan['price']),
-            internal_name=UserService.internal_currency_label(user_id),
-        )
-        for plan in VIP_PLANS.values()
-    )
     return UserService.t(
         user_id,
         'vip_screen',
@@ -582,44 +469,44 @@ def _build_vip_text(user_id: int) -> str:
         priority=summary['priority_level'],
         ref_bonus=_format_percent(summary['referral_rate_bonus_bps'] / 100),
         internal_name=UserService.internal_currency_label(user_id),
-        plans_block=plans_block,
-        stars_7=69,
-        stars_30=199,
     )
-
 
 
 
 def _build_rewards_text(user_id: int) -> str:
     wallet = WalletService.get_summary(user_id)
-    items = []
-    for item_code, item in RewardService.get_items().items():
-        items.append(
+    item_lines = []
+    for item in RewardService.get_items().values():
+        item_lines.append(
             UserService.t(
                 user_id,
                 'reward_item_row',
                 title=UserService.t(user_id, str(item['title_key'])),
                 price=int(item['price']),
                 internal_name=UserService.internal_currency_label(user_id),
+                desc=UserService.t(user_id, str(item['desc_key'])),
             )
         )
-    premium_rows = [f"• {offer['label']} · {offer['sparks_cost']} {UserService.internal_currency_label(user_id)}" for _, offer in RedemptionService.premium_offers().items()]
-    gift_rows = [
-        f"• {gift['emoji']} Telegram Gift · {gift['sparks_cost']} {UserService.internal_currency_label(user_id)} · {gift['star_count']}⭐"
-        for gift in RedemptionService.list_gifts(limit=20)
-    ]
+    items_text = '\n\n'.join(item_lines)
     return UserService.t(
         user_id,
         'rewards_screen',
-        balance=wallet['redeemable_balance'],
-        bonus=wallet['bonus_balance'],
-        items='\n'.join(items) if items else '—',
-        premium_items='\n'.join(premium_rows) if premium_rows else UserService.t(user_id, 'redeem_catalog_unavailable'),
-        gift_items='\n'.join(gift_rows) if gift_rows else UserService.t(user_id, 'redeem_catalog_unavailable'),
-        cashout_items=UserService.t(user_id, 'redeem_cashout_manual'),
-        redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
+        balance=wallet['internal_balance'],
+        items=items_text,
     )
+
+
+
+def _display_name_from_row(row) -> str:
+    username = str(row['username'] or '').strip()
+    if username:
+        return f'@{username}'
+    first_name = str(row['first_name'] or '').strip()
+    last_name = str(row['last_name'] or '').strip()
+    full_name = ' '.join(part for part in [first_name, last_name] if part).strip()
+    return full_name or f"ID {int(row['referred_user_id'])}"
+
 
 
 def _build_referrals_text(user_id: int) -> str:
@@ -756,36 +643,6 @@ def _build_admin_logs_text(user_id: int) -> str:
     return UserService.t(user_id, 'admin_logs_screen', items='\n'.join(items))
 
 
-def _build_admin_required_chats_text(user_id: int) -> str:
-    chats = SubscriptionService.list_required_chats()
-    if not chats:
-        return UserService.t(user_id, 'admin_required_chats_empty')
-    items = []
-    for row in chats[:10]:
-        chat_ref = str(row['chat_ref'])
-        join_link = SubscriptionService.effective_join_link(chat_ref, str(row['join_link'] or '')) or '—'
-        items.append(
-            UserService.t(
-                user_id,
-                'admin_required_chat_row',
-                chat_id=int(row['id']),
-                name=SubscriptionService.display_name(chat_ref),
-                link=join_link,
-            )
-        )
-    return UserService.t(
-        user_id,
-        'admin_required_chats_screen',
-        count=len(chats),
-        limit=10,
-        items='\n'.join(items),
-    )
-
-
-def _build_admin_required_chat_add_text(user_id: int) -> str:
-    return UserService.t(user_id, 'admin_required_chat_add_prompt')
-
-
 def _build_admin_input_text(user_id: int, kind: str, target_id: int) -> str:
     if kind == 'reject':
         return UserService.t(user_id, 'admin_reject_prompt', submission_id=target_id)
@@ -793,21 +650,19 @@ def _build_admin_input_text(user_id: int, kind: str, target_id: int) -> str:
     display = f"@{str(target_user['username'])}" if target_user and target_user['username'] else f'ID {target_id}'
     if kind == 'risk':
         risk = int(target_user['risk_score']) if target_user else 0
-        return UserService.t(user_id, 'admin_adjust_risk_prompt', target=display, target_user_id=target_id, current=risk)
-    return UserService.t(user_id, 'admin_adjust_balance_prompt', target=display, target_user_id=target_id)
+        return UserService.t(user_id, 'admin_adjust_risk_prompt', target=display, user_id=target_id, current=risk)
+    return UserService.t(user_id, 'admin_adjust_balance_prompt', target=display, user_id=target_id)
 
 
 
-def resolve_next_screen(bot: telebot.TeleBot, user_id: int, chat_id: int, chat_username: str | None = None) -> str:
+def resolve_next_screen(bot: telebot.TeleBot, user_id: int, chat_id: int) -> str:
     if not UserService.can_access_bot(user_id):
         return SCREEN_BLOCKED
     role = UserService.get_role(user_id)
     if not role:
         return SCREEN_ROLE
-    if SubscriptionService.should_enforce_required_chat(chat_id, chat_username=chat_username):
-        check = SubscriptionService.get_subscription_check_result(bot, user_id)
-        if not check.is_subscribed and not check.is_unknown:
-            return SCREEN_REQUIRED_SUBSCRIPTION
+    if SubscriptionService.should_enforce_required_chat(chat_id) and not SubscriptionService.is_user_subscribed(bot, user_id):
+        return SCREEN_REQUIRED_SUBSCRIPTION
     return SCREEN_MAIN_MENU
 
 
@@ -830,7 +685,6 @@ def render_screen(
 ) -> None:
     user_id = _user_id(target)
     chat_id = _chat_id(target)
-    chat_username = _chat_username(target)
     UserService.ensure_user(target.from_user)
     if not UserService.can_access_bot(user_id) and screen_key != SCREEN_BLOCKED:
         screen_key = SCREEN_BLOCKED
@@ -841,7 +695,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_LANGUAGE,
             text=text,
@@ -854,7 +708,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ROLE,
             text=text,
@@ -867,7 +721,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REQUIRED_SUBSCRIPTION,
             text=text,
@@ -880,7 +734,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_BLOCKED,
             text=text,
@@ -889,7 +743,7 @@ def render_screen(
         return
 
     if (
-        screen_key in {SCREEN_ADMIN, SCREEN_ADMIN_QUEUE, SCREEN_ADMIN_LOGS, SCREEN_ADMIN_REQUIRED_CHATS, SCREEN_ADMIN_REQUIRED_CHAT_ADD}
+        screen_key in {SCREEN_ADMIN, SCREEN_ADMIN_QUEUE, SCREEN_ADMIN_LOGS}
         or screen_key.startswith(SCREEN_ADMIN_SUBMISSION_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_REJECT_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_RISK_PREFIX)
@@ -910,7 +764,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_MAIN_MENU,
             text=text,
@@ -923,7 +777,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_PROFILE,
             text=text,
@@ -937,7 +791,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_TASKS,
             text=text,
@@ -952,7 +806,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -979,11 +833,11 @@ def render_screen(
 
     proof_submission_id = _screen_payload(screen_key, SCREEN_PROOF_WAIT_PREFIX)
     if proof_submission_id is not None:
-        text = _prepend_notice(user_id, UserService.t(user_id, 'proof_prompt', internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
+        text = _prepend_notice(user_id, UserService.t(user_id, 'proof_prompt'), notice_key, notice_text)
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -996,24 +850,11 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_WALLET,
             text=text,
             reply_markup_builder=lambda version: wallet_keyboard(user_id, version),
-        )
-        return
-
-    if screen_key == SCREEN_TOPUP_CUSTOM:
-        text = _prepend_notice(user_id, UserService.t(user_id, 'topup_custom_screen', rate=6, internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
-        render_managed_screen(
-            bot,
-            target=target,
-            profile_id=user_id,
-            chat_id=chat_id,
-            screen_key=SCREEN_TOPUP_CUSTOM,
-            text=text,
-            reply_markup_builder=lambda version: topup_custom_keyboard(user_id, version),
         )
         return
 
@@ -1022,7 +863,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_HISTORY,
             text=text,
@@ -1035,7 +876,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_VIP,
             text=text,
@@ -1048,7 +889,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REWARDS,
             text=text,
@@ -1061,7 +902,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_REFERRALS,
             text=text,
@@ -1075,7 +916,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGNS,
             text=text,
@@ -1088,7 +929,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGN_CREATE,
             text=text,
@@ -1102,7 +943,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1115,7 +956,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_CAMPAIGN_PREVIEW,
             text=text,
@@ -1133,7 +974,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1146,7 +987,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_STATS,
             text=text,
@@ -1159,7 +1000,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN,
             text=text,
@@ -1173,7 +1014,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_QUEUE,
             text=text,
@@ -1194,7 +1035,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1207,44 +1048,11 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=SCREEN_ADMIN_LOGS,
             text=text,
             reply_markup_builder=lambda version: admin_logs_keyboard(user_id, version),
-        )
-        return
-
-    if screen_key == SCREEN_ADMIN_REQUIRED_CHATS:
-        if not UserService.is_owner(user_id):
-            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
-            return
-        chats = SubscriptionService.list_required_chats()
-        text = _prepend_notice(user_id, _build_admin_required_chats_text(user_id), notice_key, notice_text)
-        render_managed_screen(
-            bot,
-            target=target,
-            profile_id=user_id,
-            chat_id=chat_id,
-            screen_key=SCREEN_ADMIN_REQUIRED_CHATS,
-            text=text,
-            reply_markup_builder=lambda version: admin_required_chats_keyboard(user_id, version, chats),
-        )
-        return
-
-    if screen_key == SCREEN_ADMIN_REQUIRED_CHAT_ADD:
-        if not UserService.is_owner(user_id):
-            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
-            return
-        text = _prepend_notice(user_id, _build_admin_required_chat_add_text(user_id), notice_key, notice_text)
-        render_managed_screen(
-            bot,
-            target=target,
-            profile_id=user_id,
-            chat_id=chat_id,
-            screen_key=SCREEN_ADMIN_REQUIRED_CHAT_ADD,
-            text=text,
-            reply_markup_builder=lambda version: admin_input_keyboard(user_id, version, back_target='admin_required_chats'),
         )
         return
 
@@ -1254,7 +1062,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1268,7 +1076,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1282,7 +1090,7 @@ def render_screen(
         render_managed_screen(
             bot,
             target=target,
-            profile_id=user_id,
+            user_id=user_id,
             chat_id=chat_id,
             screen_key=screen_key,
             text=text,
@@ -1298,10 +1106,9 @@ def render_screen(
 def render_entry(bot: telebot.TeleBot, target: Target, *, force_language: bool = False) -> None:
     user_id = _user_id(target)
     chat_id = _chat_id(target)
-    chat_username = _chat_username(target)
     UserService.ensure_user(target.from_user)
     if force_language:
         render_screen(bot, target, SCREEN_LANGUAGE)
         return
-    next_screen = resolve_next_screen(bot, user_id, chat_id, chat_username=chat_username)
+    next_screen = resolve_next_screen(bot, user_id, chat_id)
     render_screen(bot, target, next_screen)

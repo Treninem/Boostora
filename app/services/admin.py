@@ -120,7 +120,7 @@ class AdminService:
         def _run(connection: sqlite3.Connection) -> tuple[bool, str, int | None, int]:
             submission = connection.execute(
                 '''
-                SELECT s.*, c.owner_user_id, c.id AS campaign_id, c.reward_amount AS campaign_reward_amount, c.unit_price
+                SELECT s.*, c.owner_user_id, c.id AS campaign_id, c.reward_amount AS campaign_reward_amount
                 FROM task_submissions s
                 JOIN campaigns c ON c.id = s.campaign_id
                 WHERE s.id = ?
@@ -154,8 +154,8 @@ class AdminService:
                 hold_id = int(
                     connection.execute(
                         '''
-                        INSERT INTO holds (user_id, submission_id, amount, currency_code, release_at, status)
-                        VALUES (?, ?, ?, 'BST', ?, 'active')
+                        INSERT INTO holds (user_id, submission_id, amount, release_at, status)
+                        VALUES (?, ?, ?, ?, 'active')
                         ''',
                         (performer_user_id, submission_id, reward_amount, release_at),
                     ).lastrowid
@@ -179,14 +179,14 @@ class AdminService:
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = ?
                     ''',
-                    (int(submission['unit_price'] or reward_amount), int(submission['unit_price'] or reward_amount), int(submission['unit_price'] or reward_amount), campaign_id),
+                    (reward_amount, reward_amount, reward_amount, campaign_id),
                 )
                 connection.execute(
                     '''
                     INSERT INTO transactions (
                         user_id, wallet_user_id, amount, currency_code, direction, entry_type,
                         status, related_campaign_id, related_submission_id, related_hold_id, note
-                    ) VALUES (?, ?, ?, 'BST', 'credit', 'task_reward_hold', 'hold', ?, ?, ?, ?)
+                    ) VALUES (?, ?, ?, 'XTR', 'credit', 'task_reward_hold', 'hold', ?, ?, ?, ?)
                     ''',
                     (
                         performer_user_id,
@@ -195,7 +195,7 @@ class AdminService:
                         campaign_id,
                         submission_id,
                         hold_id,
-                        'Task reward placed into sparks hold after admin approval',
+                        'Reward placed into hold after admin approval',
                     ),
                 )
                 return True, 'admin_submission_approved', performer_user_id, reward_amount
@@ -223,7 +223,7 @@ class AdminService:
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 ''',
-                (int(submission['unit_price'] or reward_amount), int(submission['unit_price'] or reward_amount), campaign_id),
+                (reward_amount, reward_amount, campaign_id),
             )
             return True, 'admin_submission_rejected', performer_user_id, 0
 

@@ -1,10 +1,11 @@
+from app.config import settings
 from app.services.vip import VipService
 from app.services.wallets import WalletService
 
 
 REWARD_ITEMS = {
     'boost_hold_3d': {
-        'price': 220,
+        'price': 250,
         'days': 3,
         'hold_speed_percent': 15,
         'active_task_limit_bonus': 0,
@@ -14,7 +15,7 @@ REWARD_ITEMS = {
         'desc_key': 'reward_hold_boost_desc',
     },
     'boost_slots_3d': {
-        'price': 320,
+        'price': 350,
         'days': 3,
         'hold_speed_percent': 0,
         'active_task_limit_bonus': 1,
@@ -24,7 +25,7 @@ REWARD_ITEMS = {
         'desc_key': 'reward_slots_boost_desc',
     },
     'boost_priority_3d': {
-        'price': 420,
+        'price': 450,
         'days': 3,
         'hold_speed_percent': 0,
         'active_task_limit_bonus': 0,
@@ -35,6 +36,8 @@ REWARD_ITEMS = {
     },
 }
 
+DEMO_TOPUP_AMOUNT = 1500
+
 
 class RewardService:
     @staticmethod
@@ -43,7 +46,17 @@ class RewardService:
 
     @staticmethod
     def claim_demo_topup(user_id: int) -> tuple[bool, str]:
-        return False, 'demo_topup_disabled'
+        if not settings.enable_demo_topup:
+            return False, 'demo_topup_disabled'
+        if WalletService.has_received_demo_internal_topup(user_id):
+            return False, 'demo_topup_already_claimed'
+        WalletService.credit_internal_balance(
+            user_id,
+            DEMO_TOPUP_AMOUNT,
+            entry_type='demo_internal_topup',
+            note='One-time demo top up for internal balance',
+        )
+        return True, 'demo_topup_success'
 
     @staticmethod
     def purchase_item(user_id: int, item_code: str) -> tuple[bool, str]:

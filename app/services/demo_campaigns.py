@@ -4,7 +4,7 @@ from app import db
 SYSTEM_OWNER_ID = -1000
 DEMO_CAMPAIGNS = [
     ('Boostora Demo · Telegram channel follow', 'channel_subscribe', 'https://t.me/durov', 12, 50),
-    ('Boostora Demo · Telegram chat join', 'chat_join', 'https://t.me/Boostorachat', 16, 40),
+    ('Boostora Demo · Telegram chat join', 'chat_join', 'https://t.me/+I8t5mJaHGh80ODJi', 16, 40),
     ('Boostora Demo · Open bot', 'bot_start', 'https://t.me/BoostoraBot', 10, 80),
     ('Boostora Demo · Open Mini App', 'mini_app_open', 'https://t.me/BoostoraBot/app', 18, 30),
 ]

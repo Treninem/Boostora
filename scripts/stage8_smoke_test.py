@@ -7,9 +7,6 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-os.environ.setdefault('BOT_TOKEN', '123:abc')
-os.environ.setdefault('ADMIN_IDS', '2097006037')
-
 required_files = [
     ROOT / 'main.py',
     ROOT / '.env.example',
@@ -28,7 +25,6 @@ for pycache in ROOT.rglob('__pycache__'):
 from app.config import settings
 from app.handlers.callbacks import _safe_int
 from app.services.admin import AdminService
-from app.services.subscriptions import SubscriptionService
 from app.services.users import UserService
 
 assert settings.run_command == 'python3 main.py'
@@ -53,18 +49,3 @@ assert current == 0
 assert UserService.get_user(user_id)['risk_score'] == 0
 
 print('OK: stage 8 smoke test passed')
-
-
-# subscription management smoke
-rows_before = SubscriptionService.list_required_chats()
-assert rows_before, 'Default required chat should be bootstrapped'
-assert any(str(row['chat_ref']) == '@Boostorachat' for row in rows_before)
-ok, key = SubscriptionService.add_required_chat('@boostora_news')
-assert ok and key == 'admin_required_chat_added'
-rows_after = SubscriptionService.list_required_chats()
-added = next(row for row in rows_after if str(row['chat_ref']) == '@boostora_news')
-ok, key = SubscriptionService.remove_required_chat(int(added['id']))
-assert ok and key == 'admin_required_chat_removed'
-assert UserService.is_owner(admin_id) is True
-
-print('OK: subscription admin smoke passed')
