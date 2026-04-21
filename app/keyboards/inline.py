@@ -2,7 +2,7 @@ from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from app.config import settings
 from app.services.client_campaigns import TASK_TYPES
-from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS
+from app.services.payments import PACK_STAR_LEVELS, SPARKS_PACKS, VIP_STARS_PLANS
 from app.services.redemptions import RedemptionService
 from app.services.rewards import RewardService
 from app.services.subscriptions import SubscriptionService
@@ -280,7 +280,7 @@ def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'wallet_topup_button'),
-            callback_data=pack_callback(version, 'topup_stars', 'spk_760'),
+            callback_data=pack_callback(version, 'go', 'rewards'),
         ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'menu_vip'),
@@ -288,6 +288,10 @@ def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
         ),
     )
     markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'wallet_custom_topup_button'),
+            callback_data=pack_callback(version, 'topup_custom', 'start'),
+        ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'menu_rewards'),
             callback_data=pack_callback(version, 'go', 'rewards'),
@@ -575,13 +579,21 @@ def rewards_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
                 callback_data=pack_callback(version, 'reward_buy', item_code),
             )
         )
-    for pack_code, pack in SPARKS_PACKS.items():
+    for stars in PACK_STAR_LEVELS:
+        pack_code = f'spk_{stars}'
+        pack = SPARKS_PACKS[pack_code]
         markup.add(
             InlineKeyboardButton(
-                text=f"{pack.sparks} {UserService.internal_currency_label(user_id)} · {pack.stars} ⭐",
+                text=f"{pack.stars} ⭐ → {pack.sparks} {UserService.internal_currency_label(user_id)}",
                 callback_data=pack_callback(version, 'topup_stars', pack_code),
             )
         )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'wallet_custom_topup_button'),
+            callback_data=pack_callback(version, 'topup_custom', 'start'),
+        )
+    )
     for months, offer in RedemptionService.premium_offers().items():
         markup.add(
             InlineKeyboardButton(
@@ -612,6 +624,22 @@ def rewards_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
             text=UserService.t(user_id, 'back_to_menu'),
             callback_data=pack_callback(version, 'go', 'main_menu'),
         )
+    )
+    return markup
+
+
+
+def topup_custom_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'cancel_input_button'),
+            callback_data=pack_callback(version, 'cancel_input', 'topup_custom'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'menu_wallet'),
+            callback_data=pack_callback(version, 'go', 'wallet'),
+        ),
     )
     return markup
 

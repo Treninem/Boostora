@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 import os
 
 from dotenv import load_dotenv
@@ -17,6 +18,7 @@ class Settings:
     bot_token: str
     admin_ids: list[int]
     db_path: str
+    data_dir: str
     brand_name: str
     support_username: str
     default_hold_hours: int
@@ -26,6 +28,7 @@ class Settings:
     required_chat_id: str
     required_chat_invite_link: str
     run_command: str
+    promo_interval_hours: int
 
 
 def _parse_admin_ids(raw_value: str) -> list[int]:
@@ -62,6 +65,24 @@ def _normalize_default_required_chat_ref(raw_value: str) -> str:
     return value
 
 
+
+
+def _resolve_data_dir() -> str:
+    explicit = os.getenv('BOT_DATA_DIR', '').strip()
+    if explicit:
+        return explicit
+    if Path('/data').exists():
+        return '/data'
+    return 'storage'
+
+
+def _resolve_db_path(raw_value: str, data_dir: str) -> str:
+    value = (raw_value or '').strip() or 'boostora.db'
+    path = Path(value)
+    if path.is_absolute():
+        return str(path)
+    return str(Path(data_dir) / path.name)
+
 def _normalize_default_required_chat_link(raw_value: str) -> str:
     value = (raw_value or '').strip()
     if not value or value == LEGACY_REQUIRED_CHAT_LINK:
@@ -71,10 +92,13 @@ def _normalize_default_required_chat_link(raw_value: str) -> str:
     return value
 
 
+_data_dir = _resolve_data_dir()
+
 settings = Settings(
     bot_token=_get_required_env('BOT_TOKEN'),
     admin_ids=_parse_admin_ids(os.getenv('ADMIN_IDS', '')),
-    db_path=os.getenv('DB_PATH', 'boostora.db').strip() or 'boostora.db',
+    db_path=_resolve_db_path(os.getenv('DB_PATH', 'boostora.db'), _data_dir),
+    data_dir=_data_dir,
     brand_name=os.getenv('BRAND_NAME', 'Boostora').strip() or 'Boostora',
     support_username=os.getenv('SUPPORT_USERNAME', '@BoostoraBot').strip() or '@BoostoraBot',
     default_hold_hours=int(os.getenv('DEFAULT_HOLD_HOURS', '24')),
@@ -84,4 +108,5 @@ settings = Settings(
     required_chat_id=_normalize_default_required_chat_ref(os.getenv('REQUIRED_CHAT_ID', DEFAULT_PUBLIC_REQUIRED_CHAT_REF)),
     required_chat_invite_link=_normalize_default_required_chat_link(os.getenv('REQUIRED_CHAT_INVITE_LINK', DEFAULT_PUBLIC_REQUIRED_CHAT_LINK)),
     run_command=os.getenv('RUN_COMMAND', 'python3 main.py').strip() or 'python3 main.py',
+    promo_interval_hours=int(os.getenv('PROMO_INTERVAL_HOURS', '18')),
 )

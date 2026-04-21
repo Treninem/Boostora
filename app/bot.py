@@ -1,6 +1,7 @@
 import logging
 import os
 import tempfile
+import threading
 import time
 
 import telebot
@@ -10,6 +11,7 @@ from app.config import settings
 from app.db import init_db
 from app.handlers.start import register_start_handlers
 from app.handlers.callbacks import register_callback_handlers
+from app.services.promo import PromoService
 
 
 LOGGER = logging.getLogger(__name__)
@@ -59,6 +61,23 @@ def create_bot() -> telebot.TeleBot:
     return bot
 
 
+
+
+def _start_promo_worker(bot: telebot.TeleBot) -> threading.Event:
+    stop_event = threading.Event()
+
+    def _worker() -> None:
+        while not stop_event.is_set():
+            try:
+                PromoService.run_due_promotions(bot)
+            except Exception:
+                LOGGER.exception('Promo worker error')
+            stop_event.wait(300)
+
+    thread = threading.Thread(target=_worker, name='promo-worker', daemon=True)
+    thread.start()
+    return stop_event
+
 def _prepare_bot(bot: telebot.TeleBot) -> None:
     try:
         bot.remove_webhook()
@@ -82,10 +101,21 @@ def run() -> None:
             continue
         bot = create_bot()
         _prepare_bot(bot)
+        promo_stop_event = _start_promo_worker(bot)
         LOGGER.info('Boostora bot started')
         try:
-            bot.infinity_polling(skip_pending=True, timeout=30, long_polling_timeout=30)
+            bot.infinity_polling(
+                skip_pending=True,
+                timeout=30,
+                long_polling_timeout=30,
+                allowed_updates=[
+                    'message', 'callback_query', 'pre_checkout_query', 'chat_member',
+                    'message_reaction', 'message_reaction_count', 'poll_answer',
+                    'channel_post', 'my_chat_member', 'edited_channel_post'
+                ],
+            )
         except ApiTelegramException as exc:
+            promo_stop_event.set()
             description = str(exc)
             if 'terminated by other getUpdates request' in description:
                 LOGGER.warning(
@@ -96,8 +126,10 @@ def run() -> None:
                 continue
             raise
         except Exception:
+            promo_stop_event.set()
             LOGGER.exception('Unexpected polling error. Retrying in 5 seconds.')
             time.sleep(5)
             continue
+        promo_stop_event.set()
         break
     _release_single_instance_lock(lock_fd)

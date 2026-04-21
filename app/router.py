@@ -29,6 +29,7 @@ from app.keyboards.inline import (
     subscription_keyboard,
     task_detail_keyboard,
     tasks_keyboard,
+    topup_custom_keyboard,
     vip_keyboard,
     wallet_keyboard,
 )
@@ -85,6 +86,7 @@ SCREEN_TASK_DETAIL_PREFIX = 'task:'
 SCREEN_SUBMISSION_PREFIX = 'submission:'
 SCREEN_PROOF_WAIT_PREFIX = 'proof_wait:'
 SCREEN_WALLET = 'wallet'
+SCREEN_TOPUP_CUSTOM = 'topup_custom'
 SCREEN_HISTORY = 'history'
 SCREEN_CAMPAIGNS = 'campaigns'
 SCREEN_STATS = 'stats'
@@ -434,21 +436,33 @@ def _build_campaigns_text(user_id: int, campaigns) -> str:
 
 def _build_campaign_input_text(user_id: int, step: str) -> str:
     draft = ClientCampaignService.get_draft(user_id) or {}
+    task_type_code = str(draft.get('task_type') or '')
     task_type = _task_type_label(user_id, str(draft.get('task_type') or '—'))
     target_url = str(draft.get('target_url') or '—')
     quantity = str(draft.get('total_quantity') or '—')
     reward_amount = str(draft.get('reward_amount') or draft.get('performer_floor_reward') or 'auto')
     unit_price = str(draft.get('unit_price') or draft.get('client_floor_price') or 'auto')
     floor_price = str(draft.get('client_floor_price') or '—')
+    target_prompt = UserService.t(user_id, 'campaign_target_prompt')
+    if task_type_code in {'channel_subscribe', 'chat_join', 'post_view', 'post_like', 'post_reaction', 'story_view', 'post_share', 'post_comment', 'poll_vote'}:
+        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_in_chat')
+    if task_type_code in {'channel_subscribe', 'chat_join', 'post_reaction', 'poll_vote'}:
+        target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_admin_rights')
+    if task_type_code in {'post_view', 'post_like', 'post_reaction', 'post_share', 'post_comment', 'poll_vote'}:
+        target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_post_link')
+    if task_type_code == 'bot_start':
+        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_start')
+    if task_type_code == 'mini_app_open':
+        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_miniapp_senddata')
     prompt_map = {
-        'target': UserService.t(user_id, 'campaign_target_prompt'),
+        'target': target_prompt,
         'quantity': UserService.t(user_id, 'campaign_quantity_prompt'),
         'price': UserService.t(user_id, 'campaign_price_prompt', floor=floor_price, currency=UserService.internal_currency_label(user_id)),
     }
     return UserService.t(
         user_id,
         'campaign_input_screen',
-        step=prompt_map.get(step, UserService.t(user_id, 'campaign_target_prompt')),
+        step=prompt_map.get(step, target_prompt),
         task_type=task_type,
         target_url=target_url,
         reward=reward_amount,
@@ -987,6 +1001,19 @@ def render_screen(
             screen_key=SCREEN_WALLET,
             text=text,
             reply_markup_builder=lambda version: wallet_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_TOPUP_CUSTOM:
+        text = _prepend_notice(user_id, UserService.t(user_id, 'topup_custom_screen', rate=6, internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_TOPUP_CUSTOM,
+            text=text,
+            reply_markup_builder=lambda version: topup_custom_keyboard(user_id, version),
         )
         return
 

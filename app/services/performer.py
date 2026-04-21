@@ -1,8 +1,10 @@
 import sqlite3
 from datetime import datetime
+from urllib.parse import urlparse
 
 from app import db
 from app.config import settings
+from app.services.activity import ActivityService, AUTO_VERIFIABLE_TASK_TYPES
 from app.services.referrals import ReferralService
 from app.services.risk import RiskService
 from app.services.vip import VipService
@@ -13,6 +15,7 @@ STATUS_APPROVED = 'approved'
 STATUS_MANUAL_REVIEW = 'manual_review'
 ACTIVE_SUBMISSION_STATUSES = (STATUS_TAKEN, 'submitted', STATUS_MANUAL_REVIEW)
 BASE_ACTIVE_TASK_LIMIT = 3
+_ALLOWED_MEMBER_STATUSES = {'creator', 'administrator', 'member'}
 
 
 def normalize_target_url(raw: str) -> str:
@@ -24,6 +27,39 @@ def normalize_target_url(raw: str) -> str:
     if value.startswith('t.me/'):
         return f"https://{value}"
     return value
+
+
+
+def _extract_chat_ref(target_url: str) -> str | None:
+    value = (target_url or '').strip()
+    if not value:
+        return None
+    if value.startswith('@'):
+        return value
+    if value.lstrip('-').isdigit():
+        return value
+    if value.startswith('t.me/'):
+        value = f'https://{value}'
+    if value.startswith('https://t.me/') or value.startswith('http://t.me/'):
+        parsed = urlparse(value)
+        path = parsed.path.strip('/').split('/')
+        if not path:
+            return None
+        head = path[0].strip()
+        if not head or head.startswith('+'):
+            return None
+        return f'@{head}'
+    return None
+
+
+
+def _is_member_status(member) -> bool:
+    status = getattr(member, 'status', '') or ''
+    if status in _ALLOWED_MEMBER_STATUSES:
+        return True
+    if status == 'restricted' and bool(getattr(member, 'is_member', False)):
+        return True
+    return False
 
 
 class PerformerService:
@@ -252,15 +288,7 @@ class PerformerService:
         return db.run_in_transaction(_run)
 
     @staticmethod
-    def submit_proof(user_id: int, submission_id: int, proof_text: str) -> tuple[bool, str, int | None]:
-        clean_proof = proof_text.strip()
-        if not clean_proof:
-            return False, 'proof_empty', None
-
-        assessment = RiskService.assess_submission(user_id, submission_id, clean_proof)
-        manual_review = bool(assessment.get('manual_review'))
-        risk_score_delta = int(assessment.get('score_delta') or 0)
-
+    def _finalize_approval(user_id: int, submission_id: int, proof_text: str, risk_score_delta: int) -> tuple[bool, str, int | None, int]:
         def _run(connection: sqlite3.Connection) -> tuple[bool, str, int | None, int]:
             submission = connection.execute(
                 'SELECT * FROM task_submissions WHERE id = ?',
@@ -281,24 +309,6 @@ class PerformerService:
             now = datetime.utcnow().isoformat(timespec='seconds')
             reward_amount = int(submission['reward_amount'])
             owner_unit_price = int(campaign['unit_price'] or campaign['reward_amount'])
-
-            if manual_review:
-                connection.execute(
-                    '''
-                    UPDATE task_submissions
-                    SET status = 'manual_review',
-                        proof_text = ?,
-                        submitted_at = ?,
-                        risk_score = ?,
-                        reviewed_at = NULL,
-                        reviewer_user_id = NULL,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                    ''',
-                    (clean_proof, now, risk_score_delta, submission_id),
-                )
-                return True, 'proof_sent_manual_review', submission_id, 0
-
             hold_minutes = PerformerService.get_hold_minutes_for_user(user_id)
             release_at = datetime.utcnow().timestamp() + hold_minutes * 60
             release_iso = datetime.utcfromtimestamp(release_at).isoformat(timespec='seconds')
@@ -315,7 +325,7 @@ class PerformerService:
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 ''',
-                (clean_proof, now, now, risk_score_delta, submission_id),
+                (proof_text, now, now, risk_score_delta, submission_id),
             )
             hold_cursor = connection.execute(
                 '''
@@ -365,9 +375,89 @@ class PerformerService:
             )
             return True, 'proof_accepted', hold_id, reward_amount
 
-        ok, result_key, result_id, reward_amount = db.run_in_transaction(_run)
+        return db.run_in_transaction(_run)
+
+    @staticmethod
+    def submit_proof(user_id: int, submission_id: int, proof_text: str) -> tuple[bool, str, int | None]:
+        clean_proof = (proof_text or '').strip()
+        if not clean_proof:
+            return False, 'proof_empty', None
+
+        assessment = RiskService.assess_submission(user_id, submission_id, clean_proof)
+        manual_review = bool(assessment.get('manual_review'))
+        risk_score_delta = int(assessment.get('score_delta') or 0)
+
+        if manual_review:
+            ok, result_key, result_id = PerformerService.send_to_manual_review(user_id, submission_id, clean_proof, risk_score_delta)
+        else:
+            ok, result_key, result_id, reward_amount = PerformerService._finalize_approval(user_id, submission_id, clean_proof, risk_score_delta)
+            if ok and reward_amount > 0:
+                ReferralService.reward_for_submission(user_id, reward_amount)
         if assessment.get('reasons'):
             RiskService.record_assessment(user_id, submission_id, assessment)
-        if ok and reward_amount > 0:
-            ReferralService.reward_for_submission(user_id, reward_amount)
         return ok, result_key, result_id
+
+    @staticmethod
+    def send_to_manual_review(user_id: int, submission_id: int, note: str, risk_score_delta: int = 0) -> tuple[bool, str, int | None]:
+        def _run(connection: sqlite3.Connection) -> tuple[bool, str, int | None]:
+            submission = connection.execute('SELECT * FROM task_submissions WHERE id = ?', (submission_id,)).fetchone()
+            if not submission or int(submission['performer_user_id']) != user_id:
+                return False, 'task_not_found', None
+            if str(submission['status']) != STATUS_TAKEN:
+                return False, 'proof_already_sent', None
+            now = datetime.utcnow().isoformat(timespec='seconds')
+            connection.execute(
+                '''
+                UPDATE task_submissions
+                SET status = 'manual_review',
+                    proof_text = ?,
+                    submitted_at = ?,
+                    risk_score = ?,
+                    reviewed_at = NULL,
+                    reviewer_user_id = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                ''',
+                (note, now, risk_score_delta, submission_id),
+            )
+            return True, 'proof_sent_manual_review', submission_id
+
+        return db.run_in_transaction(_run)
+
+    @staticmethod
+    def _verify_membership(bot, user_id: int, target_url: str) -> tuple[str, str]:
+        chat_ref = _extract_chat_ref(target_url)
+        if not chat_ref:
+            return 'unavailable', 'task_verify_unavailable'
+        api_chat_ref = int(chat_ref) if chat_ref.lstrip('-').isdigit() else chat_ref
+        try:
+            member = bot.get_chat_member(api_chat_ref, user_id)
+        except Exception:
+            return 'unavailable', 'task_verify_unavailable'
+        if _is_member_status(member):
+            return 'verified', 'task_auto_verified'
+        return 'failed', 'task_verification_failed'
+
+    @staticmethod
+    def submit_for_check(bot, user_id: int, submission_id: int) -> tuple[bool, str, int | None]:
+        submission = PerformerService.get_submission(submission_id)
+        if not submission or int(submission['performer_user_id']) != user_id:
+            return False, 'task_not_found', None
+        if str(submission['status']) != STATUS_TAKEN:
+            return False, 'proof_already_sent', None
+        campaign = PerformerService.get_campaign(int(submission['campaign_id']))
+        if not campaign:
+            return False, 'task_not_found', None
+
+        task_type = str(campaign['task_type'])
+        state, result_key = ActivityService.auto_verify_submission(bot, user_id, campaign, submission)
+        if state == 'verified':
+            ok, result_key, result_id = PerformerService.submit_proof(user_id, submission_id, f'auto_verified:{task_type}')
+            return ok, result_key, result_id
+        if state == 'failed':
+            return False, result_key, None
+
+        manual_note = f'manual_review_required:{task_type}'
+        if task_type in AUTO_VERIFIABLE_TASK_TYPES:
+            manual_note = f'auto_check_pending:{task_type}'
+        return PerformerService.send_to_manual_review(user_id, submission_id, manual_note)

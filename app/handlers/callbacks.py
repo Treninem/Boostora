@@ -12,6 +12,7 @@ from app.router import (
     SCREEN_CAMPAIGN_PREVIEW,
     SCREEN_MAIN_MENU,
     SCREEN_REQUIRED_SUBSCRIPTION,
+    SCREEN_TOPUP_CUSTOM,
     SECTION_TO_SCREEN,
     admin_balance_screen_key,
     admin_reject_screen_key,
@@ -30,7 +31,7 @@ from app.services.admin import AdminService
 from app.services.campaigns import CampaignService
 from app.services.client_campaigns import ClientCampaignService
 from app.services.input_sessions import InputSessionService
-from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS, make_payload, make_start_parameter
+from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, make_start_parameter
 from app.services.performer import PerformerService
 from app.services.redemptions import RedemptionService
 from app.services.rewards import RewardService
@@ -81,6 +82,8 @@ def _ensure_owner(bot: telebot.TeleBot, call: CallbackQuery) -> bool:
 
 def _send_stars_invoice(bot: telebot.TeleBot, call: CallbackQuery, *, title: str, description: str, payload: str, amount_stars: int) -> tuple[bool, str | None]:
     prices = [types.LabeledPrice(label=title[:32], amount=int(amount_stars))]
+    parsed = payload.split(':', 2)
+    start_parameter = make_start_parameter(*(parsed if len(parsed) == 3 else ['pay', 'invoice', str(call.from_user.id)]))
     try:
         bot.send_invoice(
             chat_id=call.from_user.id,
@@ -90,7 +93,7 @@ def _send_stars_invoice(bot: telebot.TeleBot, call: CallbackQuery, *, title: str
             provider_token='',
             currency='XTR',
             prices=prices,
-            start_parameter=make_start_parameter(*payload.split(':', 2)),
+            start_parameter=start_parameter,
         )
         return True, None
     except Exception:
@@ -224,19 +227,27 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                     bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'task_not_found'), show_alert=False)
                     render_screen(bot, call, SECTION_TO_SCREEN['tasks'])
                     return
-                InputSessionService.set_session(call.from_user.id, 'submit_proof', str(submission_id))
-                bot.answer_callback_query(call.id)
-                render_screen(bot, call, proof_wait_screen_key(submission_id))
+                ok, result_key, _ = PerformerService.submit_for_check(bot, call.from_user.id, submission_id)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                render_screen(bot, call, submission_screen_key(submission_id), notice_key=result_key)
                 return
     
             if parsed.action == 'cancel_input':
+                session = InputSessionService.get_session(call.from_user.id)
+                mode = str(session['mode']) if session else ''
                 InputSessionService.clear_session(call.from_user.id)
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'proof_input_cancelled'))
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'input_cancelled'))
                 submission_id = _safe_int(parsed.value)
-                if submission_id is None:
-                    render_screen(bot, call, SECTION_TO_SCREEN['tasks'], notice_key='proof_input_cancelled')
+                if mode.startswith('campaign_'):
+                    render_screen(bot, call, SECTION_TO_SCREEN['campaigns'], notice_key='input_cancelled')
                     return
-                render_screen(bot, call, submission_screen_key(submission_id), notice_key='proof_input_cancelled')
+                if mode == 'topup_custom_sparks' or parsed.value == 'topup_custom':
+                    render_screen(bot, call, SECTION_TO_SCREEN['wallet'], notice_key='input_cancelled')
+                    return
+                if submission_id is None:
+                    render_screen(bot, call, SECTION_TO_SCREEN['tasks'], notice_key='input_cancelled')
+                    return
+                render_screen(bot, call, submission_screen_key(submission_id), notice_key='input_cancelled')
                 return
     
             if parsed.action == 'camp_new':
@@ -305,7 +316,12 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=False)
                 render_screen(bot, call, campaign_card_screen_key(campaign_id), notice_key=result_key)
                 return
-    
+
+            if parsed.action == 'topup_custom':
+                InputSessionService.set_session(call.from_user.id, 'topup_custom_sparks', '')
+                bot.answer_callback_query(call.id)
+                render_screen(bot, call, SCREEN_TOPUP_CUSTOM)
+                return
 
             if parsed.action == 'topup_stars':
                 pack = SPARKS_PACKS.get(parsed.value)

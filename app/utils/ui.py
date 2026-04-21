@@ -21,6 +21,16 @@ def _extract_message_target(target: CallbackQuery | Message) -> tuple[int, int |
 
 
 
+def _safe_delete(bot: telebot.TeleBot, chat_id: int, message_id: int | None) -> None:
+    if message_id is None:
+        return
+    try:
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception:
+        return
+
+
+
 def render_managed_screen(
     bot: telebot.TeleBot,
     *,
@@ -49,7 +59,8 @@ def render_managed_screen(
             UIStateService.bind_message(effective_user_id, chat_id, target.message.message_id, screen_key, version)
             return None
         except Exception as exc:
-            logger.warning('Edit by callback failed, sending new message instead: %s', exc)
+            logger.warning('Edit by callback failed, replacing message instead: %s', exc)
+            _safe_delete(bot, int(target.message.chat.id), int(target.message.message_id))
             sent = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
             UIStateService.bind_message(effective_user_id, chat_id, sent.message_id, screen_key, version)
             return sent
@@ -66,7 +77,8 @@ def render_managed_screen(
             UIStateService.bind_message(effective_user_id, chat_id, bound[1], screen_key, version)
             return None
         except Exception as exc:
-            logger.warning('Managed edit failed, sending new message instead: %s', exc)
+            logger.warning('Managed edit failed, replacing message instead: %s', exc)
+            _safe_delete(bot, bound[0], bound[1])
 
     sent = bot.send_message(chat_id=chat_id, text=text, reply_markup=markup)
     UIStateService.bind_message(effective_user_id, chat_id, sent.message_id, screen_key, version)

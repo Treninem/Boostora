@@ -1,5 +1,7 @@
+import shutil
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator, Sequence, TypeVar
 
@@ -216,6 +218,44 @@ CREATE TABLE IF NOT EXISTS redemptions (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+
+CREATE TABLE IF NOT EXISTS observed_messages (
+    chat_ref TEXT NOT NULL,
+    chat_id INTEGER NOT NULL,
+    message_id INTEGER NOT NULL,
+    message_kind TEXT NOT NULL DEFAULT 'message',
+    poll_id TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (chat_id, message_id)
+);
+
+CREATE TABLE IF NOT EXISTS activity_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    activity_type TEXT NOT NULL,
+    chat_ref TEXT,
+    chat_id INTEGER,
+    message_id INTEGER,
+    parent_message_id INTEGER,
+    poll_id TEXT,
+    target_value TEXT,
+    payload_json TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+
+CREATE TABLE IF NOT EXISTS bot_chats (
+    chat_id INTEGER PRIMARY KEY,
+    chat_ref TEXT NOT NULL,
+    title TEXT,
+    chat_type TEXT NOT NULL DEFAULT 'group',
+    username TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    can_post INTEGER NOT NULL DEFAULT 1,
+    last_seen_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 '''
 
 INDEXES = '''
@@ -233,6 +273,11 @@ CREATE INDEX IF NOT EXISTS idx_risk_events_user_created ON risk_events(user_id, 
 CREATE INDEX IF NOT EXISTS idx_ui_sessions_chat_message ON ui_sessions(chat_id, message_id);
 CREATE INDEX IF NOT EXISTS idx_required_chats_ref ON required_chats(chat_ref);
 CREATE INDEX IF NOT EXISTS idx_redemptions_user_status ON redemptions(user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_observed_messages_chat_message ON observed_messages(chat_ref, message_id);
+CREATE INDEX IF NOT EXISTS idx_activity_events_user_type_created ON activity_events(user_id, activity_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_chat_message ON activity_events(chat_ref, message_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_events_poll_id ON activity_events(poll_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bot_chats_active ON bot_chats(is_active, can_post, chat_type, updated_at DESC);
 
 '''
 
@@ -282,7 +327,28 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
 
 
 
+
+
+def create_startup_backup(max_files: int = 5) -> None:
+    db_path = Path(settings.db_path)
+    if not db_path.exists():
+        return
+    backup_dir = Path(settings.data_dir) / 'backups'
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    backup_path = backup_dir / f"{db_path.stem}_{stamp}{db_path.suffix}.bak"
+    try:
+        shutil.copy2(db_path, backup_path)
+    except Exception:
+        return
+    backups = sorted(backup_dir.glob(f"{db_path.stem}_*{db_path.suffix}.bak"), reverse=True)
+    for extra in backups[max_files:]:
+        try:
+            extra.unlink()
+        except Exception:
+            pass
 def init_db() -> None:
+    create_startup_backup()
     with get_connection() as connection:
         connection.executescript(SCHEMA)
         _run_migrations(connection)

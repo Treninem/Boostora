@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import math
 import re
-
 from dataclasses import dataclass
 
 from app.services.economy import INTERNAL_CURRENCY_NAME_RU
+
+BASE_SPARKS_PER_STAR = 6
 
 
 @dataclass(frozen=True)
@@ -25,11 +27,33 @@ class VipStarsPlan:
     description: str
 
 
+PACK_STAR_LEVELS = (1, 5, 10, 25, 50, 100, 250)
+PACK_BONUS_BPS = {
+    1: 0,
+    5: 600,
+    10: 1000,
+    25: 1300,
+    50: 1650,
+    100: 2100,
+    250: 2650,
+}
+
+
+def calculate_pack_sparks(stars: int) -> int:
+    stars_value = max(int(stars), 1)
+    bonus_bps = PACK_BONUS_BPS.get(stars_value, 0)
+    return int(round(stars_value * BASE_SPARKS_PER_STAR * (10000 + bonus_bps) / 10000))
+
+
 SPARKS_PACKS = {
-    "spk_360": SparksPack("spk_360", 50, 360, f"360 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_760": SparksPack("spk_760", 100, 760, f"760 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_2000": SparksPack("spk_2000", 250, 2000, f"2000 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
-    "spk_4200": SparksPack("spk_4200", 500, 4200, f"4200 {INTERNAL_CURRENCY_NAME_RU}", "Пополнение внутреннего баланса"),
+    f"spk_{stars}": SparksPack(
+        code=f"spk_{stars}",
+        stars=stars,
+        sparks=calculate_pack_sparks(stars),
+        title=f"{calculate_pack_sparks(stars)} {INTERNAL_CURRENCY_NAME_RU}",
+        description=f"Пополнение на {calculate_pack_sparks(stars)} {INTERNAL_CURRENCY_NAME_RU} за {stars} ⭐",
+    )
+    for stars in PACK_STAR_LEVELS
 }
 
 VIP_STARS_PLANS = {
@@ -38,8 +62,15 @@ VIP_STARS_PLANS = {
 }
 
 
+def calculate_custom_stars_for_sparks(sparks: int) -> int:
+    sparks_value = max(int(sparks), 1)
+    return max(1, math.ceil(sparks_value / BASE_SPARKS_PER_STAR))
+
+
+
 def make_payload(kind: str, code: str, user_id: int) -> str:
     return f"{kind}:{code}:{user_id}"
+
 
 
 def parse_payload(payload: str) -> tuple[str, str, int] | None:
