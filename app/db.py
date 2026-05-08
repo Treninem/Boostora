@@ -288,6 +288,20 @@ CREATE TABLE IF NOT EXISTS bot_chats (
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+
+CREATE TABLE IF NOT EXISTS admin_notes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_user_id INTEGER NOT NULL,
+    target_user_id INTEGER NOT NULL,
+    related_submission_id INTEGER,
+    note_type TEXT NOT NULL DEFAULT 'fraud_note',
+    note TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_user_id) REFERENCES users(user_id),
+    FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (related_submission_id) REFERENCES task_submissions(id) ON DELETE SET NULL
+);
 '''
 
 INDEXES = '''
@@ -311,6 +325,8 @@ CREATE INDEX IF NOT EXISTS idx_activity_events_chat_message ON activity_events(c
 CREATE INDEX IF NOT EXISTS idx_activity_events_poll_id ON activity_events(poll_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_bot_chats_active ON bot_chats(is_active, can_post, chat_type, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ad_broadcasts_status_due ON ad_broadcasts(status, next_run_at, created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_notes_target_created ON admin_notes(target_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_admin_notes_submission_created ON admin_notes(related_submission_id, created_at DESC);
 
 '''
 
@@ -321,9 +337,14 @@ T = TypeVar('T')
 def get_connection() -> Iterator[sqlite3.Connection]:
     db_path = Path(settings.db_path)
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(db_path)
+    connection = sqlite3.connect(db_path, timeout=30)
     connection.row_factory = sqlite3.Row
     connection.execute('PRAGMA foreign_keys = ON')
+    connection.execute('PRAGMA busy_timeout = 5000')
+    try:
+        connection.execute('PRAGMA journal_mode = WAL')
+    except sqlite3.DatabaseError:
+        pass
     try:
         yield connection
         connection.commit()

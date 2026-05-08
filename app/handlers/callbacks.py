@@ -28,8 +28,10 @@ from app.router import (
     task_screen_key,
 )
 from app.services.admin import AdminService
+from app.services.admin_console import AdminConsoleService
 from app.services.ad_broadcasts import AdBroadcastService
 from app.services.campaigns import CampaignService
+from app.services.client_dashboard import boost_campaign
 from app.services.client_campaigns import ClientCampaignService
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
@@ -205,7 +207,7 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                     InputSessionService.clear_session(call.from_user.id)
                     render_screen(bot, call, destination)
                     return
-                if destination.startswith('admin_bot_chats:') or destination.startswith('admin_users:'):
+                if destination.startswith('admin_bot_chats:') or destination.startswith('admin_bot_rights:') or destination.startswith('admin_users:') or destination.startswith('admin_queue:'):
                     InputSessionService.clear_session(call.from_user.id)
                     render_screen(bot, call, destination)
                     return
@@ -421,6 +423,21 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, call, campaign_card_screen_key(campaign_id), notice_key=result_key)
                 return
 
+            if parsed.action == 'camp_boost':
+                if not _ensure_client_role(bot, call):
+                    return
+                raw = parsed.value.split(',', 1)
+                if len(raw) != 2 or not raw[0].isdigit():
+                    bot.answer_callback_query(call.id)
+                    render_screen(bot, call, SECTION_TO_SCREEN['campaigns'])
+                    return
+                campaign_id = int(raw[0])
+                level = raw[1].strip()
+                ok, result_key = boost_campaign(call.from_user.id, campaign_id, level)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                render_screen(bot, call, campaign_card_screen_key(campaign_id), notice_key=result_key)
+                return
+
             if parsed.action == 'topup_custom':
                 InputSessionService.set_session(call.from_user.id, 'topup_custom_sparks', '')
                 bot.answer_callback_query(call.id)
@@ -538,7 +555,78 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=False)
                 render_screen(bot, call, 'rewards', notice_key=result_key)
                 return
+            if parsed.action == 'admin_bulk_clean':
+                if not _ensure_admin(bot, call):
+                    return
+                ok, result_key, count = AdminService.bulk_approve_clean(call.from_user.id, limit=10)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key, count=count), show_alert=False)
+                render_screen(bot, call, 'admin_queue:clean', notice_text=UserService.t(call.from_user.id, result_key, count=count))
+                return
+
+            if parsed.action == 'admin_bulk_block_high':
+                if not _ensure_admin(bot, call):
+                    return
+                result = AdminConsoleService.block_high_risk_users(call.from_user.id, limit=10, threshold=60)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result.result_key, count=result.count), show_alert=False)
+                render_screen(bot, call, 'admin_queue:high', notice_text=UserService.t(call.from_user.id, result.result_key, count=result.count))
+                return
+
     
+            if parsed.action == 'admin_live_audit':
+                if not _ensure_admin(bot, call):
+                    return
+                limit = _safe_int(parsed.value) or 25
+                result = AdminConsoleService.audit_bot_rights_live(bot, limit=limit)
+                text = UserService.t(
+                    call.from_user.id,
+                    'admin_bot_live_audit_done',
+                    checked=result['checked'],
+                    ready=result['ready'],
+                    issues=result['issues'],
+                    failed=result['failed'],
+                )
+                bot.answer_callback_query(call.id, text, show_alert=False)
+                render_screen(bot, call, 'admin_bot_rights:1', notice_text=text)
+                return
+
+            if parsed.action in {'admin_tpl_approve', 'admin_tpl_reject'}:
+                if not _ensure_admin(bot, call):
+                    return
+                parts = (parsed.value or '').split(':', 1)
+                submission_id = _safe_int(parts[0]) if parts else None
+                template_code = parts[1] if len(parts) > 1 else ''
+                if submission_id is None:
+                    bot.answer_callback_query(call.id)
+                    render_screen(bot, call, SCREEN_ADMIN_QUEUE)
+                    return
+                ok, result_key, _ = AdminService.review_submission_with_template(
+                    call.from_user.id,
+                    submission_id,
+                    template_code,
+                    language=UserService.get_language(call.from_user.id),
+                )
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=False)
+                if ok:
+                    render_screen(bot, call, SCREEN_ADMIN_QUEUE, notice_key=result_key)
+                else:
+                    render_screen(bot, call, admin_submission_screen_key(submission_id), notice_key=result_key)
+                return
+
+            if parsed.action == 'admin_note_start':
+                if not _ensure_admin(bot, call):
+                    return
+                parts = (parsed.value or '').split(':', 1)
+                submission_id = _safe_int(parts[0]) if parts else None
+                target_user_id = _safe_int(parts[1]) if len(parts) > 1 else None
+                if submission_id is None or target_user_id is None:
+                    bot.answer_callback_query(call.id)
+                    render_screen(bot, call, SCREEN_ADMIN_QUEUE)
+                    return
+                InputSessionService.set_session(call.from_user.id, 'admin_add_note', f'{submission_id}:{target_user_id}')
+                bot.answer_callback_query(call.id)
+                render_screen(bot, call, admin_submission_screen_key(submission_id), notice_key='admin_note_prompt')
+                return
+
             if parsed.action == 'admin_submission':
                 if not _ensure_admin(bot, call):
                     return

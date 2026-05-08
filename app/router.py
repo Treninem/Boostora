@@ -1,3 +1,4 @@
+import json
 import logging
 
 import telebot
@@ -6,8 +7,12 @@ from telebot.types import CallbackQuery, Message
 from app.config import settings
 from app.keyboards.inline import (
     admin_home_keyboard,
+    admin_groups_keyboard,
+    admin_patterns_keyboard,
     admin_input_keyboard,
     admin_logs_keyboard,
+    owner_analytics_keyboard,
+    owner_release_keyboard,
     admin_required_chats_keyboard,
     admin_queue_keyboard,
     admin_bot_chats_keyboard,
@@ -41,17 +46,25 @@ from app.keyboards.inline import (
     wallet_keyboard,
 )
 from app.services.admin import AdminService
+from app.services.admin_console import AdminConsoleService, normalize_queue_filter, priority_label_key, queue_filter_label_key
 from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.admin_logs import AdminLogService
 from app.services.bot_chats import BotChatService
 from app.services.campaigns import CampaignService
+from app.services.client_dashboard import action_tip, boost_options_text, campaign_progress, dashboard_summary, health_label
+from app.services.economy import completion_speed_explanation, recommend_unit_prices
 from app.services.client_campaigns import MODE_CONFIRM, MODE_PRICE, ClientCampaignService
 from app.services.performer import PerformerService, normalize_target_url
+from app.services.owner_analytics import OwnerAnalyticsService
+from app.services.release_readiness import ReleaseReadinessService
 from app.services.redemptions import RedemptionService
+from app.services.quality import speed_label, trust_tip, verification_label
 from app.services.referrals import ReferralService
 from app.services.rewards import RewardService
 from app.services.subscriptions import SubscriptionService
 from app.services.transactions import TransactionService
+from app.services.ux_flow import broadcast_step_status, campaign_step_status
+from app.services.trust import TrustService
 from app.services.ui_state import UIStateService
 from app.services.users import UserService
 from app.services.vip import VIP_PLANS, VipService
@@ -67,6 +80,8 @@ TRANSACTION_TYPE_KEYS = {
     'hold_release': 'tx_hold_release',
     'campaign_funding': 'tx_campaign_funding',
     'campaign_funding_bonus': 'tx_campaign_funding_bonus',
+    'campaign_boost': 'tx_campaign_boost',
+    'campaign_boost_bonus': 'tx_campaign_boost_bonus',
     'stars_topup': 'tx_stars_topup',
     'vip_purchase': 'tx_vip_purchase',
     'reward_purchase': 'tx_reward_purchase',
@@ -114,7 +129,13 @@ SCREEN_EXCHANGE = 'exchange'
 SCREEN_REFERRALS = 'referrals'
 SCREEN_BLOCKED = 'blocked'
 SCREEN_ADMIN = 'admin'
+SCREEN_ADMIN_GROUPS = 'admin_groups'
+SCREEN_ADMIN_PATTERNS = 'admin_patterns'
+SCREEN_OWNER_ANALYTICS = 'owner_analytics'
+SCREEN_OWNER_RELEASE = 'owner_release'
 SCREEN_ADMIN_QUEUE = 'admin_queue'
+SCREEN_ADMIN_QUEUE_PREFIX = 'admin_queue:'
+SCREEN_ADMIN_BOT_RIGHTS_PREFIX = 'admin_bot_rights:'
 SCREEN_ADMIN_LOGS = 'admin_logs'
 SCREEN_ADMIN_SUBMISSION_PREFIX = 'admin_submission:'
 SCREEN_ADMIN_REJECT_PREFIX = 'admin_reject:'
@@ -139,6 +160,10 @@ SECTION_TO_SCREEN = {
     'referrals': SCREEN_REFERRALS,
     'admin': SCREEN_ADMIN,
     'admin_queue': SCREEN_ADMIN_QUEUE,
+    'admin_groups': SCREEN_ADMIN_GROUPS,
+    'admin_patterns': SCREEN_ADMIN_PATTERNS,
+    'owner_analytics': SCREEN_OWNER_ANALYTICS,
+    'owner_release': SCREEN_OWNER_RELEASE,
     'admin_logs': SCREEN_ADMIN_LOGS,
     'admin_required_chats': SCREEN_ADMIN_REQUIRED_CHATS,
 }
@@ -202,17 +227,30 @@ def campaign_card_screen_key(campaign_id: int) -> str:
 
 def _build_broadcast_text_screen(user_id: int) -> str:
     chats = AdBroadcastService.promotable_chat_count()
-    return UserService.t(user_id, 'broadcast_text_screen', chats=chats)
+    language = UserService.get_language(user_id)
+    return UserService.t(
+        user_id,
+        'broadcast_text_screen',
+        chats=chats,
+        step_status=broadcast_step_status('text', language=language),
+    )
 
 
 def _build_broadcast_link_screen(user_id: int) -> str:
     draft = AdBroadcastService.get_draft(user_id) or {}
-    return UserService.t(user_id, 'broadcast_link_screen', ad_text=str(draft.get('ad_text') or '—'))
+    language = UserService.get_language(user_id)
+    return UserService.t(
+        user_id,
+        'broadcast_link_screen',
+        ad_text=str(draft.get('ad_text') or '—'),
+        step_status=broadcast_step_status('link', language=language),
+    )
 
 
 def _build_broadcast_schedule_text(user_id: int) -> str:
     draft = AdBroadcastService.get_draft(user_id) or {}
     chats = AdBroadcastService.promotable_chat_count()
+    language = UserService.get_language(user_id)
     repeats = int(draft.get('repeat_count') or 0)
     if repeats in AdBroadcastService.list_repeat_options():
         return UserService.t(
@@ -222,6 +260,7 @@ def _build_broadcast_schedule_text(user_id: int) -> str:
             ad_text=str(draft.get('ad_text') or '—'),
             link=str(draft.get('target_url') or '—'),
             repeats=AdBroadcastService.list_repeat_options().get(repeats, repeats),
+            step_status=broadcast_step_status('schedule', language=language),
         )
     return UserService.t(
         user_id,
@@ -229,6 +268,7 @@ def _build_broadcast_schedule_text(user_id: int) -> str:
         chats=chats,
         ad_text=str(draft.get('ad_text') or '—'),
         link=str(draft.get('target_url') or '—'),
+        step_status=broadcast_step_status('schedule', language=language),
     )
 
 
@@ -248,6 +288,15 @@ def _build_broadcast_preview_text(user_id: int) -> str:
         stars=price,
         payment_mode=UserService.t(user_id, 'broadcast_payment_free' if draft.get('is_admin') else 'broadcast_payment_stars'),
     )
+
+
+def admin_queue_screen_key(filter_code: str = 'all') -> str:
+    value = normalize_queue_filter(filter_code)
+    return SCREEN_ADMIN_QUEUE if value == 'all' else f'{SCREEN_ADMIN_QUEUE_PREFIX}{value}'
+
+
+def admin_bot_rights_screen_key(page: int = 1) -> str:
+    return f'{SCREEN_ADMIN_BOT_RIGHTS_PREFIX}{page}'
 
 
 def admin_submission_screen_key(submission_id: int) -> str:
@@ -381,6 +430,8 @@ def _build_profile_text(user_id: int) -> str:
     active_tasks = PerformerService.get_active_submission_count(user_id)
     task_limit = PerformerService.get_active_task_limit(user_id)
     role = UserService.get_role(user_id) or 'performer'
+    language = UserService.get_language(user_id)
+    trust = TrustService.summary(user_id, language=language)
     return UserService.t(
         user_id,
         'profile_screen',
@@ -398,6 +449,13 @@ def _build_profile_text(user_id: int) -> str:
         earned=wallet['lifetime_earned'],
         redeem_access=UserService.t(user_id, 'redeem_access_yes' if wallet['has_paid_topup'] else 'redeem_access_no'),
         internal_name=UserService.internal_currency_label(user_id),
+        trust_level=trust['level_label'],
+        trust_score=trust['score'],
+        approval_rate=trust['approval_rate'],
+        approved_count=trust['approved_count'],
+        rejected_count=trust['rejected_count'],
+        trust_bonus=trust['task_bonus'],
+        trust_hint=trust['trust_hint'],
     )
 
 
@@ -436,6 +494,8 @@ def _build_task_detail_text(user_id: int, campaign_id: int) -> tuple[str, dict[s
     else:
         status_label = UserService.t(user_id, 'task_detail_submitted')
 
+    language = UserService.get_language(user_id)
+    trust = TrustService.summary(user_id, language=language)
     text = UserService.t(
         user_id,
         'task_detail',
@@ -445,6 +505,11 @@ def _build_task_detail_text(user_id: int, campaign_id: int) -> tuple[str, dict[s
         remaining=remaining,
         status=status_label,
         internal_name=UserService.internal_currency_label(user_id),
+        verification=verification_label(str(campaign['task_type']), language),
+        trust_tip=trust_tip(str(campaign['task_type']), language),
+        trust_level=trust['level_label'],
+        trust_score=trust['score'],
+        trust_bonus=trust['task_bonus'],
     )
     return text, {
         'target_url': normalize_target_url(str(campaign['target_url'])),
@@ -519,8 +584,24 @@ def _build_campaigns_text(user_id: int, campaigns) -> str:
 
 
 
+def _campaign_pricing_snapshot_from_row(row) -> dict[str, object]:
+    raw = ''
+    try:
+        raw = str(row['pricing_json'] or '')
+    except Exception:
+        raw = ''
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except json.JSONDecodeError:
+        return {}
+
+
 def _build_campaign_input_text(user_id: int, step: str) -> str:
     draft = ClientCampaignService.get_draft(user_id) or {}
+    language = UserService.get_language(user_id)
     task_type_code = str(draft.get('task_type') or '')
     task_type = _task_type_label(user_id, str(draft.get('task_type') or '—'))
     target_url = str(draft.get('target_url') or '—')
@@ -528,6 +609,26 @@ def _build_campaign_input_text(user_id: int, step: str) -> str:
     reward_amount = str(draft.get('reward_amount') or draft.get('performer_floor_reward') or 'auto')
     unit_price = str(draft.get('unit_price') or draft.get('client_floor_price') or 'auto')
     floor_price = str(draft.get('client_floor_price') or '—')
+    recommended_price = str(draft.get('recommended_unit_price') or '—')
+    fast_price = str(draft.get('fast_unit_price') or '—')
+    priority_price = str(draft.get('priority_unit_price') or '—')
+    speed_hint = UserService.t(user_id, 'campaign_price_hint_wait_quantity')
+    if task_type_code and str(draft.get('total_quantity') or '').isdigit():
+        try:
+            advisory = recommend_unit_prices(task_type_code, int(draft.get('total_quantity') or 0))
+            recommended_price = str(advisory['recommended_unit_price'])
+            fast_price = str(advisory['fast_unit_price'])
+            priority_price = str(advisory['priority_unit_price'])
+            speed_hint = UserService.t(
+                user_id,
+                'campaign_price_recommendation_hint',
+                recommended=recommended_price,
+                fast=fast_price,
+                priority=priority_price,
+                internal_name=UserService.internal_currency_label(user_id),
+            )
+        except Exception:
+            pass
     target_prompt = UserService.t(user_id, 'campaign_target_prompt')
     if task_type_code in {'channel_subscribe', 'chat_join', 'post_view', 'post_like', 'post_reaction', 'story_view', 'post_share', 'post_comment', 'poll_vote'}:
         target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_in_chat')
@@ -542,18 +643,23 @@ def _build_campaign_input_text(user_id: int, step: str) -> str:
     prompt_map = {
         'target': target_prompt,
         'quantity': UserService.t(user_id, 'campaign_quantity_prompt'),
-        'price': UserService.t(user_id, 'campaign_price_prompt', floor=floor_price, currency=UserService.internal_currency_label(user_id)),
+        'price': UserService.t(user_id, 'campaign_price_prompt', floor=floor_price, recommended=recommended_price, fast=fast_price, priority=priority_price, currency=UserService.internal_currency_label(user_id)),
     }
     return UserService.t(
         user_id,
         'campaign_input_screen',
         step=prompt_map.get(step, target_prompt),
+        step_status=campaign_step_status(step, language=language),
         task_type=task_type,
         target_url=target_url,
         reward=reward_amount,
         quantity=quantity,
         unit_price=unit_price,
         floor=floor_price,
+        recommended=recommended_price,
+        fast=fast_price,
+        priority=priority_price,
+        speed_hint=speed_hint,
         internal_name=UserService.internal_currency_label(user_id),
     )
 
@@ -563,20 +669,37 @@ def _build_campaign_preview_text(user_id: int) -> str:
     draft = ClientCampaignService.get_draft(user_id)
     if not draft:
         return UserService.t(user_id, 'campaign_draft_missing')
+    language = UserService.get_language(user_id)
+    speed = int(draft.get('speed_index') or 100)
+    unit_price = int(draft['unit_price'])
+    recommended_unit_price = int(draft.get('recommended_unit_price') or unit_price)
+    fast_unit_price = int(draft.get('fast_unit_price') or unit_price)
+    priority_unit_price = int(draft.get('priority_unit_price') or unit_price)
+    price_position = int(draft.get('price_position_percent') or 0)
+    task_type_code = str(draft['task_type'])
+    speed_explanation = completion_speed_explanation(speed, unit_price, recommended_unit_price, language)
     return UserService.t(
         user_id,
         'campaign_preview_screen',
-        task_type=_task_type_label(user_id, str(draft['task_type'])),
+        task_type=_task_type_label(user_id, task_type_code),
         target_url=str(draft['target_url']),
         reward=int(draft['reward_amount']),
         reward_floor=int(draft['performer_floor_reward']),
         quantity=int(draft['total_quantity']),
-        unit_price=int(draft['unit_price']),
+        unit_price=unit_price,
         floor=int(draft['client_floor_price']),
+        recommended=recommended_unit_price,
+        fast=fast_unit_price,
+        priority=priority_unit_price,
+        price_position=price_position,
+        speed_explanation=speed_explanation,
         fee=int(draft['service_fee_total']),
         discount=int(draft['discount_percent']),
         budget=int(draft['budget_total']),
-        speed=int(draft.get('speed_index') or 100),
+        speed=speed,
+        speed_label=speed_label(speed, language),
+        verification=verification_label(task_type_code, language),
+        trust_tip=trust_tip(task_type_code, language),
         internal_name=UserService.internal_currency_label(user_id),
     )
 
@@ -585,49 +708,94 @@ def _build_campaign_card_text(user_id: int, campaign_id: int) -> str:
     campaign = CampaignService.get_owned_campaign(user_id, campaign_id)
     if not campaign:
         return UserService.t(user_id, 'campaign_not_found')
+    language = UserService.get_language(user_id)
+    task_type_code = str(campaign['task_type'])
+    pricing = _campaign_pricing_snapshot_from_row(campaign)
+    unit_price = int(campaign['unit_price'] or campaign['reward_amount'])
+    speed = int(pricing.get('speed_index') or 100)
+    recommended_unit_price = int(pricing.get('recommended_unit_price') or unit_price)
+    price_position = int(pricing.get('price_position_percent') or 0)
+    speed_explanation = completion_speed_explanation(speed, unit_price, recommended_unit_price, language)
+    progress = campaign_progress(campaign)
+    health = health_label(campaign, language=language)
+    next_action = action_tip(campaign, language=language)
+    boost_block = boost_options_text(campaign, language=language, internal_name=UserService.internal_currency_label(user_id))
     return UserService.t(
         user_id,
         'campaign_card_screen',
         campaign_id=campaign_id,
         title=str(campaign['title'] or f'#{campaign_id}'),
-        task_type=_task_type_label(user_id, str(campaign['task_type'])),
+        task_type=_task_type_label(user_id, task_type_code),
         target_url=str(campaign['target_url']),
         reward=int(campaign['reward_amount']),
         quantity=int(campaign['total_quantity']),
         completed=int(campaign['completed_quantity']),
         rejected=int(campaign['rejected_quantity']),
+        progress=progress['progress_percent'],
+        reject_percent=progress['reject_percent'],
+        health=health,
+        next_action=next_action,
+        boost_block=boost_block,
         budget_total=int(campaign['budget_total']),
         budget_spent=int(campaign['budget_spent']),
         budget_reserved=int(campaign['budget_reserved']),
         budget_remaining=CampaignService.get_remaining_budget(campaign),
-        unit_price=int(campaign['unit_price'] or campaign['reward_amount']),
+        unit_price=unit_price,
         fee_total=int(campaign['service_fee_total'] or 0),
+        speed=speed,
+        recommended=recommended_unit_price,
+        price_position=price_position,
+        speed_explanation=speed_explanation,
         funded='yes' if int(campaign['is_funded'] or 0) == 1 else 'no',
         internal_name=UserService.internal_currency_label(user_id),
         status=_campaign_status_label(user_id, str(campaign['status'])),
+        speed_label=speed_label(speed, language),
+        verification=verification_label(task_type_code, language),
+        trust_tip=trust_tip(task_type_code, language),
     )
 
 
 
 def _build_stats_text(user_id: int) -> str:
-    stats = CampaignService.get_owner_stats(user_id)
+    language = UserService.get_language(user_id)
+    dashboard = dashboard_summary(user_id, language=language)
+    if dashboard['rows']:
+        rows = '\n'.join(
+            UserService.t(
+                user_id,
+                'client_dashboard_row',
+                campaign_id=item['id'],
+                title=item['title'][:36],
+                status=_campaign_status_label(user_id, item['status']),
+                progress=item['progress_percent'],
+                speed=item['speed'],
+                health=item['health'],
+                tip=item['tip'],
+            )
+            for item in dashboard['rows']
+        )
+    else:
+        rows = UserService.t(user_id, 'client_dashboard_empty')
     return UserService.t(
         user_id,
-        'campaign_stats_screen',
-        total=stats['total_campaigns'],
-        active=stats['active_campaigns'],
-        paused=stats['paused_campaigns'],
-        drafts=stats['draft_campaigns'],
-        completed=stats['completed_total'],
-        rejected=stats['rejected_total'],
-        budget=stats['budget_total'],
-        spent=stats['budget_spent'],
-        reserved=stats['budget_reserved'],
-        remaining=stats['budget_remaining'],
-        fees=stats['fees_total'],
-        rewards=stats['reward_budget_total'],
+        'client_dashboard_screen',
+        total=dashboard['total'],
+        active=dashboard['active'],
+        paused=dashboard['paused'],
+        drafts=dashboard['drafts'],
+        completed=dashboard['completed_total'],
+        rejected=dashboard['rejected_total'],
+        progress=dashboard['progress_percent'],
+        budget=dashboard['budget_total'],
+        spent=dashboard['budget_spent'],
+        reserved=dashboard['budget_reserved'],
+        remaining=dashboard['budget_remaining'],
+        slow=dashboard['slow_count'],
+        quality_risk=dashboard['quality_risk_count'],
+        rows=rows,
         internal_name=UserService.internal_currency_label(user_id),
     )
+
 
 
 
@@ -750,16 +918,45 @@ def _build_admin_home_text(user_id: int) -> str:
         blocked=stats['blocked_users'],
         high_risk=stats['high_risk_users'],
         rejected=stats['rejected_total'],
+        queue_high=stats['queue_high'],
+        queue_clean=stats['queue_clean'],
+        queue_old=stats['queue_old'],
+        bot_chats_ready=stats['bot_chats_ready'],
+        bot_chats_issues=stats['bot_chats_issues'],
+        high_risk_unblocked=stats['high_risk_unblocked'],
+        groups_performer=stats.get('groups_performer', 0),
+        groups_campaign=stats.get('groups_campaign', 0),
+        groups_risk=stats.get('groups_risk', 0),
     )
 
 
-def _build_admin_queue_text(user_id: int, submissions) -> str:
+def _build_admin_queue_text(user_id: int, submissions, filter_code: str = 'all') -> str:
+    counts = AdminConsoleService.queue_counts()
+    active_filter = normalize_queue_filter(filter_code)
+    header = UserService.t(
+        user_id,
+        'admin_queue_header',
+        active_filter=UserService.t(user_id, queue_filter_label_key(active_filter)),
+        all_count=counts['all'],
+        high_count=counts['high'],
+        clean_count=counts['clean'],
+        old_count=counts['old'],
+    )
+    advice = AdminConsoleService.bulk_action_advice(active_filter)
+    advice_text = UserService.t(
+        user_id,
+        'admin_bulk_advice_line',
+        advice=UserService.t(user_id, f"admin_bulk_advice_{advice['advice_code']}"),
+        count=int(advice.get('count', 0)),
+        risk=UserService.t(user_id, f"admin_bulk_risk_{advice['risk_level']}"),
+    )
     if not submissions:
-        return UserService.t(user_id, 'admin_queue_empty')
+        return header + '\n\n' + advice_text + '\n\n' + UserService.t(user_id, 'admin_queue_empty')
     rows = []
     for item in submissions[:10]:
         performer = str(item['username'] or '').strip()
         performer_label = f'@{performer}' if performer else f"ID {int(item['performer_user_id'])}"
+        priority_score = int(item['priority_score'] or 0) if 'priority_score' in item.keys() else int(item['risk_score'] or 0) + int(item['user_risk_score'] or 0)
         rows.append(
             UserService.t(
                 user_id,
@@ -769,10 +966,270 @@ def _build_admin_queue_text(user_id: int, submissions) -> str:
                 performer=performer_label,
                 risk=int(item['risk_score']),
                 user_risk=int(item['user_risk_score']),
+                priority=priority_score,
+                priority_label=UserService.t(user_id, priority_label_key(priority_score)),
             )
         )
-    return UserService.t(user_id, 'admin_queue_screen', items='\n'.join(rows))
+    return UserService.t(user_id, 'admin_queue_screen', header=header + '\n' + advice_text, items='\n'.join(rows))
 
+
+
+def _build_admin_patterns_text(user_id: int) -> str:
+    cards = AdminConsoleService.fraud_pattern_cards(limit=8)
+    if not cards:
+        items = UserService.t(user_id, 'admin_patterns_empty')
+    else:
+        lines = []
+        for card in cards:
+            username = str(card.get('username') or '').strip()
+            display = f"@{username}" if username else f"ID {int(card['user_id'])}"
+            lines.append(UserService.t(
+                user_id,
+                'admin_pattern_card_row',
+                performer=display,
+                status=str(card.get('status') or 'active'),
+                risk=int(card.get('risk_score') or 0),
+                approved=int(card.get('approved_count') or 0),
+                rejected=int(card.get('rejected_count') or 0),
+                review=int(card.get('review_count') or 0),
+                avg=int(card.get('avg_submission_risk') or 0),
+                notes=int(card.get('note_count') or 0),
+                events=int(card.get('event_count') or 0),
+                pattern=UserService.t(user_id, f"admin_pattern_{card.get('pattern_code') or 'neutral'}"),
+                recommendation=UserService.t(user_id, f"admin_recommendation_{card.get('recommendation_code') or 'watch'}"),
+            ))
+        items = '\n'.join(lines)
+    diagnostics = AdminConsoleService.bot_rights_diagnostics(limit=5)
+    diag_lines = []
+    for item in diagnostics.get('items', [])[:5]:
+        diag_lines.append(UserService.t(
+            user_id,
+            'admin_audit_diag_row',
+            title=str(item['title'])[:48],
+            ref=str(item['ref']),
+            severity=UserService.t(user_id, f"admin_audit_severity_{item['severity']}"),
+            issue=UserService.t(user_id, f"admin_audit_issue_{item['code']}"),
+        ))
+    diag_text = '\n'.join(diag_lines) or UserService.t(user_id, 'admin_audit_diag_empty')
+    return UserService.t(
+        user_id,
+        'admin_patterns_screen',
+        items=items,
+        active=int(diagnostics.get('active', 0)),
+        ready=int(diagnostics.get('ready', 0)),
+        issues=int(diagnostics.get('issues', 0)),
+        stale=int(diagnostics.get('stale', 0)),
+        inactive=int(diagnostics.get('inactive', 0)),
+        diagnostics=diag_text,
+    )
+
+
+
+def _build_owner_analytics_text(user_id: int) -> str:
+    summary = OwnerAnalyticsService.commerce_summary()
+    clients = OwnerAnalyticsService.top_clients(limit=5)
+    performers = OwnerAnalyticsService.top_performers(limit=5)
+    tips = OwnerAnalyticsService.economy_recommendations(summary)
+
+    client_lines = []
+    for row in clients:
+        username = str(row.get('username') or '').strip()
+        display = f"@{username}" if username else f"ID {int(row['user_id'])}"
+        client_lines.append(UserService.t(
+            user_id,
+            'owner_client_row',
+            client=display,
+            campaigns=int(row.get('campaigns') or 0),
+            active=int(row.get('active_campaigns') or 0),
+            spent=int(row.get('spent') or 0),
+            budget=int(row.get('budget_total') or 0),
+            completed=int(row.get('completed') or 0),
+            rejected=int(row.get('rejected') or 0),
+            internal_name=UserService.internal_currency_label(user_id),
+        ))
+    performer_lines = []
+    for row in performers:
+        username = str(row.get('username') or '').strip()
+        display = f"@{username}" if username else f"ID {int(row['user_id'])}"
+        performer_lines.append(UserService.t(
+            user_id,
+            'owner_performer_row',
+            performer=display,
+            approved=int(row.get('approved') or 0),
+            rejected=int(row.get('rejected') or 0),
+            review=int(row.get('manual_review') or 0),
+            earned=int(row.get('earned') or 0),
+            risk=int(row.get('risk_score') or 0),
+            internal_name=UserService.internal_currency_label(user_id),
+        ))
+    tip_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in tips)
+    return UserService.t(
+        user_id,
+        'owner_analytics_screen',
+        state=UserService.t(user_id, f"owner_state_{summary.get('commerce_state') or 'early'}"),
+        score=int(summary['monetization_score']),
+        users=int(summary['total_users']),
+        active_users=int(summary['active_users']),
+        clients_count=int(summary['clients']),
+        performers_count=int(summary['performers']),
+        blocked=int(summary['blocked_users']),
+        campaigns=int(summary['total_campaigns']),
+        active_campaigns=int(summary['active_campaigns']),
+        funded_campaigns=int(summary['funded_campaigns']),
+        drafts=int(summary['draft_campaigns']),
+        completed=int(summary['completed_total']),
+        rejected=int(summary['rejected_total']),
+        completion=int(summary['completion_percent']),
+        budget=int(summary['budget_total']),
+        funded_budget=int(summary['funded_budget_total']),
+        turnover=int(summary['turnover_spent']),
+        reserved=int(summary['reserved_total']),
+        planned_fee=int(summary['planned_fee_total']),
+        margin=int(summary['actual_margin_estimate']),
+        margin_percent=int(summary['margin_percent']),
+        manual=int(summary['manual_review']),
+        manual_percent=int(summary['manual_percent']),
+        approval_percent=int(summary['approval_percent']),
+        avg_risk=int(summary['avg_submission_risk']),
+        available=int(summary['available_liability']),
+        hold=int(summary['hold_liability']),
+        bonus=int(summary['bonus_liability']),
+        stars=int(summary['stars_topup_volume']),
+        vip=int(summary['vip_volume']),
+        campaign_payments=int(summary['campaign_payment_volume']),
+        clients='\n'.join(client_lines) or UserService.t(user_id, 'owner_no_clients'),
+        performers='\n'.join(performer_lines) or UserService.t(user_id, 'owner_no_performers'),
+        tips=tip_lines,
+        internal_name=UserService.internal_currency_label(user_id),
+    )
+
+
+
+def _build_owner_release_text(user_id: int) -> str:
+    summary = ReleaseReadinessService.readiness_summary()
+    guardrails = ReleaseReadinessService.launch_guardrails()
+    rc1_gate = ReleaseReadinessService.rc1_gate_summary()
+    stable_gate = ReleaseReadinessService.stable_release_summary()
+    flow_lines = []
+    for flow in summary['flows']:
+        flow_lines.append(UserService.t(
+            user_id,
+            'release_flow_row',
+            title=UserService.t(user_id, str(flow['title_key'])),
+            status=UserService.t(user_id, f"release_status_{flow['status']}"),
+            score=int(flow['score']),
+            signal=UserService.t(user_id, str(flow['signal_key'])),
+            action=UserService.t(user_id, str(flow['action_key'])),
+        ))
+    guard_lines = []
+    for row in guardrails['matrix']:
+        guard_lines.append(UserService.t(
+            user_id,
+            'launch_guard_row',
+            title=UserService.t(user_id, str(row['title_key'])),
+            status=UserService.t(user_id, f"release_status_{row['status']}"),
+            value=int(row['value']),
+            action=UserService.t(user_id, str(row['action_key'])),
+        ))
+    rc1_gate_lines = []
+    for row in rc1_gate['rows']:
+        rc1_gate_lines.append(UserService.t(
+            user_id,
+            'rc1_gate_row',
+            title=UserService.t(user_id, str(row['title_key'])),
+            status=UserService.t(user_id, f"release_status_{row['status']}"),
+            value=int(row['value']),
+            action=UserService.t(user_id, str(row['action_key'])),
+        ))
+    stable_gate_lines = []
+    for row in stable_gate['rows']:
+        stable_gate_lines.append(UserService.t(
+            user_id,
+            'stable_gate_row',
+            title=UserService.t(user_id, str(row['title_key'])),
+            status=UserService.t(user_id, f"release_status_{row['status']}"),
+            value=int(row['value']),
+            action=UserService.t(user_id, str(row['action_key'])),
+        ))
+    regression_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.regression_plan())
+    checklist_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.final_launch_checklist())
+    contract_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.rc1_release_contract())
+    stable_contract_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.stable_release_contract())
+    return UserService.t(
+        user_id,
+        'owner_release_screen',
+        state=UserService.t(user_id, f"release_state_{summary['state']}"),
+        launch_state=UserService.t(user_id, f"release_state_{guardrails['launch_state']}"),
+        score=int(summary['score']),
+        live_score=int(guardrails['live_score']),
+        ready=int(summary['ready']),
+        warnings=int(summary['warnings']),
+        blockers=int(summary['blockers']),
+        hard_blockers=int(guardrails['hard_blockers']),
+        live_warnings=int(guardrails['live_warnings']),
+        stable_state=UserService.t(user_id, f"release_state_{stable_gate['state']}"),
+        stable_score=int(stable_gate['score']),
+        stable_blockers=int(stable_gate['blockers']),
+        stable_warnings=int(stable_gate['warnings']),
+        rc1_state=UserService.t(user_id, f"release_state_{rc1_gate['state']}"),
+        rc1_score=int(rc1_gate['score']),
+        rc1_blockers=int(rc1_gate['blockers']),
+        rc1_warnings=int(rc1_gate['warnings']),
+        total=int(summary['total']),
+        flows='\n'.join(flow_lines),
+        guardrails='\n'.join(guard_lines),
+        stable_gate='\n'.join(stable_gate_lines),
+        rc1_gate='\n'.join(rc1_gate_lines),
+        regression=regression_lines,
+        checklist=checklist_lines,
+        rc1_contract=contract_lines,
+        stable_contract=stable_contract_lines,
+    )
+
+
+
+def _build_admin_groups_text(user_id: int) -> str:
+    summary = AdminConsoleService.queue_group_summary(limit=7)
+
+    performer_lines = []
+    for row in summary['performers']:
+        username = str(row['username'] or '').strip()
+        display = f'@{username}' if username else f"ID {int(row['performer_user_id'])}"
+        performer_lines.append(UserService.t(
+            user_id,
+            'admin_group_performer_row',
+            performer=display,
+            count=int(row['cnt'] or 0),
+            risky=int(row['risky'] or 0),
+            priority=int(row['max_priority'] or 0),
+        ))
+    campaign_lines = []
+    for row in summary['campaigns']:
+        campaign_lines.append(UserService.t(
+            user_id,
+            'admin_group_campaign_row',
+            campaign_id=int(row['campaign_id']),
+            title=str(row['title'] or f"#{int(row['campaign_id'])}")[:50],
+            count=int(row['cnt'] or 0),
+            risky=int(row['risky'] or 0),
+            avg_risk=int(float(row['avg_risk'] or 0)),
+        ))
+    bucket_lines = []
+    for row in summary['risk_buckets']:
+        bucket_lines.append(UserService.t(
+            user_id,
+            'admin_group_bucket_row',
+            bucket=UserService.t(user_id, f"admin_bucket_{str(row['bucket'])}"),
+            count=int(row['cnt'] or 0),
+        ))
+
+    return UserService.t(
+        user_id,
+        'admin_groups_screen',
+        performers='\n'.join(performer_lines) or UserService.t(user_id, 'admin_groups_empty'),
+        campaigns='\n'.join(campaign_lines) or UserService.t(user_id, 'admin_groups_empty'),
+        buckets='\n'.join(bucket_lines) or UserService.t(user_id, 'admin_groups_empty'),
+    )
 
 def _build_admin_submission_text(user_id: int, submission_id: int) -> tuple[str, dict[str, object] | None]:
     card = AdminService.get_submission_card(submission_id)
@@ -782,6 +1239,20 @@ def _build_admin_submission_text(user_id: int, submission_id: int) -> tuple[str,
     stats = card['stats']
     proof = str(submission['proof_text'] or '—')
     events = card['events']
+    notes = card.get('notes') or []
+    if notes:
+        note_lines = '\n'.join(
+            UserService.t(
+                user_id,
+                'admin_note_row',
+                created=str(note['created_at']).replace('T', ' ')[:16],
+                admin_id=int(note['admin_user_id']),
+                note=str(note['note'] or '—')[:220],
+            )
+            for note in notes
+        )
+    else:
+        note_lines = UserService.t(user_id, 'admin_notes_empty')
     if events:
         event_lines = '\n'.join(
             UserService.t(
@@ -795,6 +1266,35 @@ def _build_admin_submission_text(user_id: int, submission_id: int) -> tuple[str,
         )
     else:
         event_lines = UserService.t(user_id, 'admin_risk_events_empty')
+    history_rows = card.get('decision_history') or []
+    if history_rows:
+        history_lines = '\n'.join(
+            UserService.t(
+                user_id,
+                'admin_decision_history_row',
+                submission_id=int(row['id']),
+                status=str(row['status']),
+                risk=int(row['risk_score'] or 0),
+                reviewed=str(row['reviewed_at'] or '—').replace('T', ' ')[:16],
+                reason=str(row['reject_reason'] or '—')[:90],
+            )
+            for row in history_rows
+        )
+    else:
+        history_lines = UserService.t(user_id, 'admin_decision_history_empty')
+    pattern_card = card.get('pattern_card') or {}
+    pattern_text = UserService.t(
+        user_id,
+        'admin_submission_pattern_card',
+        pattern=UserService.t(user_id, f"admin_pattern_{pattern_card.get('pattern_code') or 'neutral'}"),
+        recommendation=UserService.t(user_id, f"admin_recommendation_{pattern_card.get('recommendation_code') or 'watch'}"),
+        approved=int(pattern_card.get('approved_count') or 0),
+        rejected=int(pattern_card.get('rejected_count') or 0),
+        review=int(pattern_card.get('review_count') or 0),
+        avg=int(pattern_card.get('avg_submission_risk') or 0),
+        notes=int(pattern_card.get('note_count') or 0),
+        events=int(pattern_card.get('event_count') or 0),
+    )
     performer = str(submission['username'] or '').strip()
     performer_label = f'@{performer}' if performer else f"ID {int(submission['performer_user_id'])}"
     text = UserService.t(
@@ -817,6 +1317,9 @@ def _build_admin_submission_text(user_id: int, submission_id: int) -> tuple[str,
         submitted_at=str(submission['submitted_at'] or '—').replace('T', ' ')[:19],
         reject_reason=str(submission['reject_reason'] or '—'),
         events=event_lines,
+        notes=note_lines,
+        decision_history=history_lines,
+        pattern_card=pattern_text,
     )
     return text, card
 
@@ -890,6 +1393,36 @@ def _build_admin_bot_chats_text(user_id: int, page: int) -> tuple[str, list, int
     return UserService.t(user_id, 'admin_bot_chats_screen', items=items, page=page, total_pages=total_pages, total=total), rows, total_pages
 
 
+def _build_admin_bot_rights_text(user_id: int, page: int) -> tuple[str, list, int]:
+    total = AdminConsoleService.count_bot_right_issues()
+    per_page = 10
+    total_pages = max((total + per_page - 1) // per_page, 1)
+    page = min(max(page, 1), total_pages)
+    rows = AdminConsoleService.list_bot_right_issues(limit=per_page, offset=(page - 1) * per_page)
+    summary = AdminConsoleService.bot_rights_summary()
+    if not rows:
+        items = UserService.t(user_id, 'admin_bot_rights_empty')
+    else:
+        lines = []
+        for row in rows:
+            title = str(row['title'] or SubscriptionService.display_name(str(row['chat_ref'] or row['chat_id'])))
+            ref = str(row['chat_ref'] or row['chat_id'])
+            chat_type = str(row['chat_type'] or 'chat')
+            lines.append(UserService.t(user_id, 'admin_bot_right_row', title=title[:60], ref=ref, chat_type=chat_type))
+        items = '\n'.join(lines)
+    return UserService.t(
+        user_id,
+        'admin_bot_rights_screen',
+        items=items,
+        page=page,
+        total_pages=total_pages,
+        total=total,
+        active=summary['active'],
+        ready=summary['ready'],
+        issues=summary['issues'],
+    ), rows, total_pages
+
+
 
 def _build_admin_users_text(user_id: int, page: int) -> tuple[str, list, int]:
     total = UserService.count_users()
@@ -904,7 +1437,19 @@ def _build_admin_users_text(user_id: int, page: int) -> tuple[str, list, int]:
         for row in rows:
             username = str(row['username'] or '').strip()
             display = f'@{username}' if username else f"ID {int(row['user_id'])}"
-            lines.append(UserService.t(user_id, 'admin_user_row', display=display, user_id=int(row['user_id']), status=str(row['status']), sparks=int(row['internal_balance'] or 0), bonus=int(row['bonus_balance'] or 0)))
+            trust = TrustService.summary(int(row['user_id']), language=UserService.get_language(user_id))
+            lines.append(UserService.t(
+                user_id,
+                'admin_user_row',
+                display=display,
+                user_id=int(row['user_id']),
+                status=str(row['status']),
+                sparks=int(row['internal_balance'] or 0),
+                bonus=int(row['bonus_balance'] or 0),
+                trust_level=trust['level_label'],
+                trust_score=trust['score'],
+                approval_rate=trust['approval_rate'],
+            ))
         items = '\n'.join(lines)
     return UserService.t(user_id, 'admin_users_screen', items=items, page=page, total_pages=total_pages, total=total), rows, total_pages
 
@@ -1351,19 +1896,94 @@ def render_screen(
         )
         return
 
-    if screen_key == SCREEN_ADMIN_QUEUE:
-        submissions = AdminService.list_review_queue()
-        text = _prepend_notice(user_id, _build_admin_queue_text(user_id, submissions), notice_key, notice_text)
+
+    if screen_key == SCREEN_OWNER_ANALYTICS:
+        if not UserService.is_owner(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        text = _prepend_notice(user_id, _build_owner_analytics_text(user_id), notice_key, notice_text)
         render_managed_screen(
             bot,
             target=target,
             profile_id=user_id,
             chat_id=chat_id,
-            screen_key=SCREEN_ADMIN_QUEUE,
+            screen_key=SCREEN_OWNER_ANALYTICS,
             text=text,
-            reply_markup_builder=lambda version: admin_queue_keyboard(user_id, version, submissions),
+            reply_markup_builder=lambda version: owner_analytics_keyboard(user_id, version),
         )
         return
+
+    if screen_key == SCREEN_OWNER_RELEASE:
+        if not UserService.is_owner(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        text = _prepend_notice(user_id, _build_owner_release_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_OWNER_RELEASE,
+            text=text,
+            reply_markup_builder=lambda version: owner_release_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_ADMIN_GROUPS:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_MAIN_MENU, notice_key='admin_access_denied')
+            return
+        text = _prepend_notice(user_id, _build_admin_groups_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_ADMIN_GROUPS,
+            text=text,
+            reply_markup_builder=lambda version: admin_groups_keyboard(user_id, version),
+        )
+        return
+
+    if screen_key == SCREEN_ADMIN_PATTERNS:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_MAIN_MENU, notice_key='admin_access_denied')
+            return
+        text = _prepend_notice(user_id, _build_admin_patterns_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_ADMIN_PATTERNS,
+            text=text,
+            reply_markup_builder=lambda version: admin_patterns_keyboard(user_id, version),
+        )
+        return
+
+    queue_filter_payload = None
+    if screen_key == SCREEN_ADMIN_QUEUE:
+        queue_filter_payload = 'all'
+    else:
+        queue_filter_payload = _screen_suffix(screen_key, SCREEN_ADMIN_QUEUE_PREFIX)
+    if queue_filter_payload is not None:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_MAIN_MENU, notice_key='admin_access_denied')
+            return
+        filter_code = normalize_queue_filter(queue_filter_payload)
+        submissions = AdminService.list_review_queue(filter_code=filter_code)
+        text = _prepend_notice(user_id, _build_admin_queue_text(user_id, submissions, filter_code), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=admin_queue_screen_key(filter_code),
+            text=text,
+            reply_markup_builder=lambda version: admin_queue_keyboard(user_id, version, submissions, filter_code=filter_code),
+        )
+        return
+
 
     admin_submission_id = _screen_payload(screen_key, SCREEN_ADMIN_SUBMISSION_PREFIX)
     if admin_submission_id is not None:
@@ -1415,6 +2035,25 @@ def render_screen(
             screen_key=admin_bot_chats_screen_key(page),
             text=text,
             reply_markup_builder=lambda version: admin_bot_chats_keyboard(user_id, version, rows, page=page, total_pages=total_pages),
+        )
+        return
+
+    admin_bot_rights_page = _screen_suffix(screen_key, SCREEN_ADMIN_BOT_RIGHTS_PREFIX)
+    if admin_bot_rights_page is not None:
+        if not UserService.is_admin(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        page = _safe_page(admin_bot_rights_page)
+        text, rows, total_pages = _build_admin_bot_rights_text(user_id, page)
+        text = _prepend_notice(user_id, text, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=admin_bot_rights_screen_key(page),
+            text=text,
+            reply_markup_builder=lambda version: admin_bot_chats_keyboard(user_id, version, rows, page=page, total_pages=total_pages, issues_mode=True),
         )
         return
 

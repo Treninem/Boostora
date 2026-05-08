@@ -14,6 +14,7 @@ from app.handlers.start import register_start_handlers
 from app.handlers.callbacks import register_callback_handlers
 from app.services.promo import PromoService
 from app.services.ad_broadcasts import AdBroadcastService
+from app.version import APP_VERSION
 
 
 LOGGER = logging.getLogger(__name__)
@@ -30,14 +31,66 @@ def _lock_path() -> str:
     return os.path.join(tempfile.gettempdir(), f'boostora_{safe_token}.lock')
 
 
+def _read_lock_pid(path: str) -> int | None:
+    try:
+        with open(path, 'r', encoding='utf-8') as file:
+            raw = file.read().strip().split()[0]
+        return int(raw)
+    except Exception:
+        return None
+
+
+def _pid_is_alive(pid: int | None) -> bool:
+    if not pid or pid <= 0:
+        return False
+    if pid == os.getpid():
+        return True
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except Exception:
+        return True
+    return True
+
+
+def _clear_stale_lock(path: str) -> bool:
+    pid = _read_lock_pid(path)
+    if _pid_is_alive(pid):
+        return False
+    try:
+        os.unlink(path)
+        LOGGER.warning('Removed stale Boostora polling lock: %s', path)
+        return True
+    except FileNotFoundError:
+        return True
+    except Exception as exc:
+        LOGGER.warning('Could not remove stale polling lock %s: %s', path, exc)
+        return False
+
+
+def _write_lock_payload(fd: int) -> None:
+    payload = f'{os.getpid()} {int(time.time())}\n'
+    os.write(fd, payload.encode())
+
+
 def _acquire_single_instance_lock() -> int | None:
     path = _lock_path()
     try:
         fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-        os.write(fd, str(os.getpid()).encode())
+        _write_lock_payload(fd)
         return fd
     except FileExistsError:
-        return None
+        if not _clear_stale_lock(path):
+            return None
+        try:
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_RDWR)
+            _write_lock_payload(fd)
+            return fd
+        except FileExistsError:
+            return None
 
 
 def _release_single_instance_lock(fd: int | None) -> None:
@@ -154,7 +207,7 @@ def run() -> None:
         bot = create_bot()
         _prepare_bot(bot)
         promo_stop_event = _start_promo_worker(bot)
-        LOGGER.info('Boostora bot started')
+        LOGGER.info('%s started', APP_VERSION)
         try:
             _poll_forever(bot)
         finally:

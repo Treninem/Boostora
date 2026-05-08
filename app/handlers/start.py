@@ -1,3 +1,5 @@
+import time
+
 import telebot
 from telebot import types
 from telebot.types import Message, PreCheckoutQuery
@@ -16,6 +18,7 @@ from app.router import (
     admin_balance_screen_key,
     admin_reject_screen_key,
     admin_risk_screen_key,
+    admin_submission_screen_key,
     campaign_input_screen_key,
     proof_wait_screen_key,
     render_entry,
@@ -34,6 +37,10 @@ from app.services.subscriptions import SubscriptionService
 from app.services.users import UserService
 from app.services.vip import VipService
 from app.services.wallets import WalletService
+from app.version import APP_VERSION
+
+
+_BOTTOM_KEYBOARD_SENT_AT: dict[int, float] = {}
 
 
 def _try_delete_user_message(bot: telebot.TeleBot, message: Message) -> None:
@@ -42,11 +49,40 @@ def _try_delete_user_message(bot: telebot.TeleBot, message: Message) -> None:
     except Exception:
         return
 
-def _ensure_bottom_keyboard(bot: telebot.TeleBot, chat_id: int, user_id: int) -> None:
+
+def _ensure_bottom_keyboard(bot: telebot.TeleBot, chat_id: int, user_id: int, *, force: bool = False) -> None:
+    # Reply keyboards stay attached to the chat after a message is sent.
+    # To avoid chat clutter, refresh the bottom menu at most once per 10 minutes,
+    # unless /start explicitly asks for a fresh keyboard.
+    now = time.time()
+    last_sent = _BOTTOM_KEYBOARD_SENT_AT.get(user_id, 0.0)
+    if not force and now - last_sent < 600:
+        return
     try:
         bot.send_message(chat_id, UserService.t(user_id, 'bottom_nav_ready'), reply_markup=main_reply_keyboard(user_id))
+        _BOTTOM_KEYBOARD_SENT_AT[user_id] = now
     except Exception:
         return
+
+
+def _cancel_destination_for_session(user_id: int, session) -> str | None:
+    if not session:
+        return None
+    mode = str(session['mode'] or '')
+    if mode.startswith('broadcast_'):
+        draft = AdBroadcastService.get_draft(user_id) or {}
+        return 'admin' if draft.get('is_admin') else 'campaigns'
+    if mode.startswith('campaign_'):
+        return 'campaigns'
+    if mode == 'topup_custom_sparks':
+        return 'wallet'
+    if mode == 'admin_add_required_chat':
+        return SCREEN_ADMIN_REQUIRED_CHATS
+    if mode in {'admin_reject_submission', 'admin_adjust_risk', 'admin_adjust_balance', 'admin_add_note'}:
+        return SCREEN_ADMIN_QUEUE
+    if mode == 'submit_proof' and session['payload']:
+        return submission_screen_key(int(session['payload']))
+    return None
 
 
 def _extract_referrer_id(message: Message) -> int | None:
@@ -140,8 +176,18 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         if existing_user is None and referrer_exists and referrer_id is not None:
             ReferralService.try_bind_referral(referrer_id, message.from_user.id)
         InputSessionService.clear_session(message.from_user.id)
-        _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
+        _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id, force=True)
         render_entry(bot, message, force_language=True)
+
+
+    @bot.message_handler(commands=['version'])
+    def handle_version(message: Message) -> None:
+        UserService.ensure_user(message.from_user)
+        bot.reply_to(
+            message,
+            UserService.t(message.from_user.id, 'version_text', version=APP_VERSION),
+            parse_mode='HTML',
+        )
 
     @bot.message_handler(commands=['menu'])
     def handle_menu(message: Message) -> None:
@@ -275,14 +321,12 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
         session = InputSessionService.get_session(message.from_user.id)
         if _is_cancel_text(message.text or ''):
-            draft = AdBroadcastService.get_draft(message.from_user.id) if session and str(session['mode'] or '').startswith('broadcast_') else {}
+            destination = _cancel_destination_for_session(message.from_user.id, session)
             InputSessionService.clear_session(message.from_user.id)
             _delete_pending_invoice(bot, message.from_user.id)
             _try_delete_user_message(bot, message)
-            if draft.get('is_admin'):
-                render_screen(bot, message, 'admin', notice_key='input_cancelled')
-            elif session and str(session['mode'] or '').startswith('broadcast_'):
-                render_screen(bot, message, 'campaigns', notice_key='input_cancelled')
+            if destination:
+                render_screen(bot, message, destination, notice_key='input_cancelled')
             else:
                 render_entry(bot, message)
             return
@@ -339,6 +383,27 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, message, SCREEN_ADMIN_QUEUE, notice_key=result_key)
             else:
                 render_screen(bot, message, admin_risk_screen_key(target_user_id), notice_key=result_key)
+            return
+
+        if mode == 'admin_add_note' and session and session['payload']:
+            payload = str(session['payload'])
+            parts = payload.split(':', 1)
+            submission_id = int(parts[0]) if parts and parts[0].isdigit() else None
+            target_user_id = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
+            _try_delete_user_message(bot, message)
+            if submission_id is None or target_user_id is None:
+                InputSessionService.clear_session(message.from_user.id)
+                render_screen(bot, message, SCREEN_ADMIN_QUEUE, notice_key='admin_submission_not_found')
+                return
+            ok, result_key = AdminService.add_admin_note(
+                message.from_user.id,
+                target_user_id,
+                message.text or '',
+                related_submission_id=submission_id,
+            )
+            if ok:
+                InputSessionService.clear_session(message.from_user.id)
+            render_screen(bot, message, admin_submission_screen_key(submission_id), notice_key=result_key)
             return
 
         if mode == 'admin_adjust_balance' and session and session['payload']:

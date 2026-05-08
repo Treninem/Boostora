@@ -7,6 +7,7 @@ from app.config import settings
 from app.services.activity import ActivityService, AUTO_VERIFIABLE_TASK_TYPES
 from app.services.referrals import ReferralService
 from app.services.risk import RiskService
+from app.services.trust import TrustService
 from app.services.vip import VipService
 
 
@@ -136,7 +137,8 @@ class PerformerService:
     @staticmethod
     def get_active_task_limit(user_id: int) -> int:
         bonuses = VipService.get_active_bonuses(user_id)
-        return BASE_ACTIVE_TASK_LIMIT + bonuses['active_task_limit_bonus']
+        trust = TrustService.summary(user_id, language='ru')
+        return BASE_ACTIVE_TASK_LIMIT + bonuses['active_task_limit_bonus'] + int(trust['task_bonus'])
 
     @staticmethod
     def get_hold_minutes_for_user(user_id: int) -> int:

@@ -4,6 +4,7 @@ from typing import Any
 
 from app import db
 from app.services.admin_logs import AdminLogService
+from app.services.admin_console import AdminConsoleService
 from app.services.referrals import ReferralService
 from app.services.users import UserService
 
@@ -27,19 +28,35 @@ class AdminService:
                 (SELECT COUNT(*) FROM task_submissions WHERE status = 'rejected') AS rejected_total
             '''
         )
+        rights = AdminConsoleService.bot_rights_summary()
+        counts = AdminConsoleService.queue_counts()
         if not row:
-            return {'queue_count': 0, 'blocked_users': 0, 'high_risk_users': 0, 'rejected_total': 0}
-        return {
-            'queue_count': int(row['queue_count']),
-            'blocked_users': int(row['blocked_users']),
-            'high_risk_users': int(row['high_risk_users']),
-            'rejected_total': int(row['rejected_total']),
-        }
+            base = {'queue_count': 0, 'blocked_users': 0, 'high_risk_users': 0, 'rejected_total': 0}
+        else:
+            base = {
+                'queue_count': int(row['queue_count'] or 0),
+                'blocked_users': int(row['blocked_users'] or 0),
+                'high_risk_users': int(row['high_risk_users'] or 0),
+                'rejected_total': int(row['rejected_total'] or 0),
+            }
+        group_summary = AdminConsoleService.queue_group_summary(limit=100)
+        base.update({
+            'queue_high': counts['high'],
+            'queue_clean': counts['clean'],
+            'queue_old': counts['old'],
+            'bot_chats_ready': rights['ready'],
+            'bot_chats_issues': rights['issues'],
+            'high_risk_unblocked': AdminConsoleService.risky_users_count(),
+            'groups_performer': len(group_summary['performers']),
+            'groups_campaign': len(group_summary['campaigns']),
+            'groups_risk': len(group_summary['risk_buckets']),
+        })
+        return base
 
     @staticmethod
-    def list_review_queue(limit: int = 20):
-        return db.fetch_all(
-            '''
+    def list_review_queue(limit: int = 20, filter_code: str = 'all'):
+        extra_where, extra_params = AdminConsoleService.queue_filter_sql(filter_code)
+        query = f'''
             SELECT
                 s.*,
                 c.title AS campaign_title,
@@ -49,16 +66,38 @@ class AdminService:
                 u.first_name,
                 u.last_name,
                 u.status AS user_status,
-                u.risk_score AS user_risk_score
+                u.risk_score AS user_risk_score,
+                (s.risk_score + u.risk_score + CASE WHEN COALESCE(s.submitted_at, s.updated_at, s.created_at) <= datetime('now', '-12 hours') THEN 20 ELSE 0 END) AS priority_score
             FROM task_submissions s
             JOIN campaigns c ON c.id = s.campaign_id
             JOIN users u ON u.user_id = s.performer_user_id
             WHERE s.status = 'manual_review'
-            ORDER BY s.risk_score DESC, s.submitted_at ASC, s.id ASC
+            {extra_where}
+            ORDER BY priority_score DESC, COALESCE(s.submitted_at, s.updated_at, s.created_at) ASC, s.id ASC
             LIMIT ?
-            ''',
-            (limit,),
+            '''
+        return db.fetch_all(query, (*extra_params, limit))
+
+    @staticmethod
+    def bulk_approve_clean(admin_user_id: int, limit: int = 10) -> tuple[bool, str, int]:
+        submission_ids = AdminConsoleService.select_clean_submission_ids(limit=limit)
+        if not submission_ids:
+            return False, 'admin_bulk_no_targets', 0
+        approved = 0
+        for submission_id in submission_ids:
+            ok, _result_key, _performer_user_id = AdminService.review_submission(
+                admin_user_id,
+                submission_id,
+                approve=True,
+            )
+            if ok:
+                approved += 1
+        AdminLogService.log(
+            admin_user_id,
+            'bulk_approve_clean_submissions',
+            details=f'approved={approved}; selected={len(submission_ids)}',
         )
+        return approved > 0, 'admin_bulk_approved_clean' if approved else 'admin_bulk_no_targets', approved
 
     @staticmethod
     def get_submission_card(submission_id: int):
@@ -105,6 +144,14 @@ class AdminService:
             ''',
             (int(submission['performer_user_id']),),
         )
+        performer_user_id = int(submission['performer_user_id'])
+        notes = AdminService.list_admin_notes(
+            performer_user_id,
+            related_submission_id=int(submission['id']),
+            limit=5,
+        )
+        decision_history = AdminConsoleService.performer_decision_history(performer_user_id, limit=5)
+        pattern_card = AdminConsoleService.performer_pattern_card(performer_user_id)
         return {
             'submission': submission,
             'stats': {
@@ -113,6 +160,9 @@ class AdminService:
                 'review_count': int(stats['review_count'] or 0) if stats else 0,
             },
             'events': recent_events,
+            'notes': notes,
+            'decision_history': decision_history,
+            'pattern_card': pattern_card,
         }
 
     @staticmethod
@@ -351,6 +401,64 @@ class AdminService:
                 details=f'delta={delta}; reason={(reason or "manual")[:200]}',
             )
         return ok, result_key, balance
+
+    @staticmethod
+    def list_admin_notes(target_user_id: int, *, related_submission_id: int | None = None, limit: int = 5):
+        if related_submission_id is not None:
+            return db.fetch_all(
+                '''
+                SELECT * FROM admin_notes
+                WHERE target_user_id = ?
+                  AND (related_submission_id = ? OR related_submission_id IS NULL)
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                ''',
+                (target_user_id, related_submission_id, limit),
+            )
+        return db.fetch_all(
+            '''
+            SELECT * FROM admin_notes
+            WHERE target_user_id = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            ''',
+            (target_user_id, limit),
+        )
+
+    @staticmethod
+    def add_admin_note(admin_user_id: int, target_user_id: int, note: str, *, related_submission_id: int | None = None, note_type: str = 'fraud_note') -> tuple[bool, str]:
+        text = (note or '').strip()
+        if not text:
+            return False, 'admin_note_empty'
+        if len(text) > 700:
+            text = text[:700]
+        target = UserService.get_user(target_user_id)
+        if not target:
+            return False, 'admin_user_not_found'
+        db.execute(
+            '''
+            INSERT INTO admin_notes (admin_user_id, target_user_id, related_submission_id, note_type, note)
+            VALUES (?, ?, ?, ?, ?)
+            ''',
+            (admin_user_id, target_user_id, related_submission_id, note_type, text),
+        )
+        AdminLogService.log(
+            admin_user_id,
+            'add_admin_note',
+            target_user_id=target_user_id,
+            details=f'submission_id={related_submission_id or "—"}; note={text[:160]}',
+        )
+        return True, 'admin_note_saved'
+
+    @staticmethod
+    def review_submission_with_template(admin_user_id: int, submission_id: int, template_code: str, *, language: str = 'ru') -> tuple[bool, str, int | None]:
+        kind = AdminConsoleService.template_kind(template_code)
+        if kind not in {'approve', 'reject'}:
+            return False, 'admin_template_invalid', None
+        reason = AdminConsoleService.template_reason(template_code, language)
+        if kind == 'approve':
+            return AdminService.review_submission(admin_user_id, submission_id, approve=True)
+        return AdminService.review_submission(admin_user_id, submission_id, approve=False, reject_reason=reason)
 
     @staticmethod
     def _build_release_at_for_user(user_id: int) -> str:

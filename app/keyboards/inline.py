@@ -4,6 +4,7 @@ from app.config import settings
 from app.services.bot_chats import BotChatService
 from app.services.ad_broadcasts import AdBroadcastService
 from app.services.client_campaigns import TASK_TYPES
+from app.services.client_dashboard import boost_options
 from app.services.payments import PACK_STAR_LEVELS, SPARKS_PACKS, VIP_STARS_PLANS
 from app.services.redemptions import RedemptionService
 from app.services.rewards import RewardService
@@ -200,6 +201,12 @@ def tasks_keyboard(user_id: int, version: int, tasks) -> InlineKeyboardMarkup:
         )
     markup.add(
         InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
+    markup.add(
+        InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
             callback_data=pack_callback(version, 'go', 'tasks'),
         ),
@@ -257,6 +264,22 @@ def task_detail_keyboard(
 
 
 
+def referrals_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'refresh_screen'),
+            callback_data=pack_callback(version, 'go', 'referrals'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'back_to_menu'),
+            callback_data=pack_callback(version, 'go', 'main_menu'),
+        ),
+    )
+    return markup
+
+
+
 def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(
@@ -286,6 +309,12 @@ def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
                 callback_data=pack_callback(version, 'cancel_invoice', 'wallet'),
             )
         )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -356,6 +385,12 @@ def campaigns_keyboard(user_id: int, version: int, campaigns) -> InlineKeyboardM
             callback_data=pack_callback(version, 'camp_new', 'start'),
         )
     )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'client_dashboard_button'),
+            callback_data=pack_callback(version, 'go', 'stats'),
+        )
+    )
     for campaign in campaigns[:12]:
         status_key = STATUS_TEXT_KEYS.get(str(campaign['status']), 'campaign_status_draft')
         status_text = UserService.t(user_id, status_key)
@@ -372,6 +407,12 @@ def campaigns_keyboard(user_id: int, version: int, campaigns) -> InlineKeyboardM
                 callback_data=pack_callback(version, 'camp', str(int(campaign['id']))),
             )
         )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -476,13 +517,38 @@ def campaign_card_keyboard(user_id: int, version: int, campaign) -> InlineKeyboa
                 callback_data=pack_callback(version, 'camp_status', f'{campaign_id},active'),
             )
         )
+    options = boost_options(campaign)
+    if 'recommended' in options:
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'campaign_boost_recommended_button'),
+                callback_data=pack_callback(version, 'camp_boost', f'{campaign_id},recommended'),
+            )
+        )
+    boost_pair = []
+    if 'fast' in options:
+        boost_pair.append(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'campaign_boost_fast_button'),
+                callback_data=pack_callback(version, 'camp_boost', f'{campaign_id},fast'),
+            )
+        )
+    if 'priority' in options:
+        boost_pair.append(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'campaign_boost_priority_button'),
+                callback_data=pack_callback(version, 'camp_boost', f'{campaign_id},priority'),
+            )
+        )
+    if boost_pair:
+        markup.add(*boost_pair)
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'back_to_campaigns'),
             callback_data=pack_callback(version, 'go', 'campaigns'),
         ),
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'menu_stats'),
+            text=UserService.t(user_id, 'client_dashboard_button'),
             callback_data=pack_callback(version, 'go', 'stats'),
         ),
     )
@@ -638,26 +704,33 @@ def exchange_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     return rewards_keyboard(user_id, version)
 
 
-def admin_bot_chats_keyboard(user_id: int, version: int, chats, *, page: int, total_pages: int) -> InlineKeyboardMarkup:
+def admin_bot_chats_keyboard(user_id: int, version: int, chats, *, page: int, total_pages: int, issues_mode: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=1)
     for row in chats:
         title = str(row['title'] or SubscriptionService.display_name(str(row['chat_ref'] or row['chat_id'])))[:40]
         link = BotChatService.chat_link(row)
         label = f"{title}"
+        if issues_mode:
+            label = '⚠️ ' + label
         if link:
             markup.add(InlineKeyboardButton(text=label, url=link))
         else:
             markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'refresh', 'current')))
+    target_prefix = 'admin_bot_rights' if issues_mode else 'admin_bot_chats'
     nav = []
     if page > 1:
-        nav.append(InlineKeyboardButton(text='◀️', callback_data=pack_callback(version, 'go', f'admin_bot_chats:{page-1}')))
+        nav.append(InlineKeyboardButton(text='◀️', callback_data=pack_callback(version, 'go', f'{target_prefix}:{page-1}')))
     nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages,1)}', callback_data=pack_callback(version, 'refresh', 'current')))
     if page < total_pages:
-        nav.append(InlineKeyboardButton(text='▶️', callback_data=pack_callback(version, 'go', f'admin_bot_chats:{page+1}')))
+        nav.append(InlineKeyboardButton(text='▶️', callback_data=pack_callback(version, 'go', f'{target_prefix}:{page+1}')))
     markup.row(*nav)
+    if issues_mode:
+        markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'admin_bot_chats_button'), callback_data=pack_callback(version, 'go', 'admin_bot_chats:1')))
+    else:
+        markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'admin_bot_rights_button'), callback_data=pack_callback(version, 'go', 'admin_bot_rights:1')))
+    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'admin_bot_live_audit_button'), callback_data=pack_callback(version, 'admin_live_audit', '25')))
     markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')))
     return markup
-
 
 def admin_users_keyboard(user_id: int, version: int, users, *, page: int, total_pages: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=1)
@@ -681,37 +754,41 @@ def broadcast_input_keyboard(user_id: int, version: int, *, is_admin: bool = Fal
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'campaign_cancel_button'),
-            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
-        ),
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'menu_admin') if is_admin else UserService.t(user_id, 'back_to_campaigns'),
-            callback_data=pack_callback(version, 'go', 'admin' if is_admin else 'campaigns'),
+            text=UserService.t(user_id, 'back_to_menu'),
+            callback_data=pack_callback(version, 'go', 'main_menu'),
         ),
     )
     return markup
 
 
 def broadcast_schedule_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
-    markup = InlineKeyboardMarkup(row_width=1)
-    draft = AdBroadcastService.get_draft(user_id) or {}
-    repeats = int(draft.get('repeat_count') or 0)
-    if repeats in AdBroadcastService.list_repeat_options():
-        for interval_hours in AdBroadcastService.list_interval_options(repeats):
-            code = f'freq:{interval_hours}'
-            label = AdBroadcastService.schedule_label(AdBroadcastService.build_schedule_code(repeats, interval_hours))
-            markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'ad_sched', code)))
+    draft = AdBroadcastService.get_draft(user_id)
+    markup = InlineKeyboardMarkup(row_width=2)
+    repeats = int(draft.get('repeat_count') or 0) if draft else 0
+    if repeats <= 0:
+        for repeat_count, label in AdBroadcastService.list_repeat_options().items():
+            markup.add(
+                InlineKeyboardButton(
+                    text=str(label),
+                    callback_data=pack_callback(version, 'ad_sched', f'repeat:{int(repeat_count)}'),
+                )
+            )
     else:
-        for repeats_count, label in AdBroadcastService.list_repeat_options().items():
-            markup.add(InlineKeyboardButton(text=str(label), callback_data=pack_callback(version, 'ad_sched', f'repeat:{repeats_count}')))
+        for hours in AdBroadcastService.list_interval_options(repeats):
+            markup.add(
+                InlineKeyboardButton(
+                    text=AdBroadcastService.interval_label(int(hours)),
+                    callback_data=pack_callback(version, 'ad_sched', f'freq:{int(hours)}'),
+                )
+            )
     markup.add(
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'campaign_cancel_button'),
-            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
+            text=UserService.t(user_id, 'cancel_proof_input'),
+            callback_data=pack_callback(version, 'cancel_input', 'broadcast'),
         ),
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'back_to_campaigns'),
-            callback_data=pack_callback(version, 'go', 'campaigns'),
+            text=UserService.t(user_id, 'back_to_menu'),
+            callback_data=pack_callback(version, 'go', 'main_menu'),
         ),
     )
     return markup
@@ -720,44 +797,17 @@ def broadcast_schedule_keyboard(user_id: int, version: int) -> InlineKeyboardMar
 def broadcast_preview_keyboard(user_id: int, version: int, *, is_admin: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=1)
     action = 'ad_send' if is_admin else 'ad_pay'
-    confirm_text = UserService.t(user_id, 'broadcast_send_now_button' if is_admin else 'broadcast_pay_button')
-    markup.add(InlineKeyboardButton(text=confirm_text, callback_data=pack_callback(version, action, 'confirm')))
-    if (not is_admin) and InvoiceMessageService.get(user_id):
-        markup.add(
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'cancel_invoice_button'),
-                callback_data=pack_callback(version, 'cancel_invoice', 'broadcast_preview'),
-            )
+    text_key = 'broadcast_send_now_button' if is_admin else 'broadcast_pay_button'
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, text_key),
+            callback_data=pack_callback(version, action, 'confirm'),
         )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'campaign_cancel_button'),
-            callback_data=pack_callback(version, 'camp_cancel', 'broadcast'),
-        ),
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'back_to_campaigns'),
-            callback_data=pack_callback(version, 'go', 'campaigns' if not is_admin else 'admin'),
-        ),
-    )
-    return markup
-
-
-def referrals_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'wallet_exchange_button'),
-            callback_data=pack_callback(version, 'go', 'exchange'),
-        ),
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'menu_vip'),
-            callback_data=pack_callback(version, 'go', 'vip'),
-        ),
     )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
-            callback_data=pack_callback(version, 'go', 'referrals'),
+            callback_data=pack_callback(version, 'go', 'broadcast_preview'),
         ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'back_to_menu'),
@@ -787,16 +837,32 @@ def admin_home_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
             callback_data=pack_callback(version, 'go', 'admin_queue'),
         ),
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_logs_button'),
-            callback_data=pack_callback(version, 'go', 'admin_logs'),
+            text=UserService.t(user_id, 'admin_queue_high_button'),
+            callback_data=pack_callback(version, 'go', 'admin_queue:high'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_patterns_button'),
+            callback_data=pack_callback(version, 'go', 'admin_patterns'),
         ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'admin_bot_chats_button'),
             callback_data=pack_callback(version, 'go', 'admin_bot_chats:1'),
         ),
         InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_bot_rights_button'),
+            callback_data=pack_callback(version, 'go', 'admin_bot_rights:1'),
+        ),
+        InlineKeyboardButton(
             text=UserService.t(user_id, 'admin_users_button'),
             callback_data=pack_callback(version, 'go', 'admin_users:1'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_logs_button'),
+            callback_data=pack_callback(version, 'go', 'admin_logs'),
         ),
     )
     markup.add(
@@ -808,9 +874,19 @@ def admin_home_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     if UserService.is_owner(user_id):
         markup.add(
             InlineKeyboardButton(
+                text=UserService.t(user_id, 'owner_analytics_button'),
+                callback_data=pack_callback(version, 'go', 'owner_analytics'),
+            ),
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'owner_release_button'),
+                callback_data=pack_callback(version, 'go', 'owner_release'),
+            ),
+        )
+        markup.add(
+            InlineKeyboardButton(
                 text=UserService.t(user_id, 'admin_required_chats_button'),
                 callback_data=pack_callback(version, 'go', 'admin_required_chats'),
-            )
+            ),
         )
     markup.add(
         InlineKeyboardButton(
@@ -820,12 +896,98 @@ def admin_home_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     )
     return markup
 
-def admin_queue_keyboard(user_id: int, version: int, submissions) -> InlineKeyboardMarkup:
-    markup = InlineKeyboardMarkup(row_width=1)
+
+
+def owner_analytics_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'refresh_screen'),
+            callback_data=pack_callback(version, 'go', 'owner_analytics'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'owner_release_button'),
+            callback_data=pack_callback(version, 'go', 'owner_release'),
+        ),
+    )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'menu_admin'),
+            callback_data=pack_callback(version, 'go', 'admin'),
+        ),
+    )
+    return markup
+
+
+
+def owner_release_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'refresh_screen'),
+            callback_data=pack_callback(version, 'go', 'owner_release'),
+        ),
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'owner_analytics_button'),
+            callback_data=pack_callback(version, 'go', 'owner_analytics'),
+        ),
+    )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'menu_admin'),
+            callback_data=pack_callback(version, 'go', 'admin'),
+        ),
+    )
+    return markup
+
+
+
+def admin_groups_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_button'), callback_data=pack_callback(version, 'go', 'admin_queue')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_high_button'), callback_data=pack_callback(version, 'go', 'admin_queue:high')),
+    )
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_patterns_button'), callback_data=pack_callback(version, 'go', 'admin_patterns')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'refresh_screen'), callback_data=pack_callback(version, 'go', 'admin_groups')),
+    )
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')),
+    )
+    return markup
+
+
+def admin_patterns_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_groups_button'), callback_data=pack_callback(version, 'go', 'admin_groups')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_high_button'), callback_data=pack_callback(version, 'go', 'admin_queue:high')),
+    )
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_bot_rights_button'), callback_data=pack_callback(version, 'go', 'admin_bot_rights:1')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_bot_live_audit_button'), callback_data=pack_callback(version, 'admin_live_audit', '25')),
+    )
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'refresh_screen'), callback_data=pack_callback(version, 'go', 'admin_patterns')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')),
+    )
+    return markup
+
+
+def admin_queue_keyboard(user_id: int, version: int, submissions, *, filter_code: str = 'all') -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_filter_all'), callback_data=pack_callback(version, 'go', 'admin_queue')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_filter_high'), callback_data=pack_callback(version, 'go', 'admin_queue:high')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_filter_clean'), callback_data=pack_callback(version, 'go', 'admin_queue:clean')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'admin_queue_filter_old'), callback_data=pack_callback(version, 'go', 'admin_queue:old')),
+    )
     for submission in submissions[:10]:
         title = str(submission['campaign_title'] or f"#{int(submission['campaign_id'])}")
         performer = str(submission['username'] or '').strip()
         display = f"@{performer}" if performer else f"ID {int(submission['performer_user_id'])}"
+        priority = int(submission['priority_score'] or 0) if 'priority_score' in submission.keys() else int(submission['risk_score'] or 0)
         text = UserService.t(
             user_id,
             'admin_queue_row',
@@ -833,6 +995,7 @@ def admin_queue_keyboard(user_id: int, version: int, submissions) -> InlineKeybo
             title=title[:18],
             performer=display[:18],
             risk=int(submission['risk_score']),
+            priority=priority,
         )
         markup.add(
             InlineKeyboardButton(
@@ -840,10 +1003,30 @@ def admin_queue_keyboard(user_id: int, version: int, submissions) -> InlineKeybo
                 callback_data=pack_callback(version, 'admin_submission', str(int(submission['id']))),
             )
         )
+    if filter_code == 'clean':
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_bulk_approve_clean_button'),
+                callback_data=pack_callback(version, 'admin_bulk_clean', '10'),
+            )
+        )
+    if filter_code == 'high':
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_bulk_block_high_button'),
+                callback_data=pack_callback(version, 'admin_bulk_block_high', '10'),
+            )
+        )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
-            callback_data=pack_callback(version, 'go', 'admin_queue'),
+            callback_data=pack_callback(version, 'go', 'admin_queue' if filter_code == 'all' else f'admin_queue:{filter_code}'),
         ),
         InlineKeyboardButton(
             text=UserService.t(user_id, 'menu_admin'),
@@ -851,6 +1034,7 @@ def admin_queue_keyboard(user_id: int, version: int, submissions) -> InlineKeybo
         ),
     )
     return markup
+
 
 
 def admin_submission_keyboard(user_id: int, version: int, card) -> InlineKeyboardMarkup:
@@ -868,6 +1052,35 @@ def admin_submission_keyboard(user_id: int, version: int, card) -> InlineKeyboar
                 callback_data=pack_callback(version, 'admin_reject_start', str(int(submission['id']))),
             ),
         )
+    if str(submission['status']) == 'manual_review':
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_tpl_approve_clean_button'),
+                callback_data=pack_callback(version, 'admin_tpl_approve', f"{int(submission['id'])}:approve_clean"),
+            )
+        )
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_tpl_reject_target_button'),
+                callback_data=pack_callback(version, 'admin_tpl_reject', f"{int(submission['id'])}:reject_wrong_target"),
+            ),
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_tpl_reject_proof_button'),
+                callback_data=pack_callback(version, 'admin_tpl_reject', f"{int(submission['id'])}:reject_no_proof"),
+            ),
+        )
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_tpl_reject_spam_button'),
+                callback_data=pack_callback(version, 'admin_tpl_reject', f"{int(submission['id'])}:reject_spam"),
+            )
+        )
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_note_button'),
+            callback_data=pack_callback(version, 'admin_note_start', f"{int(submission['id'])}:{performer_user_id}"),
+        )
+    )
     block_action = 'admin_unblock' if str(submission['user_status']) == 'blocked' else 'admin_block'
     block_text = 'admin_unblock_button' if str(submission['user_status']) == 'blocked' else 'admin_block_button'
     markup.add(
@@ -918,6 +1131,12 @@ def admin_required_chats_keyboard(user_id: int, version: int, chats) -> InlineKe
     )
     markup.add(
         InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
+    markup.add(
+        InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
             callback_data=pack_callback(version, 'go', 'admin_required_chats'),
         ),
@@ -931,6 +1150,12 @@ def admin_required_chats_keyboard(user_id: int, version: int, chats) -> InlineKe
 
 def admin_logs_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        InlineKeyboardButton(
+            text=UserService.t(user_id, 'admin_queue_groups_button'),
+            callback_data=pack_callback(version, 'go', 'admin_groups'),
+        )
+    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),

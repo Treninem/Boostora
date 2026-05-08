@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app import db
+from app.services.trust import TrustService
 
 
 RISK_THRESHOLD_MANUAL_REVIEW = 40
@@ -51,7 +52,20 @@ class RiskService:
     def assess_submission(user_id: int, submission_id: int, proof_text: str) -> dict[str, object]:
         submission = db.fetch_one('SELECT * FROM task_submissions WHERE id = ?', (submission_id,))
         user = db.fetch_one('SELECT * FROM users WHERE user_id = ?', (user_id,))
+        trust = TrustService.summary(user_id, language='ru')
         reasons: list[dict[str, object]] = []
+        manual_threshold = 15
+
+        if int(trust['score']) >= 85:
+            manual_threshold += 5
+        elif int(trust['score']) < 40:
+            manual_threshold -= 3
+            reasons.append({
+                'event_type': 'low_trust_profile',
+                'severity': 'medium',
+                'score_delta': 4,
+                'details': f"Trust score is {int(trust['score'])}",
+            })
 
         if user and int(user['risk_score']) >= RISK_THRESHOLD_MANUAL_REVIEW:
             reasons.append({
@@ -134,9 +148,11 @@ class RiskService:
 
         total_score = sum(int(item['score_delta']) for item in reasons)
         return {
-            'manual_review': total_score >= 15,
+            'manual_review': total_score >= manual_threshold,
             'score_delta': total_score,
             'reasons': reasons,
+            'manual_threshold': manual_threshold,
+            'trust_score': int(trust['score']),
         }
 
     @staticmethod

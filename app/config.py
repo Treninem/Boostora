@@ -12,6 +12,8 @@ LEGACY_REQUIRED_CHAT_LINK = 'https://t.me/+I8t5mJaHGh80ODJi'
 DEFAULT_PUBLIC_REQUIRED_CHAT_REF = '@Boostorachat'
 DEFAULT_PUBLIC_REQUIRED_CHAT_LINK = 'https://t.me/Boostorachat'
 
+CONFIG_WARNINGS: list[str] = []
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -31,20 +33,61 @@ class Settings:
     promo_interval_hours: int
 
 
+def _add_config_warning(message: str) -> None:
+    if message not in CONFIG_WARNINGS:
+        CONFIG_WARNINGS.append(message)
+
+
 def _parse_admin_ids(raw_value: str) -> list[int]:
     ids: list[int] = []
-    for chunk in raw_value.split(','):
+    seen: set[int] = set()
+    for chunk in (raw_value or '').split(','):
         value = chunk.strip()
         if not value:
             continue
-        ids.append(int(value))
+        try:
+            parsed = int(value)
+        except ValueError:
+            _add_config_warning(f'ADMIN_IDS contains invalid value: {value}')
+            continue
+        if parsed <= 0:
+            _add_config_warning(f'ADMIN_IDS contains non-positive value: {value}')
+            continue
+        if parsed in seen:
+            continue
+        seen.add(parsed)
+        ids.append(parsed)
+    if raw_value.strip() and not ids:
+        _add_config_warning('ADMIN_IDS is set but has no valid numeric ids')
     return ids
 
 
 def _parse_bool(raw_value: str, default: bool = False) -> bool:
     if raw_value is None:
         return default
-    return raw_value.strip().lower() in {'1', 'true', 'yes', 'on'}
+    value = raw_value.strip().lower()
+    if value in {'1', 'true', 'yes', 'on'}:
+        return True
+    if value in {'0', 'false', 'no', 'off'}:
+        return False
+    _add_config_warning(f'boolean value is invalid and default was used: {raw_value}')
+    return default
+
+
+def _parse_int_env(name: str, default: int, *, minimum: int | None = None, maximum: int | None = None) -> int:
+    raw_value = os.getenv(name, str(default)).strip()
+    try:
+        value = int(raw_value)
+    except ValueError:
+        _add_config_warning(f'{name} must be an integer; default {default} was used')
+        return default
+    if minimum is not None and value < minimum:
+        _add_config_warning(f'{name} is below minimum {minimum}; default {default} was used')
+        return default
+    if maximum is not None and value > maximum:
+        _add_config_warning(f'{name} is above maximum {maximum}; default {default} was used')
+        return default
+    return value
 
 
 def _get_required_env(name: str) -> str:
@@ -101,12 +144,12 @@ settings = Settings(
     data_dir=_data_dir,
     brand_name=os.getenv('BRAND_NAME', 'Boostora').strip() or 'Boostora',
     support_username=os.getenv('SUPPORT_USERNAME', '@BoostoraBot').strip() or '@BoostoraBot',
-    default_hold_hours=int(os.getenv('DEFAULT_HOLD_HOURS', '24')),
-    demo_hold_minutes=int(os.getenv('DEMO_HOLD_MINUTES', '3')),
+    default_hold_hours=_parse_int_env('DEFAULT_HOLD_HOURS', 24, minimum=1, maximum=720),
+    demo_hold_minutes=_parse_int_env('DEMO_HOLD_MINUTES', 3, minimum=1, maximum=1440),
     enable_demo_topup=_parse_bool(os.getenv('ENABLE_DEMO_TOPUP', '1'), default=True),
     enable_xtr_payments=_parse_bool(os.getenv('ENABLE_XTR_PAYMENTS', '1'), default=True),
     required_chat_id=_normalize_default_required_chat_ref(os.getenv('REQUIRED_CHAT_ID', DEFAULT_PUBLIC_REQUIRED_CHAT_REF)),
     required_chat_invite_link=_normalize_default_required_chat_link(os.getenv('REQUIRED_CHAT_INVITE_LINK', DEFAULT_PUBLIC_REQUIRED_CHAT_LINK)),
     run_command=os.getenv('RUN_COMMAND', 'python3 main.py').strip() or 'python3 main.py',
-    promo_interval_hours=int(os.getenv('PROMO_INTERVAL_HOURS', '18')),
+    promo_interval_hours=_parse_int_env('PROMO_INTERVAL_HOURS', 18, minimum=1, maximum=720),
 )

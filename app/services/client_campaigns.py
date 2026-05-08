@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 from app.services.activity import ActivityService
 from app.services.campaigns import CampaignService
-from app.services.economy import calculate_campaign_pricing, supported_task_types, task_meta
+from app.services.economy import calculate_campaign_pricing, recommend_unit_prices, supported_task_types, task_meta
 from app.services.input_sessions import InputSessionService
 from app.services.wallets import WalletService
 
@@ -150,6 +150,9 @@ class ClientCampaignService:
         draft['performer_floor_reward'] = int(floor['performer_floor_reward'])
         draft['discount_percent'] = int(floor['discount_percent'])
         draft['base_client_floor_price'] = int(floor['base_client_floor_price'])
+        draft['recommended_unit_price'] = int(floor['recommended_unit_price'])
+        draft['fast_unit_price'] = int(floor['fast_unit_price'])
+        draft['priority_unit_price'] = int(floor['priority_unit_price'])
         InputSessionService.set_session(user_id, MODE_PRICE, json.dumps(draft, ensure_ascii=False))
         return True, 'campaign_quantity_saved', MODE_PRICE
 
@@ -185,6 +188,10 @@ class ClientCampaignService:
         draft['performer_floor_reward'] = int(pricing['performer_floor_reward'])
         draft['base_client_floor_price'] = int(pricing['base_client_floor_price'])
         draft['speed_index'] = int(pricing['speed_index'])
+        draft['price_position_percent'] = int(pricing['price_position_percent'])
+        draft['recommended_unit_price'] = int(pricing['recommended_unit_price'])
+        draft['fast_unit_price'] = int(pricing['fast_unit_price'])
+        draft['priority_unit_price'] = int(pricing['priority_unit_price'])
         InputSessionService.set_session(user_id, MODE_CONFIRM, json.dumps(draft, ensure_ascii=False))
         return True, 'campaign_price_saved', MODE_CONFIRM
 
@@ -218,6 +225,10 @@ class ClientCampaignService:
                 'performer_floor_reward': int(draft['performer_floor_reward']),
                 'service_fee_unit': int(draft['service_fee_unit']),
                 'speed_index': int(draft['speed_index']),
+                'price_position_percent': int(draft.get('price_position_percent') or 0),
+                'recommended_unit_price': int(draft.get('recommended_unit_price') or draft['unit_price']),
+                'fast_unit_price': int(draft.get('fast_unit_price') or draft['unit_price']),
+                'priority_unit_price': int(draft.get('priority_unit_price') or draft['unit_price']),
             },
             total_quantity=int(draft['total_quantity']),
             status='draft',
