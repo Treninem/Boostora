@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#12091f">
+  <meta name="color-scheme" content="dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org">
+  <title>Boostora</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: var(--tg-theme-bg-color, #12091f);
+      --surface: var(--tg-theme-secondary-bg-color, #21132f);
+      --text: var(--tg-theme-text-color, #fff);
+      --hint: var(--tg-theme-hint-color, rgba(255,255,255,.7));
+      --button: var(--tg-theme-button-color, #f0b33f);
+      --button-text: var(--tg-theme-button-text-color, #241404);
+      --line: rgba(255,255,255,.13);
+      --card: rgba(255,255,255,.075);
+      --gold: #f0b33f;
+      --purple: #7b3cff;
+      --green: #43e29b;
+      --danger: #ff7474;
+      --safe-top: max(10px, env(safe-area-inset-top));
+      --safe-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+    * { box-sizing: border-box; }
+    html { background: var(--bg); }
+    body {
+      margin: 0; min-height: 100vh; color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 10% -10%, rgba(123,60,255,.36), transparent 35%),
+        radial-gradient(circle at 95% 4%, rgba(240,179,63,.18), transparent 26%), var(--bg);
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font: inherit; cursor: pointer; touch-action: manipulation; }
+    [hidden] { display: none !important; }
+    .top { position: sticky; top: 0; z-index: 30; padding-top: env(safe-area-inset-top); background: rgba(18,9,31,.82); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
+    .topin, .wrap { width: min(100%, 980px); margin: 0 auto; }
+    .topin { min-height: 58px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; }
+    .mark { width: 36px; height: 36px; border-radius: 13px; display: grid; place-items: center; background: linear-gradient(135deg,#8a4cff,#f0b33f); box-shadow: 0 10px 25px rgba(0,0,0,.28); }
+    .pill { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--hint); background: var(--card); font-size: 12px; white-space: nowrap; }
+    .wrap { padding: 16px 14px calc(90px + var(--safe-bottom)); }
+    .view { animation: appear .18s ease; }
+    @keyframes appear { from { opacity: .2; transform: translateY(5px); } }
+    .hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 16px; padding: 21px; border-radius: 29px; overflow: hidden; background: linear-gradient(135deg,rgba(42,18,72,.99),rgba(91,36,180,.94) 58%,rgba(198,141,42,.93)); box-shadow: 0 18px 48px rgba(0,0,0,.33); }
+    .hero h1 { margin: 0 0 9px; font-size: clamp(29px,7vw,51px); line-height: .98; }
+    .hero p { margin: 0; color: rgba(255,255,255,.76); line-height: 1.48; }
+    .hero img { width: 100%; max-height: 270px; object-fit: contain; filter: drop-shadow(0 16px 25px rgba(0,0,0,.32)); }
+    .eyebrow { margin-bottom: 8px !important; color: #ffe19a !important; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
+    .btn { min-height: 47px; border: 0; border-radius: 16px; padding: 12px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 850; background: var(--button); color: var(--button-text); box-shadow: 0 9px 22px rgba(0,0,0,.18); }
+    .btn.secondary { color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); box-shadow: none; }
+    .btn.full { width: 100%; }
+    .btn:disabled { opacity: .55; cursor: wait; }
+    .state { margin-top: 12px !important; font-size: 13px; }
+    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin: 25px 2px 11px; }
+    .section-head h2 { margin: 0; font-size: 22px; }
+    .section-head span { color: var(--hint); font-size: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+    .card { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 23px; background: linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.05)); box-shadow: 0 10px 29px rgba(0,0,0,.16); }
+    .card img { width: 100%; height: 124px; object-fit: cover; border-radius: 17px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); }
+    .card h3 { margin: 11px 0 6px; font-size: 17px; }
+    .muted { color: var(--hint); line-height: 1.45; }
+    .card .btn { margin-top: 12px; width: 100%; }
+    .stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    .stat { padding: 13px; border-radius: 19px; border: 1px solid var(--line); background: var(--card); }
+    .stat b { display: block; font-size: 23px; margin-bottom: 3px; }
+    .stat span { color: var(--hint); font-size: 12px; }
+    .profile { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); }
+    .avatar { width: 48px; height: 48px; border-radius: 17px; display: grid; place-items: center; font-size: 22px; background: linear-gradient(135deg,#7b3cff,#d93df2); }
+    .profile b { display: block; }
+    .progress { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); margin-top: 10px; }
+    .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#7b3cff,#f0b33f); border-radius: inherit; transition: width .25s ease; }
+    .notice { margin-top: 14px; padding: 13px 14px; border-radius: 18px; border: 1px solid rgba(240,179,63,.25); background: rgba(240,179,63,.09); color: #ffe4a6; }
+    .management { margin-top: 14px; padding: 14px; border: 1px solid rgba(123,60,255,.32); border-radius: 23px; background: rgba(123,60,255,.09); }
+    .management h3 { margin: 0 0 11px; }
+    .management .actions { margin: 0; }
+    .bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 7px 10px calc(7px + env(safe-area-inset-bottom)); background: rgba(18,9,31,.9); backdrop-filter: blur(18px); border-top: 1px solid var(--line); }
+    .nav { width: min(100%,650px); margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; }
+    .nav button { min-width: 0; min-height: 56px; padding: 6px 3px; border: 0; border-radius: 15px; color: var(--hint); background: transparent; font-size: 11px; }
+    .nav button b { display: block; font-size: 19px; margin-bottom: 2px; }
+    .nav button.active { color: #fff; background: rgba(255,255,255,.11); }
+    .toast { position: fixed; left: 50%; bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 80; transform: translate(-50%,18px); width: min(calc(100% - 28px),520px); padding: 12px 14px; border-radius: 16px; background: #2b183b; border: 1px solid var(--line); box-shadow: 0 14px 35px rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: .2s ease; text-align: center; }
+    .toast.show { opacity: 1; transform: translate(-50%,0); }
+    @media (max-width:760px) { .hero { grid-template-columns: 1fr; } .hero img { max-height: 210px; } .grid { grid-template-columns: 1fr 1fr; } .stat-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width:480px) { .grid { grid-template-columns: 1fr; } .hero { padding: 18px; border-radius: 24px; } .wrap,.topin { padding-left: 12px; padding-right: 12px; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="topin">
+      <div class="brand"><span class="mark">🚀</span><span id="brandName">Boostora</span></div>
+      <span class="pill" id="rolePill">Подключение…</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="view" data-view="home">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Кабинет продвижения</p>
+          <h1>Управляй активностью</h1>
+          <p>Задания, кампании, взаимная активность, баланс и PRO — в одном кабинете. Доступные действия зависят от твоей роли.</p>
+          <div class="actions">
+            <button class="btn" data-action="hub">🧭 Открыть кабинет</button>
+            <button class="btn secondary" data-action="main">🤖 Меню бота</button>
+          </div>
+          <p class="state" id="telegramState">Проверяем подключение к Telegram…</p>
+        </div>
+        <img src="assets/hero-growth.svg" alt="Рост активности Boostora">
+      </div>
+
+      <div class="section-head"><h2>Твой профиль</h2><span id="connectionBadge">проверка…</span></div>
+      <div class="profile">
+        <div class="avatar">👤</div>
+        <div><b id="userName">Гость</b><span class="muted" id="userDetails">Ожидаем безопасную сессию Telegram.</span></div>
+      </div>
+
+      <div class="section-head"><h2>Сводка</h2><span>только твои данные</span></div>
+      <div class="stat-grid">
+        <div class="stat"><b id="balanceStat">—</b><span>доступно</span></div>
+        <div class="stat"><b id="workStat">—</b><span id="workLabel">активность</span></div>
+        <div class="stat"><b id="modeStat">—</b><span>режим</span></div>
+        <div class="stat"><b id="obligationStat">—</b><span>осталось действий</span></div>
+      </div>
+
+      <div class="section-head"><h2>Быстрые действия</h2></div>
+      <div class="grid" id="quickGrid">
+        <article class="card common-card"><img src="assets/wallet.svg" alt="Кошелёк"><h3>Кошелёк</h3><p class="muted">Баланс, пополнение, история и награды.</p><button class="btn secondary" data-action="wallet">Открыть</button></article>
+        <article class="card performer-only" hidden><img src="assets/liker.svg" alt="Задания"><h3>Задания</h3><p class="muted">Выбери доступное задание и отправь подтверждение.</p><button class="btn secondary" data-action="tasks">Открыть</button></article>
+        <article class="card client-only" hidden><img src="assets/commenter.svg" alt="Кампании"><h3>Мои кампании</h3><p class="muted">Создание, запуск и контроль продвижения.</p><button class="btn secondary" data-action="campaigns">Открыть</button></article>
+        <article class="card"><img src="assets/obligations.svg" alt="Standard и PRO"><h3>Standard и PRO</h3><p class="muted">Выбор режима и твои обязательства.</p><button class="btn secondary" data-action="engagement">Открыть</button></article>
+      </div>
+      <div class="notice" id="registrationNotice" hidden>Сначала открой бота и заверши выбор роли, принятие правил и юридических условий.</div>
+    </section>
+
+    <section class="view" data-view="work" hidden>
+      <div class="section-head"><h2 id="workTitle">Работа</h2><span id="workHint">доступно по роли</span></div>
+      <div class="grid performer-only" hidden>
+        <article class="card"><img src="assets/liker.svg" alt="Доступные задания"><h3>Доступные задания</h3><p class="muted"><span id="availableTasks">0</span> заданий ждут исполнителей.</p><button class="btn" data-action="tasks">Выбрать задание</button></article>
+        <article class="card"><img src="assets/commenter.svg" alt="Активные задания"><h3>Мои выполнения</h3><p class="muted">Проверь активные задания, proof и статус проверки.</p><button class="btn secondary" data-action="tasks">Открыть</button></article>
+        <article class="card"><img src="assets/standard.svg" alt="Награды"><h3>Награды</h3><p class="muted">Бонусы, достижения и приглашения.</p><button class="btn secondary" data-action="rewards">Открыть</button></article>
+      </div>
+      <div class="grid client-only" hidden>
+        <article class="card"><img src="assets/hero-growth.svg" alt="Кампании"><h3>Мои кампании</h3><p class="muted">Всего: <span id="campaignCount">0</span>, активных: <span id="activeCampaignCount">0</span>.</p><button class="btn" data-action="campaigns">Управлять</button></article>
+        <article class="card"><img src="assets/boostore.svg" alt="Витрина"><h3>Витрина услуг</h3><p class="muted">Доступные способы продвижения без технических настроек поставщика.</p><button class="btn secondary" data-action="marketplace">Открыть</button></article>
+        <article class="card"><img src="assets/commenter.svg" alt="Статистика"><h3>Статистика</h3><p class="muted">Результаты, скорость и качество кампаний.</p><button class="btn secondary" data-action="stats">Открыть</button></article>
+      </div>
+      <div class="section-head"><h2>Общее</h2></div>
+      <div class="grid">
+        <article class="card"><img src="assets/pro.svg" alt="PRO"><h3>PRO</h3><p class="muted">Активность без ответных обязательств Standard.</p><button class="btn secondary" data-action="vip">Открыть PRO</button></article>
+        <article class="card"><img src="assets/rules.svg" alt="Правила"><h3>Правила</h3><p class="muted">Условия участия и безопасной работы.</p><button class="btn secondary" data-action="rules">Открыть</button></article>
+      </div>
+    </section>
+
+    <section class="view" data-view="balance" hidden>
+      <div class="section-head"><h2>Кошелёк</h2><span>личные данные</span></div>
+      <div class="stat-grid">
+        <div class="stat"><b id="walletAvailable">0</b><span>доступно</span></div>
+        <div class="stat"><b id="walletCampaign">0</b><span>для кампаний</span></div>
+        <div class="stat"><b id="walletHold">0</b><span>на проверке</span></div>
+        <div class="stat"><b id="walletEarned">0</b><span>заработано</span></div>
+      </div>
+      <div class="section-head"><h2>Действия</h2></div>
+      <div class="grid">
+        <article class="card"><img src="assets/wallet.svg" alt="Кошелёк"><h3>Управление балансом</h3><p class="muted">Пополнение Stars, обмен и доступные средства.</p><button class="btn" data-action="wallet">Открыть кошелёк</button></article>
+        <article class="card"><img src="assets/obligations.svg" alt="История"><h3>История</h3><p class="muted">Операции, начисления и удержания.</p><button class="btn secondary" data-action="history">Открыть историю</button></article>
+        <article class="card"><img src="assets/standard.svg" alt="Рефералы"><h3>Приглашения</h3><p class="muted">Реферальная ссылка и награды.</p><button class="btn secondary" data-action="referrals">Открыть</button></article>
+      </div>
+    </section>
+
+    <section class="view" data-view="more" hidden>
+      <div class="section-head"><h2>Standard и PRO</h2><span id="modeCaption">режим не выбран</span></div>
+      <div class="grid">
+        <article class="card"><img src="assets/standard.svg" alt="Standard"><h3>Standard</h3><p class="muted">Взаимная активность с ответными действиями.</p><button class="btn secondary" data-action="engagement">Настроить</button></article>
+        <article class="card"><img src="assets/pro.svg" alt="PRO"><h3>PRO</h3><p class="muted">Без ответных действий. Цена показывается в боте.</p><button class="btn secondary" data-action="engagement">Подробнее</button></article>
+        <article class="card"><img src="assets/obligations.svg" alt="Обязательства"><h3>Мой прогресс</h3><p class="muted"><span id="obligationText">Нет активных обязательств.</span></p><div class="progress"><i id="obligationProgress"></i></div><button class="btn secondary" data-action="obligations">Открыть</button></article>
+      </div>
+
+      <div class="section-head"><h2>Документы</h2></div>
+      <div class="grid">
+        <article class="card"><img src="assets/rules.svg" alt="Правила"><h3>Правила сообщества</h3><button class="btn secondary" data-action="rules">Открыть</button></article>
+        <article class="card"><img src="assets/rules.svg" alt="Условия"><h3>Юридические условия</h3><button class="btn secondary" data-action="legal">Открыть</button></article>
+      </div>
+
+      <section class="management" id="adminPanel" hidden>
+        <h3>🛡 Управление</h3>
+        <div class="actions">
+          <button class="btn secondary" data-action="admin">Админ-центр</button>
+          <button class="btn secondary" data-action="admin_queue">Проверка заявок</button>
+          <button class="btn secondary" data-action="admin_obligations">Обязательства</button>
+          <button class="btn secondary" data-action="admin_logs">Журнал</button>
+        </div>
+      </section>
+
+      <section class="management" id="ownerPanel" hidden>
+        <h3>👑 Раздел владельца</h3>
+        <div class="actions">
+          <button class="btn secondary" data-action="owner_analytics">Коммерция</button>
+          <button class="btn secondary" data-action="owner_provider">Поставщик услуг</button>
+          <button class="btn secondary" data-action="owner_release">Проверка релиза</button>
+        </div>
+        <p class="muted" id="ownerVersion" style="margin-top:10px"></p>
+      </section>
+    </section>
+  </main>
+
+  <nav class="bottom" aria-label="Навигация">
+    <div class="nav">
+      <button class="active" data-nav="home"><b>🏠</b>Главная</button>
+      <button data-nav="work"><b>🔥</b>Работа</button>
+      <button data-nav="balance"><b>💳</b>Баланс</button>
+      <button data-nav="more"><b>☰</b>Ещё</button>
+    </div>
+  </nav>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+  (() => {
+    'use strict';
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    const $ = (id) => document.getElementById(id);
+    const views = [...document.querySelectorAll('[data-view]')];
+    const navButtons = [...document.querySelectorAll('[data-nav]')];
+    const actionButtons = [...document.querySelectorAll('[data-action]')];
+    const fallbackParams = {
+      main:'main_menu', hub:'smart_hub', tasks:'tasks', wallet:'wallet', history:'history',
+      campaigns:'campaigns', stats:'stats', marketplace:'marketplace', engagement:'engagement_mode',
+      obligations:'engagement_obligations', rules:'community_rules', legal:'legal_docs', rewards:'rewards',
+      referrals:'referrals', vip:'vip', admin:'admin', admin_queue:'admin_queue',
+      admin_obligations:'admin_engagement_obligations', admin_logs:'admin_logs',
+      owner_analytics:'owner_analytics', owner_release:'owner_release', owner_provider:'owner_provider'
+    };
+    let config = {brand_name:'Boostora', bot_url:''};
+    let session = null;
+    let toastTimer = null;
+
+    function toast(text) {
+      const node = $('toast');
+      node.textContent = text;
+      node.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => node.classList.remove('show'), 2600);
+    }
+    function setView(name) {
+      views.forEach((view) => { view.hidden = view.dataset.view !== name; });
+      navButtons.forEach((button) => button.classList.toggle('active', button.dataset.nav === name));
+      window.scrollTo({top:0, behavior:'smooth'});
+      try { tg && tg.HapticFeedback.selectionChanged(); } catch (_) {}
+    }
+    function setRoleVisibility(role) {
+      document.querySelectorAll('.performer-only').forEach((node) => { node.hidden = role !== 'performer'; });
+      document.querySelectorAll('.client-only').forEach((node) => { node.hidden = role !== 'client'; });
+      $('workTitle').textContent = role === 'client' ? 'Продвижение' : role === 'performer' ? 'Задания' : 'Работа';
+      $('workHint').textContent = role ? 'доступно по твоей роли' : 'сначала выбери роль в боте';
+    }
+    function openTelegram(url) {
+      if (!url) { toast('Ссылка на бота пока не настроена.'); return; }
+      try {
+        if (tg && typeof tg.openTelegramLink === 'function') tg.openTelegramLink(url);
+        else window.location.href = url;
+      } catch (_) { window.location.href = url; }
+    }
+    function fallbackUrl(action) {
+      if (!config.bot_url) return '';
+      const param = fallbackParams[action];
+      return param ? `${config.bot_url}?start=wa_${encodeURIComponent(param)}` : config.bot_url;
+    }
+    async function invokeAction(action, button) {
+      if (button) button.disabled = true;
+      try {
+        if (!tg || !tg.initData) {
+          openTelegram(fallbackUrl(action));
+          return;
+        }
+        const response = await fetch('/api/miniapp/action', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({init_data:tg.initData, action})
+        });
+        const data = await response.json();
+        if (response.status === 403) { toast('Этот раздел недоступен для твоей роли.'); return; }
+        if (!response.ok || !data.open_url) throw new Error(data.error || 'action_failed');
+        openTelegram(data.open_url);
+      } catch (_) {
+        toast('Не удалось открыть раздел. Попробуй ещё раз.');
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+    function renderDashboard(data) {
+      const dashboard = data.dashboard || {};
+      const role = (data.access && data.access.role) || dashboard.role || '';
+      const roleText = role === 'client' ? 'Заказчик' : role === 'performer' ? 'Исполнитель' : 'Роль не выбрана';
+      $('rolePill').textContent = data.access && data.access.is_owner ? 'Владелец' : data.access && data.access.is_admin ? 'Администратор' : roleText;
+      setRoleVisibility(role);
+      $('registrationNotice').hidden = !!dashboard.registered && !!role;
+
+      const wallet = dashboard.wallet || {};
+      const activity = dashboard.activity || {};
+      const engagement = dashboard.engagement || {};
+      $('balanceStat').textContent = wallet.available ?? 0;
+      $('walletAvailable').textContent = wallet.available ?? 0;
+      $('walletCampaign').textContent = wallet.campaign ?? 0;
+      $('walletHold').textContent = wallet.hold ?? 0;
+      $('walletEarned').textContent = wallet.earned ?? 0;
+      if (role === 'client') {
+        $('workStat').textContent = activity.client_active ?? 0;
+        $('workLabel').textContent = 'активных кампаний';
+      } else {
+        $('workStat').textContent = `${activity.active_tasks ?? 0}/${activity.task_limit ?? 0}`;
+        $('workLabel').textContent = 'активных заданий';
+      }
+      $('availableTasks').textContent = activity.available_tasks ?? 0;
+      $('campaignCount').textContent = activity.client_campaigns ?? 0;
+      $('activeCampaignCount').textContent = activity.client_active ?? 0;
+      const mode = engagement.mode === 'pro' ? 'PRO' : engagement.mode === 'standard' ? 'Standard' : '—';
+      $('modeStat').textContent = mode;
+      $('modeCaption').textContent = mode === '—' ? 'режим не выбран' : `текущий режим: ${mode}`;
+      $('obligationStat').textContent = engagement.remaining ?? 0;
+      const required = Math.max(Number(engagement.required || 0), 1);
+      const done = Number(engagement.done || 0);
+      const percent = Math.max(0, Math.min(100, Math.round(done * 100 / required)));
+      $('obligationProgress').style.width = `${percent}%`;
+      $('obligationText').textContent = Number(engagement.remaining || 0) > 0
+        ? `Выполнено ${done}, осталось ${engagement.remaining}.`
+        : 'Активных обязательств нет.';
+
+      const isAdmin = !!(data.access && data.access.is_admin);
+      const isOwner = !!(data.access && data.access.is_owner);
+      $('adminPanel').hidden = !isAdmin;
+      $('ownerPanel').hidden = !isOwner;
+      if (isOwner && data.owner_meta) $('ownerVersion').textContent = data.owner_meta.version || '';
+
+      const allowed = new Set((data.access && data.access.allowed_actions) || []);
+      actionButtons.forEach((button) => {
+        const action = button.dataset.action;
+        if ((action.startsWith('admin') || action.startsWith('owner')) && !allowed.has(action)) button.hidden = true;
+      });
+    }
+    async function loadConfig() {
+      const response = await fetch('/api/config', {cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error('config');
+      config = data;
+      $('brandName').textContent = data.brand_name || 'Boostora';
+    }
+    async function authenticate() {
+      if (!tg || !tg.initData) {
+        $('connectionBadge').textContent = 'веб-предпросмотр';
+        $('telegramState').textContent = 'Открой Mini App из Telegram, чтобы увидеть личный кабинет.';
+        $('userDetails').textContent = 'В браузере доступен только предварительный просмотр.';
+        setRoleVisibility('');
+        return;
+      }
+      const response = await fetch('/api/telegram/session', {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({init_data:tg.initData})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.authenticated) throw new Error(data.reason || 'auth');
+      session = data;
+      const user = data.user || {};
+      const name = [user.first_name,user.last_name].filter(Boolean).join(' ') || 'Пользователь Telegram';
+      $('userName').textContent = name;
+      $('userDetails').textContent = user.username ? `@${user.username} · профиль подтверждён` : 'Профиль подтверждён Telegram';
+      $('connectionBadge').textContent = 'подключено';
+      $('telegramState').textContent = `Здравствуйте, ${user.first_name || name}. Все кнопки готовы.`;
+      renderDashboard(data);
+      try {
+        fetch('/api/miniapp/open', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData,source:'interactive_miniapp',platform:tg.platform || ''})});
+      } catch (_) {}
+    }
+
+    navButtons.forEach((button) => button.addEventListener('click', () => setView(button.dataset.nav)));
+    actionButtons.forEach((button) => button.addEventListener('click', () => invokeAction(button.dataset.action, button)));
+    if (tg) {
+      tg.ready(); tg.expand();
+      try { tg.enableClosingConfirmation(); } catch (_) {}
+    }
+    loadConfig().catch(() => toast('Не удалось загрузить настройки.')).finally(() => {
+      authenticate().catch(() => {
+        $('connectionBadge').textContent = 'ошибка подключения';
+        $('telegramState').textContent = 'Закрой Mini App и открой её снова кнопкой из Boostora.';
+        toast('Сессия Telegram не подтверждена.');
+      });
+    });
+  })();
+  </script>
+</body>
+</html>
