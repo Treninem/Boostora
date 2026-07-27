@@ -1361,85 +1361,103 @@ def _build_owner_analytics_text(user_id: int) -> str:
 
 
 def _build_owner_release_text(user_id: int) -> str:
+    """Build a compact owner-only release summary that always fits Telegram."""
     summary = ReleaseReadinessService.readiness_summary()
     guardrails = ReleaseReadinessService.launch_guardrails()
     rc1_gate = ReleaseReadinessService.rc1_gate_summary()
     stable_gate = ReleaseReadinessService.stable_release_summary()
-    flow_lines = []
-    for flow in summary['flows']:
-        flow_lines.append(UserService.t(
-            user_id,
-            'release_flow_row',
-            title=UserService.t(user_id, str(flow['title_key'])),
-            status=UserService.t(user_id, f"release_status_{flow['status']}"),
-            score=int(flow['score']),
-            signal=UserService.t(user_id, str(flow['signal_key'])),
-            action=UserService.t(user_id, str(flow['action_key'])),
-        ))
-    guard_lines = []
-    for row in guardrails['matrix']:
-        guard_lines.append(UserService.t(
-            user_id,
-            'launch_guard_row',
-            title=UserService.t(user_id, str(row['title_key'])),
-            status=UserService.t(user_id, f"release_status_{row['status']}"),
-            value=int(row['value']),
-            action=UserService.t(user_id, str(row['action_key'])),
-        ))
-    rc1_gate_lines = []
-    for row in rc1_gate['rows']:
-        rc1_gate_lines.append(UserService.t(
-            user_id,
-            'rc1_gate_row',
-            title=UserService.t(user_id, str(row['title_key'])),
-            status=UserService.t(user_id, f"release_status_{row['status']}"),
-            value=int(row['value']),
-            action=UserService.t(user_id, str(row['action_key'])),
-        ))
-    stable_gate_lines = []
-    for row in stable_gate['rows']:
-        stable_gate_lines.append(UserService.t(
-            user_id,
-            'stable_gate_row',
-            title=UserService.t(user_id, str(row['title_key'])),
-            status=UserService.t(user_id, f"release_status_{row['status']}"),
-            value=int(row['value']),
-            action=UserService.t(user_id, str(row['action_key'])),
-        ))
-    regression_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.regression_plan())
-    checklist_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.final_launch_checklist())
-    contract_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.rc1_release_contract())
-    stable_contract_lines = '\n'.join('• ' + UserService.t(user_id, key) for key in ReleaseReadinessService.stable_release_contract())
-    return UserService.t(
-        user_id,
-        'owner_release_screen',
-        state=UserService.t(user_id, f"release_state_{summary['state']}"),
-        launch_state=UserService.t(user_id, f"release_state_{guardrails['launch_state']}"),
-        score=int(summary['score']),
-        live_score=int(guardrails['live_score']),
-        ready=int(summary['ready']),
-        warnings=int(summary['warnings']),
-        blockers=int(summary['blockers']),
-        hard_blockers=int(guardrails['hard_blockers']),
-        live_warnings=int(guardrails['live_warnings']),
-        stable_state=UserService.t(user_id, f"release_state_{stable_gate['state']}"),
-        stable_score=int(stable_gate['score']),
-        stable_blockers=int(stable_gate['blockers']),
-        stable_warnings=int(stable_gate['warnings']),
-        rc1_state=UserService.t(user_id, f"release_state_{rc1_gate['state']}"),
-        rc1_score=int(rc1_gate['score']),
-        rc1_blockers=int(rc1_gate['blockers']),
-        rc1_warnings=int(rc1_gate['warnings']),
-        total=int(summary['total']),
-        flows='\n'.join(flow_lines),
-        guardrails='\n'.join(guard_lines),
-        stable_gate='\n'.join(stable_gate_lines),
-        rc1_gate='\n'.join(rc1_gate_lines),
-        regression=regression_lines,
-        checklist=checklist_lines,
-        rc1_contract=contract_lines,
-        stable_contract=stable_contract_lines,
-    )
+    language = UserService.get_language(user_id)
+
+    def status_text(status: str) -> str:
+        return UserService.t(user_id, f"release_status_{status}")
+
+    def attention_rows(rows: list[dict], *, score_field: str = 'value', limit: int = 8) -> list[str]:
+        ordered = sorted(
+            rows,
+            key=lambda row: (
+                {'blocker': 0, 'warning': 1, 'ready': 2}.get(str(row.get('status')), 3),
+                str(row.get('code') or ''),
+            ),
+        )
+        non_ready = [row for row in ordered if str(row.get('status')) != 'ready']
+        selected = non_ready[:limit] if non_ready else ordered[:min(5, limit)]
+        result: list[str] = []
+        for row in selected:
+            title_key = str(row.get('title_key') or '')
+            title = UserService.t(user_id, title_key)
+            metric = int(row.get(score_field) or 0)
+            suffix = f"{metric}/100" if score_field == 'score' else str(metric)
+            result.append(
+                f"• <b>{title}</b> — {status_text(str(row.get('status') or 'warning'))} · <b>{suffix}</b>"
+            )
+        return result
+
+    stable_lines = attention_rows(list(stable_gate.get('rows') or []), limit=8)
+    flow_lines = attention_rows(list(summary.get('flows') or []), score_field='score', limit=6)
+    guard_lines = attention_rows(list(guardrails.get('matrix') or []), limit=5)
+
+    stable_state = UserService.t(user_id, f"release_state_{stable_gate['state']}")
+    code_state = UserService.t(user_id, f"release_state_{summary['state']}")
+    launch_state = UserService.t(user_id, f"release_state_{guardrails['launch_state']}")
+    rc1_state = UserService.t(user_id, f"release_state_{rc1_gate['state']}")
+
+    if language == 'en':
+        title = '<b>Boostora v3.2.9 release center</b>'
+        attention_title = '<b>Priority checks</b>'
+        flow_title = '<b>Critical flows</b>'
+        guard_title = '<b>Launch checks</b>'
+        footer = 'The screen is read-only. Full details remain in the automated release audit and transfer package.'
+        labels = {
+            'stable': 'Stable gate',
+            'code': 'Code',
+            'launch': 'Launch',
+            'rc1': 'RC1 gate',
+            'blockers': 'blockers',
+            'warnings': 'warnings',
+            'ready': 'ready',
+        }
+    else:
+        title = '<b>Релиз-центр Boostora v3.2.9</b>'
+        attention_title = '<b>Приоритетные проверки</b>'
+        flow_title = '<b>Критические сценарии</b>'
+        guard_title = '<b>Проверки запуска</b>'
+        footer = 'Экран только читает данные. Полные подробности остаются в автоматическом аудите и архиве переноса.'
+        labels = {
+            'stable': 'Stable gate',
+            'code': 'Код',
+            'launch': 'Запуск',
+            'rc1': 'RC1 gate',
+            'blockers': 'блокеры',
+            'warnings': 'предупреждения',
+            'ready': 'готово',
+        }
+
+    parts = [
+        title,
+        '',
+        f"{labels['stable']}: <b>{stable_state}</b> · <b>{int(stable_gate['score'])}/100</b> · "
+        f"{labels['blockers']}: <b>{int(stable_gate['blockers'])}</b> · "
+        f"{labels['warnings']}: <b>{int(stable_gate['warnings'])}</b>",
+        f"{labels['code']}: <b>{code_state}</b> · <b>{int(summary['score'])}/100</b> · "
+        f"{labels['ready']}: <b>{int(summary['ready'])}/{int(summary['total'])}</b>",
+        f"{labels['launch']}: <b>{launch_state}</b> · <b>{int(guardrails['live_score'])}/100</b> · "
+        f"{labels['blockers']}: <b>{int(guardrails['hard_blockers'])}</b>",
+        f"{labels['rc1']}: <b>{rc1_state}</b> · <b>{int(rc1_gate['score'])}/100</b> · "
+        f"{labels['blockers']}: <b>{int(rc1_gate['blockers'])}</b>",
+        '',
+        attention_title,
+        *(stable_lines or ['• —']),
+        '',
+        flow_title,
+        *(flow_lines or ['• —']),
+        '',
+        guard_title,
+        *(guard_lines or ['• —']),
+        '',
+        footer,
+    ]
+    return '\n'.join(parts)
+
 
 
 

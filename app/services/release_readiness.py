@@ -1415,5 +1415,7 @@ class ReleaseReadinessService:
             'stable_contract_patch_325_policy',
             'stable_contract_patch_326_policy',
             'stable_contract_patch_327_policy',
+            'stable_contract_patch_328_policy',
+            'stable_contract_patch_329_policy',
         ]
 

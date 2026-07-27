@@ -3126,3 +3126,26 @@ TEXTS['en'].update({
     'stable_contract_patch_327_policy': 'v3.2.7: MenuButtonWebApp receives the required type=web_app argument, retains compatibility with older signatures and cannot crash the main runtime.',
     'version_text': '<b>{version}</b>\nThe Mini App menu button is fixed for pyTelegramBotAPI 4.28.0. Menu configuration failures no longer stop the bot or web server.',
 })
+
+# Boostora v3.2.8 — interactive, role-safe Mini App.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.2.8</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.8</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nMini App стала интерактивным ролевым кабинетом. Обычным пользователям не показываются служебные, административные и владельческие разделы.',
+    'stable_contract_patch_328_policy': 'v3.2.8: действия Mini App проходят серверную проверку Telegram initData и роли; пользовательские, административные и владельческие разделы разделены; deep-link повторно проходит все ограничения внутри бота.',
+    'version_text': '<b>{version}</b>\nMini App стала рабочим ролевым кабинетом: кнопки открывают нужные разделы, а служебные функции скрыты и защищены на сервере.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.2.8 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.8</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release contract</b>\n{stable_contract}\n\nMini App is now an interactive role-aware cabinet. Service, admin and owner sections are not exposed to regular users.',
+    'stable_contract_patch_328_policy': 'v3.2.8: Mini App actions require server-side Telegram initData and role checks; user, admin and owner areas are separated; bot deep links re-apply every existing access gate.',
+    'version_text': '<b>{version}</b>\nMini App is now a working role-aware cabinet: buttons open the correct screens and service functions are hidden and server-protected.',
+})
+
+
+# Boostora v3.2.9 — callback translation and Telegram text-limit hotfix.
+TEXTS['ru'].update({
+    'stable_contract_patch_329_policy': 'v3.2.9: отчёты Boostore не конфликтуют с аргументами перевода; длинные служебные экраны не превышают лимит Telegram; старое сообщение удаляется только после успешной отправки замены.',
+    'version_text': '<b>{version}</b>\nИсправлены отчёт Boostore, лимит служебных экранов Telegram и безопасная замена сообщений без потери навигации.',
+})
+TEXTS['en'].update({
+    'stable_contract_patch_329_policy': 'v3.2.9: Boostore reports no longer conflict with translation arguments; oversized service screens stay within Telegram limits; an old message is deleted only after its replacement is sent.',
+    'version_text': '<b>{version}</b>\nBoostore reporting, Telegram service-screen limits and safe message replacement were fixed.',
+})

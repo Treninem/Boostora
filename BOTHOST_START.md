@@ -1,4 +1,4 @@
-# Boostora v3.2.8 — запуск на Bothost
+# Boostora v3.2.9 — запуск на Bothost
 
 ## Настройки проекта
 
@@ -41,7 +41,7 @@ https://boostorabot.bothost.tech/
 ```text
 Embedded Mini App is listening on http://0.0.0.0:3000
 Telegram Mini App menu button configured
-Boostora v3.2.8 started with update guard
+Boostora v3.2.9 started with update guard
 ```
 
 Открой Mini App именно из Telegram. Обычный пользователь должен видеть только личные разделы. Администратор получает раздел «Управление», а первый ID из `ADMIN_IDS` дополнительно получает раздел владельца.

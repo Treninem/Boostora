@@ -66,9 +66,9 @@ class UserService:
         return str(user['status']) if user and user['status'] else 'active'
 
     @staticmethod
-    def t(viewer_id: int, key: str, **kwargs) -> str:
+    def t(viewer_id: int, text_key: str, **kwargs) -> str:
         language = UserService.get_language(viewer_id)
-        template = TEXTS.get(language, TEXTS['ru']).get(key) or TEXTS['en'].get(key) or TEXTS['ru'].get(key) or key
+        template = TEXTS.get(language, TEXTS['ru']).get(text_key) or TEXTS['en'].get(text_key) or TEXTS['ru'].get(text_key) or text_key
         class _SafeDict(dict):
             def __missing__(self, item):
                 return '{' + item + '}'

@@ -13,17 +13,50 @@ from pathlib import Path
 import threading
 import time
 from typing import Any
-from urllib.parse import parse_qsl, unquote, urlsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit
 
+from app import db
 from app.config import settings
 from app.version import APP_VERSION
 from app.services.activity import ActivityService
+from app.services.engagement_modes import EngagementModeService
+from app.services.smart_hub import SmartHubService
+from app.services.users import UserService
+from app.services.wallets import WalletService
 
 
 LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_ROOT = (PROJECT_ROOT / 'miniapp_example').resolve()
 MAX_JSON_BODY_BYTES = 64 * 1024
+
+# Mini App actions never execute privileged operations directly. They only create a
+# signed, role-checked deep link to an existing protected bot screen. The bot then
+# applies all community rules, legal documents, subscription and access gates again.
+ACTION_START_PARAMS: dict[str, tuple[str, str]] = {
+    'main': ('main_menu', 'user'),
+    'hub': ('smart_hub', 'user'),
+    'tasks': ('tasks', 'performer'),
+    'wallet': ('wallet', 'user'),
+    'history': ('history', 'user'),
+    'campaigns': ('campaigns', 'client'),
+    'stats': ('stats', 'client'),
+    'marketplace': ('marketplace', 'client'),
+    'engagement': ('engagement_mode', 'user'),
+    'obligations': ('engagement_obligations', 'user'),
+    'rules': ('community_rules', 'user'),
+    'legal': ('legal_docs', 'user'),
+    'rewards': ('rewards', 'user'),
+    'referrals': ('referrals', 'user'),
+    'vip': ('vip', 'user'),
+    'admin': ('admin', 'admin'),
+    'admin_queue': ('admin_queue', 'admin'),
+    'admin_obligations': ('admin_engagement_obligations', 'admin'),
+    'admin_logs': ('admin_logs', 'admin'),
+    'owner_analytics': ('owner_analytics', 'owner'),
+    'owner_release': ('owner_release', 'owner'),
+    'owner_provider': ('owner_provider', 'owner'),
+}
 
 
 class _ReusableThreadingHTTPServer(ThreadingHTTPServer):
@@ -47,9 +80,14 @@ def _safe_username() -> str:
     return settings.support_username.strip().lstrip('@')
 
 
-def _telegram_bot_url() -> str:
+def _telegram_bot_url(start_param: str = '') -> str:
     username = _safe_username()
-    return f'https://t.me/{username}' if username else ''
+    if not username:
+        return ''
+    base = f'https://t.me/{username}'
+    if start_param:
+        return f'{base}?{urlencode({"start": f"wa_{start_param}"})}'
+    return base
 
 
 def _json_bytes(payload: Any) -> bytes:
@@ -59,7 +97,6 @@ def _json_bytes(payload: Any) -> bytes:
 def _validate_telegram_init_data(init_data: str) -> tuple[bool, str, dict[str, Any] | None]:
     if not init_data or len(init_data) > MAX_JSON_BODY_BYTES:
         return False, 'empty_or_oversized', None
-
     try:
         pairs = dict(parse_qsl(init_data, keep_blank_values=True, strict_parsing=True))
     except (ValueError, TypeError):
@@ -107,8 +144,111 @@ def _validate_telegram_init_data(init_data: str) -> tuple[bool, str, dict[str, A
     return True, 'ok', safe_user
 
 
+def _user_id(user: dict[str, Any] | None) -> int | None:
+    if not user:
+        return None
+    try:
+        value = int(user.get('id'))
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
+def _can_use_action(user_id: int, audience: str) -> bool:
+    if not UserService.can_access_bot(user_id):
+        return False
+    if audience == 'owner':
+        return UserService.is_owner(user_id)
+    if audience == 'admin':
+        return UserService.is_admin(user_id)
+    role = UserService.get_role(user_id) or ''
+    if audience == 'client':
+        return role == 'client'
+    if audience == 'performer':
+        return role == 'performer'
+    return True
+
+
+def _safe_dashboard(user_id: int) -> dict[str, Any]:
+    user_row = UserService.get_user(user_id)
+    role = UserService.get_role(user_id) or ''
+    status = UserService.get_status(user_id)
+    if user_row is None:
+        return {
+            'registered': False,
+            'role': '',
+            'status': status,
+            'wallet': {},
+            'activity': {},
+            'engagement': {},
+        }
+
+    wallet = WalletService.get_summary(user_id)
+    smart = SmartHubService.dashboard(user_id)
+    obligations = EngagementModeService.obligation_dashboard(user_id)
+    mode = EngagementModeService.current_mode(user_id) or 'not_selected'
+    return {
+        'registered': True,
+        'role': role,
+        'status': status,
+        'wallet': {
+            'available': int(wallet.get('available_balance', 0)),
+            'hold': int(wallet.get('hold_balance', 0)),
+            'campaign': int(wallet.get('campaign_balance', 0)),
+            'bonus': int(wallet.get('bonus_balance', 0)),
+            'earned': int(wallet.get('lifetime_earned', 0)),
+        },
+        'activity': {
+            'available_tasks': int(smart.get('available_tasks', 0)),
+            'active_tasks': int(smart.get('active_tasks', 0)),
+            'task_limit': int(smart.get('task_limit', 0)),
+            'client_campaigns': int(smart.get('client_campaigns', 0)),
+            'client_active': int(smart.get('client_active', 0)),
+            'client_drafts': int(smart.get('client_drafts', 0)),
+        },
+        'engagement': {
+            'mode': mode,
+            'open': int(obligations.get('open_count', 0)),
+            'done': int(obligations.get('total_done', 0)),
+            'remaining': int(obligations.get('total_remaining', 0)),
+            'overdue': int(obligations.get('overdue_count', 0)),
+            'required': int(EngagementModeService.required_actions()),
+            'pro_price_stars': int(EngagementModeService.pro_price_stars()),
+        },
+    }
+
+
+def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
+    user_id = _user_id(user)
+    if user_id is None:
+        raise ValueError('invalid_user_id')
+    role = UserService.get_role(user_id) or ''
+    is_owner = UserService.is_owner(user_id)
+    is_admin = UserService.is_admin(user_id)
+    allowed_actions = [
+        name for name, (_, audience) in ACTION_START_PARAMS.items()
+        if _can_use_action(user_id, audience)
+    ]
+    payload: dict[str, Any] = {
+        'ok': True,
+        'authenticated': True,
+        'user': user,
+        'access': {
+            'role': role,
+            'is_admin': is_admin,
+            'is_owner': is_owner,
+            'allowed_actions': allowed_actions,
+        },
+        'dashboard': _safe_dashboard(user_id),
+    }
+    # Technical release metadata is intentionally owner-only.
+    if is_owner:
+        payload['owner_meta'] = {'version': APP_VERSION}
+    return payload
+
+
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.2.7'
+    server_version = 'BoostoraWeb/3.2.9'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):
@@ -129,15 +269,7 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             "base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org",
         )
 
-    def _send_bytes(
-        self,
-        status: HTTPStatus,
-        payload: bytes,
-        *,
-        content_type: str,
-        cache_control: str = 'no-store',
-        head_only: bool = False,
-    ) -> None:
+    def _send_bytes(self, status: HTTPStatus, payload: bytes, *, content_type: str, cache_control: str = 'no-store', head_only: bool = False) -> None:
         self.send_response(status)
         self._common_headers(content_type=content_type, content_length=len(payload), cache_control=cache_control)
         self.end_headers()
@@ -145,13 +277,7 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             self.wfile.write(payload)
 
     def _send_json(self, status: HTTPStatus, payload: Any, *, head_only: bool = False) -> None:
-        self._send_bytes(
-            status,
-            _json_bytes(payload),
-            content_type='application/json; charset=utf-8',
-            cache_control='no-store',
-            head_only=head_only,
-        )
+        self._send_bytes(status, _json_bytes(payload), content_type='application/json; charset=utf-8', cache_control='no-store', head_only=head_only)
 
     def _send_error_json(self, status: HTTPStatus, code: str, *, head_only: bool = False) -> None:
         self._send_json(status, {'ok': False, 'error': code}, head_only=head_only)
@@ -164,7 +290,6 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             if clean_path.startswith('/miniapp/'):
                 clean_path = clean_path[len('/miniapp'):]
             relative = Path(clean_path.lstrip('/'))
-
         if any(part in {'', '.', '..'} for part in relative.parts):
             return None
         candidate = (STATIC_ROOT / relative).resolve()
@@ -172,9 +297,7 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             candidate.relative_to(STATIC_ROOT)
         except ValueError:
             return None
-        if not candidate.is_file():
-            return None
-        return candidate
+        return candidate if candidate.is_file() else None
 
     def _serve_static(self, *, head_only: bool = False) -> None:
         path = self._static_file_for_path(self.path)
@@ -191,46 +314,20 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
         if content_type.startswith('text/') or content_type in {'application/javascript', 'image/svg+xml'}:
             content_type = f'{content_type}; charset=utf-8'
         cache_control = 'no-store' if path.name == 'index.html' else 'public, max-age=86400, immutable'
-        self._send_bytes(
-            HTTPStatus.OK,
-            payload,
-            content_type=content_type,
-            cache_control=cache_control,
-            head_only=head_only,
-        )
+        self._send_bytes(HTTPStatus.OK, payload, content_type=content_type, cache_control=cache_control, head_only=head_only)
 
     def _handle_health(self, *, head_only: bool = False) -> None:
-        self._send_json(
-            HTTPStatus.OK,
-            {
-                'ok': True,
-                'service': 'boostora',
-                'version': APP_VERSION,
-                'webapp': True,
-                'time': datetime.now(timezone.utc).isoformat(),
-            },
-            head_only=head_only,
-        )
+        self._send_json(HTTPStatus.OK, {'ok': True, 'service': 'boostora', 'version': APP_VERSION, 'webapp': True, 'time': datetime.now(timezone.utc).isoformat()}, head_only=head_only)
 
     def _handle_config(self, *, head_only: bool = False) -> None:
-        self._send_json(
-            HTTPStatus.OK,
-            {
-                'ok': True,
-                'brand_name': settings.brand_name,
-                'version': APP_VERSION,
-                'support_username': settings.support_username,
-                'bot_url': _telegram_bot_url(),
-                'webapp_url': settings.mini_app_url,
-                'features': {
-                    'standard': True,
-                    'pro': True,
-                    'boostore': settings.boostore_enabled,
-                    'telegram_auth': True,
-                },
-            },
-            head_only=head_only,
-        )
+        # Public config deliberately contains no owner/admin details or provider state.
+        self._send_json(HTTPStatus.OK, {
+            'ok': True,
+            'brand_name': settings.brand_name,
+            'support_username': settings.support_username,
+            'bot_url': _telegram_bot_url(),
+            'webapp_url': settings.mini_app_url,
+        }, head_only=head_only)
 
     def _read_json_body(self) -> dict[str, Any] | None:
         try:
@@ -246,41 +343,71 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             return None
         return payload if isinstance(payload, dict) else None
 
+    def _validated_user_from_payload(self, payload: dict[str, Any]) -> tuple[dict[str, Any] | None, str]:
+        init_data = payload.get('init_data')
+        if not isinstance(init_data, str):
+            return None, 'missing_init_data'
+        valid, reason, user = _validate_telegram_init_data(init_data)
+        if not valid:
+            return None, reason
+        if not user or _user_id(user) is None:
+            return None, 'missing_user'
+        return user, 'ok'
+
     def _handle_telegram_session(self) -> None:
         payload = self._read_json_body()
         if payload is None:
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_json')
             return
-        init_data = payload.get('init_data')
-        if not isinstance(init_data, str):
-            self._send_error_json(HTTPStatus.BAD_REQUEST, 'missing_init_data')
-            return
-        valid, reason, user = _validate_telegram_init_data(init_data)
-        if not valid:
+        user, reason = self._validated_user_from_payload(payload)
+        if user is None:
             self._send_json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'authenticated': False, 'reason': reason})
             return
-        self._send_json(HTTPStatus.OK, {'ok': True, 'authenticated': True, 'user': user})
+        try:
+            self._send_json(HTTPStatus.OK, _session_payload(user))
+        except Exception:
+            LOGGER.exception('Could not build Mini App session')
+            self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, 'session_failed')
 
+    def _handle_miniapp_action(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_json')
+            return
+        user, reason = self._validated_user_from_payload(payload)
+        if user is None:
+            self._send_json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'authenticated': False, 'reason': reason})
+            return
+        action = str(payload.get('action') or '').strip()
+        action_meta = ACTION_START_PARAMS.get(action)
+        if action_meta is None:
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'unknown_action')
+            return
+        user_id = _user_id(user)
+        if user_id is None:
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_user_id')
+            return
+        start_param, audience = action_meta
+        if not _can_use_action(user_id, audience):
+            self._send_error_json(HTTPStatus.FORBIDDEN, 'access_denied')
+            return
+        url = _telegram_bot_url(start_param)
+        if not url:
+            self._send_error_json(HTTPStatus.SERVICE_UNAVAILABLE, 'bot_url_unavailable')
+            return
+        self._send_json(HTTPStatus.OK, {'ok': True, 'action': action, 'open_url': url})
 
     def _handle_miniapp_open(self) -> None:
         payload = self._read_json_body()
         if payload is None:
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_json')
             return
-        init_data = payload.get('init_data')
-        if not isinstance(init_data, str):
-            self._send_error_json(HTTPStatus.BAD_REQUEST, 'missing_init_data')
+        user, reason = self._validated_user_from_payload(payload)
+        if user is None:
+            self._send_json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'authenticated': False, 'reason': reason})
             return
-        valid, reason, user = _validate_telegram_init_data(init_data)
-        if not valid or not user:
-            self._send_json(
-                HTTPStatus.UNAUTHORIZED,
-                {'ok': False, 'authenticated': False, 'reason': reason if not valid else 'missing_user'},
-            )
-            return
-        try:
-            user_id = int(user.get('id'))
-        except (TypeError, ValueError):
+        user_id = _user_id(user)
+        if user_id is None:
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_user_id')
             return
         hint = payload.get('hint', '')
@@ -289,12 +416,7 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_event')
             return
         try:
-            ActivityService.record_mini_app_open(
-                user_id,
-                hint=hint,
-                source=source,
-                payload={'platform': payload.get('platform'), 'app_version': payload.get('app_version')},
-            )
+            ActivityService.record_mini_app_open(user_id, hint=hint, source=source, payload={'platform': payload.get('platform')})
         except Exception:
             LOGGER.exception('Could not record validated Mini App open event for user_id=%s', user_id)
             self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, 'event_store_failed')
@@ -326,6 +448,9 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
         if path == '/api/telegram/session':
             self._handle_telegram_session()
             return
+        if path == '/api/miniapp/action':
+            self._handle_miniapp_action()
+            return
         if path == '/api/miniapp/open':
             self._handle_miniapp_open()
             return
@@ -342,19 +467,14 @@ def start_webapp_server() -> WebAppRuntime | None:
             raise RuntimeError(message)
         LOGGER.error(message)
         return None
-
     try:
-        server = _ReusableThreadingHTTPServer(
-            (settings.webapp_host, settings.webapp_port),
-            BoostoraWebHandler,
-        )
+        server = _ReusableThreadingHTTPServer((settings.webapp_host, settings.webapp_port), BoostoraWebHandler)
     except OSError as exc:
         message = f'Could not bind Mini App web server on {settings.webapp_host}:{settings.webapp_port}: {exc}'
         if settings.webapp_required:
             raise RuntimeError(message) from exc
         LOGGER.error(message)
         return None
-
     thread = threading.Thread(target=server.serve_forever, name='webapp-server', daemon=True)
     thread.start()
     LOGGER.info('Embedded Mini App is listening on http://%s:%s', settings.webapp_host, settings.webapp_port)
