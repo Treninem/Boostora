@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.2.9'
-APP_STAGE = 'telegram_callback_and_message_limit_hotfix'
+APP_VERSION = 'Boostora v3.3.0'
+APP_STAGE = 'telegram_catalog_and_premium_miniapp'

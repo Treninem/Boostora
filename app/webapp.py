@@ -248,7 +248,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
 
 
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.2.9'
+    server_version = 'BoostoraWeb/3.3.0'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):

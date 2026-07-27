@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,139 @@ from app import db
 from app.config import settings
 
 PROVIDER_CODE = 'boostore'
+PUBLIC_PLATFORM = 'telegram'
+CATALOG_PAGE_SIZE = 8
+
+_PLATFORM_PATTERNS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ('telegram', ('telegram', 'телеграм', ' tg ', 't.me')),
+    ('youtube', ('youtube', 'ютуб')),
+    ('instagram', ('instagram', 'инстаграм')),
+    ('tiktok', ('tiktok', 'tik tok', 'тикток')),
+    ('vk', ('vkontakte', 'вконтакте', ' vk ', 'vk.com')),
+    ('facebook', ('facebook', 'фейсбук')),
+    ('avito', ('avito', 'авито')),
+    ('2gis', ('2gis', '2гис', '2 gis')),
+    ('rutube', ('rutube', 'рутуб')),
+    ('discord', ('discord', 'дискорд')),
+    ('twitch', ('twitch', 'твич')),
+    ('twitter', ('twitter', ' x.com', 'твиттер')),
+)
+
+_CATEGORY_ORDER = (
+    'subscribers', 'views', 'reactions', 'comments', 'groups', 'stories',
+    'polls', 'shares', 'bots', 'boosts', 'other',
+)
+_CATEGORY_LABELS = {
+    'ru': {
+        'subscribers': 'Подписчики', 'views': 'Просмотры', 'reactions': 'Реакции и лайки',
+        'comments': 'Комментарии', 'groups': 'Группы и чаты', 'stories': 'Истории',
+        'polls': 'Опросы и голоса', 'shares': 'Репосты и пересылки', 'bots': 'Боты',
+        'boosts': 'Бусты и Premium', 'other': 'Другие услуги',
+    },
+    'en': {
+        'subscribers': 'Subscribers', 'views': 'Views', 'reactions': 'Reactions and likes',
+        'comments': 'Comments', 'groups': 'Groups and chats', 'stories': 'Stories',
+        'polls': 'Polls and votes', 'shares': 'Shares and forwards', 'bots': 'Bots',
+        'boosts': 'Boosts and Premium', 'other': 'Other services',
+    },
+}
+_SUBCATEGORY_ORDER = (
+    'channels', 'groups', 'posts', 'videos', 'stories', 'custom', 'positive',
+    'premium', 'refill', 'no_refill', 'general',
+)
+_SUBCATEGORY_LABELS = {
+    'ru': {
+        'channels': 'Каналы', 'groups': 'Группы и чаты', 'posts': 'Публикации',
+        'videos': 'Видео', 'stories': 'Истории', 'custom': 'Свои варианты',
+        'positive': 'Положительные', 'premium': 'Premium', 'refill': 'С гарантией',
+        'no_refill': 'Без гарантии', 'general': 'Остальные',
+    },
+    'en': {
+        'channels': 'Channels', 'groups': 'Groups and chats', 'posts': 'Posts',
+        'videos': 'Video', 'stories': 'Stories', 'custom': 'Custom',
+        'positive': 'Positive', 'premium': 'Premium', 'refill': 'With refill',
+        'no_refill': 'Without refill', 'general': 'Other',
+    },
+}
+
+
+def _row_text(row: Any, key: str) -> str:
+    try:
+        return str(row[key] or '')
+    except Exception:
+        if isinstance(row, dict):
+            return str(row.get(key) or '')
+        return ''
+
+
+def _catalog_text(row: Any) -> str:
+    return ' '.join((_row_text(row, 'category'), _row_text(row, 'name'), _row_text(row, 'service_type'))).lower()
+
+
+def _detect_platform(row: Any) -> str:
+    text = f' {_catalog_text(row)} '
+    for platform, needles in _PLATFORM_PATTERNS:
+        if any(needle in text for needle in needles):
+            return platform
+    return 'other'
+
+
+def _detect_category(row: Any) -> str:
+    text = _catalog_text(row)
+    checks = (
+        ('comments', ('коммент', 'comment', 'review', 'отзыв')),
+        ('reactions', ('реакц', 'reaction', 'like', 'лайк', 'emoji')),
+        ('stories', ('истори', 'story', 'stories')),
+        ('polls', ('опрос', 'голос', 'poll', 'vote')),
+        ('shares', ('репост', 'пересыл', 'share', 'forward', 'repost')),
+        ('bots', ('бот', ' bot ', 'start bot')),
+        ('boosts', ('boost', 'буст', 'premium', 'stars', 'звезд')),
+        ('views', ('просмотр', 'view', 'impression')),
+        ('groups', ('групп', 'чат', 'group', 'chat')),
+        ('subscribers', ('подпис', 'subscriber', 'follower', 'member', 'участник')),
+    )
+    padded = f' {text} '
+    for code, needles in checks:
+        if any(needle in padded for needle in needles):
+            return code
+    return 'other'
+
+
+def _detect_subcategory(row: Any, category: str) -> str:
+    text = _catalog_text(row)
+    if 'premium' in text or 'премиум' in text:
+        return 'premium'
+    if any(word in text for word in ('custom', 'свой текст', 'ваш текст', 'заказной', 'кастом')):
+        return 'custom'
+    if any(word in text for word in ('positive', 'положительн')):
+        return 'positive'
+    if any(word in text for word in ('story', 'stories', 'истори')):
+        return 'stories'
+    if any(word in text for word in ('video', 'видео', 'reels', 'shorts')):
+        return 'videos'
+    if any(word in text for word in ('group', 'chat', 'групп', 'чат')):
+        return 'groups'
+    if any(word in text for word in ('post', 'publication', 'пост', 'публикац')):
+        return 'posts'
+    if any(word in text for word in ('channel', 'канал')):
+        return 'channels'
+    try:
+        refill = bool(int(row['refill_enabled'] or 0))
+    except Exception:
+        refill = False
+    if category in {'subscribers', 'views'}:
+        return 'refill' if refill else 'no_refill'
+    return 'general'
+
+
+def _category_label(code: str, language: str = 'ru') -> str:
+    labels = _CATEGORY_LABELS.get(language, _CATEGORY_LABELS['ru'])
+    return labels.get(code, labels['other'])
+
+
+def _subcategory_label(code: str, language: str = 'ru') -> str:
+    labels = _SUBCATEGORY_LABELS.get(language, _SUBCATEGORY_LABELS['ru'])
+    return labels.get(code, labels['general'])
 
 
 @dataclass(frozen=True)
@@ -179,21 +313,174 @@ class BoostoreProviderService:
         return ProviderResult(True, 'boostore_service_enabled' if new_value else 'boostore_service_disabled', data={'enabled': new_value})
 
     @staticmethod
-    def marketplace_summary(limit: int = 8) -> dict[str, Any]:
-        total = BoostoreProviderService.count_services(enabled_only=False)
-        enabled = BoostoreProviderService.count_services(enabled_only=True)
-        services = BoostoreProviderService.list_services(enabled_only=True, limit=limit)
-        categories = db.fetch_all(
-            '''
-            SELECT category, COUNT(*) AS cnt
-            FROM provider_services
-            WHERE provider_code = ? AND is_enabled = 1
-            GROUP BY category
-            ORDER BY cnt DESC, category COLLATE NOCASE
-            LIMIT 8
-            ''',
-            (PROVIDER_CODE,),
+    def service_taxonomy(row: Any, *, language: str = 'ru') -> dict[str, str]:
+        platform = _detect_platform(row)
+        category = _detect_category(row)
+        subcategory = _detect_subcategory(row, category)
+        return {
+            'platform': platform,
+            'category': category,
+            'subcategory': subcategory,
+            'category_label': _category_label(category, language),
+            'subcategory_label': _subcategory_label(subcategory, language),
+        }
+
+    @staticmethod
+    def list_catalog_services(
+        *,
+        enabled_only: bool = True,
+        platform: str = PUBLIC_PLATFORM,
+        category: str | None = None,
+        subcategory: str | None = None,
+        limit: int = CATALOG_PAGE_SIZE,
+        offset: int = 0,
+    ) -> list[Any]:
+        rows = BoostoreProviderService.list_services(enabled_only=enabled_only, limit=5000, offset=0)
+        filtered: list[Any] = []
+        for row in rows:
+            taxonomy = BoostoreProviderService.service_taxonomy(row)
+            if platform and taxonomy['platform'] != platform:
+                continue
+            if category and taxonomy['category'] != category:
+                continue
+            if subcategory and taxonomy['subcategory'] != subcategory:
+                continue
+            filtered.append(row)
+        start = max(0, int(offset))
+        page_size = max(1, int(limit))
+        return filtered[start:start + page_size]
+
+    @staticmethod
+    def count_catalog_services(
+        *,
+        enabled_only: bool = True,
+        platform: str = PUBLIC_PLATFORM,
+        category: str | None = None,
+        subcategory: str | None = None,
+    ) -> int:
+        rows = BoostoreProviderService.list_services(enabled_only=enabled_only, limit=5000, offset=0)
+        count = 0
+        for row in rows:
+            taxonomy = BoostoreProviderService.service_taxonomy(row)
+            if platform and taxonomy['platform'] != platform:
+                continue
+            if category and taxonomy['category'] != category:
+                continue
+            if subcategory and taxonomy['subcategory'] != subcategory:
+                continue
+            count += 1
+        return count
+
+    @staticmethod
+    def catalog_categories(*, enabled_only: bool, platform: str = PUBLIC_PLATFORM, language: str = 'ru') -> list[dict[str, Any]]:
+        rows = BoostoreProviderService.list_services(enabled_only=False, limit=5000, offset=0)
+        counters: dict[str, dict[str, int]] = {}
+        for row in rows:
+            taxonomy = BoostoreProviderService.service_taxonomy(row, language=language)
+            if taxonomy['platform'] != platform:
+                continue
+            code = taxonomy['category']
+            bucket = counters.setdefault(code, {'total': 0, 'enabled': 0})
+            bucket['total'] += 1
+            if int(row['is_enabled'] or 0):
+                bucket['enabled'] += 1
+        result = []
+        for code in _CATEGORY_ORDER:
+            bucket = counters.get(code)
+            if not bucket:
+                continue
+            if enabled_only and bucket['enabled'] <= 0:
+                continue
+            result.append({
+                'code': code,
+                'label': _category_label(code, language),
+                'total': int(bucket['total']),
+                'enabled': int(bucket['enabled']),
+            })
+        return result
+
+    @staticmethod
+    def catalog_subcategories(
+        category: str, *, enabled_only: bool, platform: str = PUBLIC_PLATFORM, language: str = 'ru'
+    ) -> list[dict[str, Any]]:
+        rows = BoostoreProviderService.list_services(enabled_only=False, limit=5000, offset=0)
+        counters: dict[str, dict[str, int]] = {}
+        for row in rows:
+            taxonomy = BoostoreProviderService.service_taxonomy(row, language=language)
+            if taxonomy['platform'] != platform or taxonomy['category'] != category:
+                continue
+            code = taxonomy['subcategory']
+            bucket = counters.setdefault(code, {'total': 0, 'enabled': 0})
+            bucket['total'] += 1
+            if int(row['is_enabled'] or 0):
+                bucket['enabled'] += 1
+        result = []
+        for code in _SUBCATEGORY_ORDER:
+            bucket = counters.get(code)
+            if not bucket:
+                continue
+            if enabled_only and bucket['enabled'] <= 0:
+                continue
+            result.append({
+                'code': code,
+                'label': _subcategory_label(code, language),
+                'total': int(bucket['total']),
+                'enabled': int(bucket['enabled']),
+            })
+        return result
+
+    @staticmethod
+    def get_public_service(external_service_id: str) -> Any | None:
+        row = db.fetch_one(
+            'SELECT * FROM provider_services WHERE provider_code = ? AND external_service_id = ? AND is_enabled = 1',
+            (PROVIDER_CODE, str(external_service_id)),
         )
+        if not row:
+            return None
+        taxonomy = BoostoreProviderService.service_taxonomy(row)
+        return row if taxonomy['platform'] == PUBLIC_PLATFORM else None
+
+    @staticmethod
+    def set_catalog_enabled(
+        *,
+        enabled: bool,
+        platform: str = PUBLIC_PLATFORM,
+        category: str | None = None,
+        subcategory: str | None = None,
+    ) -> ProviderResult:
+        rows = BoostoreProviderService.list_services(enabled_only=False, limit=5000, offset=0)
+        selected: list[tuple[int, str, str]] = []
+        for row in rows:
+            taxonomy = BoostoreProviderService.service_taxonomy(row)
+            if taxonomy['platform'] != platform:
+                continue
+            if category and taxonomy['category'] != category:
+                continue
+            if subcategory and taxonomy['subcategory'] != subcategory:
+                continue
+            selected.append((1 if enabled else 0, PROVIDER_CODE, str(row['external_service_id'])))
+        if not selected:
+            return ProviderResult(False, 'boostore_catalog_folder_empty', data={'count': 0})
+        db.execute_many(
+            '''
+            UPDATE provider_services
+            SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE provider_code = ? AND external_service_id = ?
+            ''',
+            selected,
+        )
+        return ProviderResult(
+            True,
+            'boostore_catalog_added' if enabled else 'boostore_catalog_removed',
+            data={'count': len(selected)},
+        )
+
+    @staticmethod
+    def marketplace_summary(limit: int = CATALOG_PAGE_SIZE) -> dict[str, Any]:
+        total = BoostoreProviderService.count_catalog_services(enabled_only=False)
+        enabled = BoostoreProviderService.count_catalog_services(enabled_only=True)
+        services = BoostoreProviderService.list_catalog_services(enabled_only=True, limit=limit)
+        categories = BoostoreProviderService.catalog_categories(enabled_only=True)
         return {
             'config': BoostoreProviderService.config_state(),
             'total_services': total,

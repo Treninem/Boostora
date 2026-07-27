@@ -16,6 +16,9 @@ from app.router import (
     SCREEN_CAMPAIGN_PREVIEW,
     SCREEN_COMMUNITY_RULES,
     SCREEN_TOPUP_CUSTOM,
+    SCREEN_MAIN_MENU,
+    SECTION_TO_SCREEN,
+    resolve_next_screen,
     admin_balance_screen_key,
     admin_reject_screen_key,
     admin_risk_screen_key,
@@ -46,6 +49,19 @@ from app.version import APP_VERSION
 
 
 _BOTTOM_KEYBOARD_SENT_AT: dict[int, float] = {}
+
+
+WEBAPP_START_PREFIX = 'wa_'
+
+
+def _webapp_start_screen(start_arg: str) -> str | None:
+    value = str(start_arg or '').strip()
+    if not value.startswith(WEBAPP_START_PREFIX):
+        return None
+    section = value[len(WEBAPP_START_PREFIX):].strip()
+    if section == 'main_menu':
+        return SCREEN_MAIN_MENU
+    return SECTION_TO_SCREEN.get(section)
 
 
 def _try_delete_user_message(bot: telebot.TeleBot, message: Message) -> None:
@@ -184,12 +200,25 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             ReferralService.try_bind_referral(referrer_id, message.from_user.id)
         InputSessionService.clear_session(message.from_user.id)
         _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id, force=True)
+        requested_screen = _webapp_start_screen(start_arg)
+        if requested_screen:
+            gate_screen = resolve_next_screen(
+                bot,
+                message.from_user.id,
+                message.chat.id,
+                chat_username=getattr(message.chat, 'username', None),
+            )
+            render_screen(bot, message, requested_screen if gate_screen == SCREEN_MAIN_MENU else gate_screen)
+            return
         render_entry(bot, message, force_language=True)
 
 
     @bot.message_handler(commands=['version'])
     def handle_version(message: Message) -> None:
         UserService.ensure_user(message.from_user)
+        if not UserService.is_admin(message.from_user.id):
+            render_entry(bot, message)
+            return
         bot.reply_to(
             message,
             UserService.t(message.from_user.id, 'version_text', version=APP_VERSION),
@@ -293,7 +322,7 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             return
         if kind == 'boostore' and code.isdigit():
             result = BoostoreProviderService.place_prepared_order(int(code))
-            render_screen(bot, message, 'marketplace', notice_key='boostore_order_placed' if result.ok else result.result_key)
+            render_screen(bot, message, 'marketplace', notice_key='boostore_order_placed' if result.ok else 'boostore_temporarily_unavailable')
             return
 
 
@@ -515,7 +544,8 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 quantity=int(raw),
             )
             if not result.ok:
-                render_screen(bot, message, 'marketplace', notice_key=result.result_key)
+                public_key = 'boostore_quantity_out_of_range' if result.result_key == 'boostore_quantity_out_of_range' else 'boostore_temporarily_unavailable'
+                render_screen(bot, message, 'marketplace', notice_key=public_key)
                 return
             order_id = int((result.data or {}).get('order_id') or 0) if isinstance(result.data, dict) else 0
             price = int((result.data or {}).get('price_stars') or 1) if isinstance(result.data, dict) else 1

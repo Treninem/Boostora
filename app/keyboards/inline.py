@@ -242,12 +242,13 @@ def tasks_keyboard(user_id: int, version: int, tasks) -> InlineKeyboardMarkup:
                 callback_data=pack_callback(version, 'task', str(int(task['id']))),
             )
         )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -356,12 +357,13 @@ def wallet_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
                 callback_data=pack_callback(version, 'cancel_invoice', 'wallet'),
             )
         )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -454,12 +456,13 @@ def campaigns_keyboard(user_id: int, version: int, campaigns) -> InlineKeyboardM
                 callback_data=pack_callback(version, 'camp', str(int(campaign['id']))),
             )
         )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -762,12 +765,12 @@ def admin_bot_chats_keyboard(user_id: int, version: int, chats, *, page: int, to
         if link:
             markup.add(InlineKeyboardButton(text=label, url=link))
         else:
-            markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'boostore_order_start', str(row['external_service_id']))))
+            markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'refresh')))
     target_prefix = 'admin_bot_rights' if issues_mode else 'admin_bot_chats'
     nav = []
     if page > 1:
         nav.append(InlineKeyboardButton(text='◀️', callback_data=pack_callback(version, 'go', f'{target_prefix}:{page-1}')))
-    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages,1)}', callback_data=pack_callback(version, 'boostore_order_start', str(row['external_service_id']))))
+    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages,1)}', callback_data=pack_callback(version, 'refresh')))
     if page < total_pages:
         nav.append(InlineKeyboardButton(text='▶️', callback_data=pack_callback(version, 'go', f'{target_prefix}:{page+1}')))
     markup.row(*nav)
@@ -789,7 +792,7 @@ def admin_users_keyboard(user_id: int, version: int, users, *, page: int, total_
     nav = []
     if page > 1:
         nav.append(InlineKeyboardButton(text='◀️', callback_data=pack_callback(version, 'go', f'admin_users:{page-1}')))
-    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages,1)}', callback_data=pack_callback(version, 'boostore_order_start', str(row['external_service_id']))))
+    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages,1)}', callback_data=pack_callback(version, 'refresh')))
     if page < total_pages:
         nav.append(InlineKeyboardButton(text='▶️', callback_data=pack_callback(version, 'go', f'admin_users:{page+1}')))
     markup.row(*nav)
@@ -1069,12 +1072,13 @@ def admin_queue_keyboard(user_id: int, version: int, submissions, *, filter_code
                 callback_data=pack_callback(version, 'admin_bulk_block_high', '10'),
             )
         )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -1181,12 +1185,13 @@ def admin_required_chats_keyboard(user_id: int, version: int, chats) -> InlineKe
             callback_data=pack_callback(version, 'admin_required_chats_add_start', 'new'),
         )
     )
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -1202,12 +1207,13 @@ def admin_required_chats_keyboard(user_id: int, version: int, chats) -> InlineKe
 
 def admin_logs_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'admin_queue_groups_button'),
-            callback_data=pack_callback(version, 'go', 'admin_groups'),
+    if UserService.is_admin(user_id):
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'admin_queue_groups_button'),
+                callback_data=pack_callback(version, 'go', 'admin_groups'),
+            )
         )
-    )
     markup.add(
         InlineKeyboardButton(
             text=UserService.t(user_id, 'refresh_screen'),
@@ -1358,11 +1364,15 @@ def admin_engagement_obligations_keyboard(user_id: int, version: int, items=None
     return markup
 
 
-def marketplace_keyboard(user_id: int, version: int, services=None) -> InlineKeyboardMarkup:
+def marketplace_keyboard(user_id: int, version: int, categories=None) -> InlineKeyboardMarkup:
+    """Public Telegram-only catalogue root."""
     markup = InlineKeyboardMarkup(row_width=1)
-    for row in list(services or [])[:10]:
-        label = f"{str(row['name'])[:42]} · {int(row['min_quantity'] or 0)}-{int(row['max_quantity'] or 0)}"
-        markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'boostore_order_start', str(row['external_service_id']))))
+    for item in list(categories or []):
+        label = f"📁 {str(item.get('label') or '')} · {int(item.get('enabled') or 0)}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'go', f"marketplace:cat:{item.get('code')}"),
+        ))
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'smart_hub_button'), callback_data=pack_callback(version, 'go', 'smart_hub')),
         InlineKeyboardButton(text=UserService.t(user_id, 'back_to_menu'), callback_data=pack_callback(version, 'go', 'main_menu')),
@@ -1370,18 +1380,143 @@ def marketplace_keyboard(user_id: int, version: int, services=None) -> InlineKey
     return markup
 
 
-def owner_provider_keyboard(user_id: int, version: int, services=None) -> InlineKeyboardMarkup:
+def marketplace_category_keyboard(user_id: int, version: int, category: str, subcategories=None) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    for item in list(subcategories or []):
+        label = f"📂 {str(item.get('label') or '')} · {int(item.get('enabled') or 0)}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'go', f"marketplace:sub:{category}:{item.get('code')}:1"),
+        ))
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_categories'), callback_data=pack_callback(version, 'go', 'marketplace')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'back_to_menu'), callback_data=pack_callback(version, 'go', 'main_menu')),
+    )
+    return markup
+
+
+def marketplace_services_keyboard(
+    user_id: int,
+    version: int,
+    *,
+    category: str,
+    subcategory: str,
+    services=None,
+    page: int = 1,
+    total_pages: int = 1,
+) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    for row in list(services or []):
+        name = str(row['name'] or '')
+        minimum = int(row['min_quantity'] or 0)
+        maximum = int(row['max_quantity'] or 0)
+        label = f"🛒 {name[:38]} · {minimum}-{maximum}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'boostore_order_start', str(row['external_service_id'])),
+        ))
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton(
+            text='◀️',
+            callback_data=pack_callback(version, 'go', f"marketplace:sub:{category}:{subcategory}:{page - 1}"),
+        ))
+    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages, 1)}', callback_data=pack_callback(version, 'refresh')))
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(
+            text='▶️',
+            callback_data=pack_callback(version, 'go', f"marketplace:sub:{category}:{subcategory}:{page + 1}"),
+        ))
+    if nav:
+        markup.row(*nav)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_subcategories'), callback_data=pack_callback(version, 'go', f'marketplace:cat:{category}')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_categories'), callback_data=pack_callback(version, 'go', 'marketplace')),
+    )
+    return markup
+
+
+def owner_provider_keyboard(user_id: int, version: int, categories=None) -> InlineKeyboardMarkup:
+    """Owner-only Telegram catalogue manager root."""
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'boostore_check_button'), callback_data=pack_callback(version, 'boostore_check', 'balance')),
         InlineKeyboardButton(text=UserService.t(user_id, 'boostore_sync_button'), callback_data=pack_callback(version, 'boostore_sync', 'services')),
     )
-    for row in list(services or [])[:12]:
-        enabled = '✅' if int(row['is_enabled'] or 0) else '▫️'
-        label = f"{enabled} {str(row['name'])[:44]}"
-        markup.add(InlineKeyboardButton(text=label, callback_data=pack_callback(version, 'boostore_toggle', str(row['external_service_id']))))
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_add_all_telegram'), callback_data=pack_callback(version, 'boostore_bulk', 'on:all')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_remove_all_telegram'), callback_data=pack_callback(version, 'boostore_bulk', 'off:all')),
+    )
+    for item in list(categories or []):
+        label = f"📁 {str(item.get('label') or '')} · {int(item.get('enabled') or 0)}/{int(item.get('total') or 0)}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'go', f"owner_provider:cat:{item.get('code')}"),
+        ))
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'owner_analytics_button'), callback_data=pack_callback(version, 'go', 'owner_analytics')),
         InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')),
+    )
+    return markup
+
+
+def owner_provider_category_keyboard(user_id: int, version: int, category: str, subcategories=None) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_add_folder'), callback_data=pack_callback(version, 'boostore_bulk', f'on:c:{category}')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_remove_folder'), callback_data=pack_callback(version, 'boostore_bulk', f'off:c:{category}')),
+    )
+    for item in list(subcategories or []):
+        label = f"📂 {str(item.get('label') or '')} · {int(item.get('enabled') or 0)}/{int(item.get('total') or 0)}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'go', f"owner_provider:sub:{category}:{item.get('code')}:1"),
+        ))
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_categories'), callback_data=pack_callback(version, 'go', 'owner_provider')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'menu_admin'), callback_data=pack_callback(version, 'go', 'admin')),
+    )
+    return markup
+
+
+def owner_provider_services_keyboard(
+    user_id: int,
+    version: int,
+    *,
+    category: str,
+    subcategory: str,
+    services=None,
+    page: int = 1,
+    total_pages: int = 1,
+) -> InlineKeyboardMarkup:
+    markup = InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_add_subfolder'), callback_data=pack_callback(version, 'boostore_bulk', f'on:s:{category}:{subcategory}')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_remove_subfolder'), callback_data=pack_callback(version, 'boostore_bulk', f'off:s:{category}:{subcategory}')),
+    )
+    for row in list(services or []):
+        enabled = '✅' if int(row['is_enabled'] or 0) else '▫️'
+        label = f"{enabled} {str(row['name'] or '')[:50]}"
+        markup.add(InlineKeyboardButton(
+            text=label[:64],
+            callback_data=pack_callback(version, 'boostore_toggle', str(row['external_service_id'])),
+        ))
+    nav = []
+    if page > 1:
+        nav.append(InlineKeyboardButton(
+            text='◀️',
+            callback_data=pack_callback(version, 'go', f"owner_provider:sub:{category}:{subcategory}:{page - 1}"),
+        ))
+    nav.append(InlineKeyboardButton(text=f'{page}/{max(total_pages, 1)}', callback_data=pack_callback(version, 'refresh')))
+    if page < total_pages:
+        nav.append(InlineKeyboardButton(
+            text='▶️',
+            callback_data=pack_callback(version, 'go', f"owner_provider:sub:{category}:{subcategory}:{page + 1}"),
+        ))
+    if nav:
+        markup.row(*nav)
+    markup.add(
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_subcategories'), callback_data=pack_callback(version, 'go', f'owner_provider:cat:{category}')),
+        InlineKeyboardButton(text=UserService.t(user_id, 'catalog_back_categories'), callback_data=pack_callback(version, 'go', 'owner_provider')),
     )
     return markup

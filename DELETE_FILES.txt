@@ -1,0 +1,9 @@
+miniapp_example/assets/boostore.svg
+miniapp_example/assets/commenter.svg
+miniapp_example/assets/hero-growth.svg
+miniapp_example/assets/liker.svg
+miniapp_example/assets/obligations.svg
+miniapp_example/assets/pro.svg
+miniapp_example/assets/rules.svg
+miniapp_example/assets/standard.svg
+miniapp_example/assets/wallet.svg

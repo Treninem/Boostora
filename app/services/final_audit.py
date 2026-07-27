@@ -103,18 +103,28 @@ class FinalAuditService:
             'mini_app_cabinet',
             'final_audit_mini_app_cabinet',
             (PROJECT_ROOT / 'miniapp_example/index.html').exists()
-            and _source_contains('miniapp_example/index.html', 'Оживи Telegram-канал', 'Standard', 'Boostore', 'assets/hero-growth.svg', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()'),
+            and _source_contains('miniapp_example/index.html', 'Управляй активностью', 'Standard', 'PRO', 'assets/hero-growth.webp', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()', 'data-action="tasks"', 'data-action="campaigns"'),
             action_ok='final_audit_action_mini_app_ok',
             action_bad='final_audit_action_mini_app_fix',
         )
         add(
             'mini_app_visual_assets',
             'final_audit_mini_app_visual_assets',
-            (PROJECT_ROOT / 'miniapp_example/assets/hero-growth.svg').exists()
-            and (PROJECT_ROOT / 'miniapp_example/assets/liker.svg').exists()
-            and (PROJECT_ROOT / 'miniapp_example/assets/commenter.svg').exists()
-            and _source_contains('miniapp_example/index.html', 'assets/hero-growth.svg', 'assets/liker.svg', 'assets/commenter.svg'),
-            value=len(list((PROJECT_ROOT / 'miniapp_example/assets').glob('*.svg'))) if (PROJECT_ROOT / 'miniapp_example/assets').exists() else 0,
+            all((PROJECT_ROOT / 'miniapp_example/assets' / name).exists() for name in (
+                'hero-growth.webp', 'telegram-profile.webp', 'server-status.webp', 'bot-actions.webp',
+                'liker.webp', 'commenter.webp', 'boostore.webp', 'standard.webp', 'pro.webp',
+                'obligations.webp', 'community-rules.webp', 'wallet-hold.webp',
+                'release-center.webp', 'boostora-logo.png',
+            ))
+            and _source_contains(
+                'miniapp_example/index.html',
+                'assets/hero-growth.webp', 'assets/liker.webp', 'assets/commenter.webp',
+                'assets/boostora-logo.png', 'assets/release-center.webp',
+            ),
+            value=(
+                len(list((PROJECT_ROOT / 'miniapp_example/assets').glob('*.webp')))
+                + len(list((PROJECT_ROOT / 'miniapp_example/assets').glob('*.png')))
+            ) if (PROJECT_ROOT / 'miniapp_example/assets').exists() else 0,
             action_ok='final_audit_action_mini_app_visual_ok',
             action_bad='final_audit_action_mini_app_visual_fix',
         )
@@ -123,9 +133,9 @@ class FinalAuditService:
             'final_audit_embedded_mini_app_runtime',
             settings.webapp_enabled
             and bool(settings.mini_app_url)
-            and _source_contains('app/webapp.py', 'ThreadingHTTPServer', "'/health'", "'/api/config'", "'/api/telegram/session'", '_validate_telegram_init_data', 'hmac.compare_digest')
+            and _source_contains('app/webapp.py', 'ThreadingHTTPServer', "'/health'", "'/api/config'", "'/api/telegram/session'", "'/api/miniapp/action'", '_validate_telegram_init_data', 'hmac.compare_digest', '_can_use_action')
             and _source_contains('app/bot.py', 'start_webapp_server()', 'set_chat_menu_button', 'MenuButtonWebApp', 'webapp_runtime.stop()')
-            and _source_contains('miniapp_example/index.html', "fetch('/api/config'", "fetch('/api/telegram/session'", "fetch('/api/miniapp/open'"),
+            and _source_contains('miniapp_example/index.html', "fetch('/api/config'", "fetch('/api/telegram/session'", "fetch('/api/miniapp/action'", "fetch('/api/miniapp/open'", 'adminPanel', 'ownerPanel'),
             action_ok='final_audit_action_embedded_mini_app_ok',
             action_bad='final_audit_action_embedded_mini_app_fix',
         )
@@ -186,6 +196,18 @@ class FinalAuditService:
             and hasattr(BoostoreProviderService, 'place_prepared_order'),
             action_ok='final_audit_action_boostore_ok',
             action_bad='final_audit_action_boostore_fix',
+        )
+        add(
+            'telegram_service_catalog',
+            'final_audit_telegram_service_catalog',
+            hasattr(BoostoreProviderService, 'catalog_categories')
+            and hasattr(BoostoreProviderService, 'catalog_subcategories')
+            and hasattr(BoostoreProviderService, 'set_catalog_enabled')
+            and _source_contains('app/router.py', 'SCREEN_MARKETPLACE_CATEGORY_PREFIX', 'SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX')
+            and _source_contains('app/handlers/callbacks.py', "parsed.action == 'boostore_bulk'", 'get_public_service')
+            and _source_contains('app/keyboards/inline.py', 'marketplace_category_keyboard', 'owner_provider_services_keyboard'),
+            action_ok='final_audit_action_telegram_catalog_ok',
+            action_bad='final_audit_action_telegram_catalog_fix',
         )
         add(
             'runtime_network_update_guard',

@@ -268,7 +268,14 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                     InputSessionService.clear_session(call.from_user.id)
                     render_screen(bot, call, destination)
                     return
-                if destination.startswith('admin_bot_chats:') or destination.startswith('admin_bot_rights:') or destination.startswith('admin_users:') or destination.startswith('admin_queue:'):
+                if (
+                    destination.startswith('admin_bot_chats:')
+                    or destination.startswith('admin_bot_rights:')
+                    or destination.startswith('admin_users:')
+                    or destination.startswith('admin_queue:')
+                    or destination.startswith('marketplace:')
+                    or destination.startswith('owner_provider:')
+                ):
                     InputSessionService.clear_session(call.from_user.id)
                     render_screen(bot, call, destination)
                     return
@@ -731,11 +738,10 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 if not _ensure_client_role(bot, call):
                     return
                 service_id = str(parsed.value or '').strip()
-                service = BoostoreProviderService.list_services(enabled_only=True, limit=1000)
-                found = any(str(row['external_service_id']) == service_id for row in service)
-                if not found:
-                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'boostore_service_not_enabled'), show_alert=True)
-                    render_screen(bot, call, 'marketplace', notice_key='boostore_service_not_enabled')
+                service = BoostoreProviderService.get_public_service(service_id)
+                if not service:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'boostore_temporarily_unavailable'), show_alert=True)
+                    render_screen(bot, call, 'marketplace', notice_key='boostore_temporarily_unavailable')
                     return
                 InputSessionService.set_session(call.from_user.id, 'boostore_order_link', service_id)
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'boostore_order_link_prompt'), show_alert=False)
@@ -777,12 +783,39 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                     render_screen(bot, call, 'owner_provider', notice_key=result.result_key)
                 return
 
+            if parsed.action == 'boostore_bulk':
+                if not _ensure_owner(bot, call):
+                    return
+                parts = [part for part in str(parsed.value or '').split(':') if part]
+                enabled = bool(parts and parts[0] == 'on')
+                category = None
+                subcategory = None
+                if len(parts) >= 3 and parts[1] == 'c':
+                    category = parts[2]
+                elif len(parts) >= 4 and parts[1] == 's':
+                    category = parts[2]
+                    subcategory = parts[3]
+                elif len(parts) < 2 or parts[1] != 'all':
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'stale_screen'), show_alert=False)
+                    render_current(bot, call)
+                    return
+                result = BoostoreProviderService.set_catalog_enabled(
+                    enabled=enabled,
+                    category=category,
+                    subcategory=subcategory,
+                )
+                count = int((result.data or {}).get('count') or 0) if isinstance(result.data, dict) else 0
+                text = UserService.t(call.from_user.id, result.result_key, count=count)
+                bot.answer_callback_query(call.id, text, show_alert=not result.ok)
+                render_current(bot, call, notice_text=text)
+                return
+
             if parsed.action == 'boostore_toggle':
                 if not _ensure_owner(bot, call):
                     return
                 result = BoostoreProviderService.toggle_service(parsed.value)
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result.result_key), show_alert=False)
-                render_screen(bot, call, 'owner_provider', notice_key=result.result_key)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result.result_key), show_alert=not result.ok)
+                render_current(bot, call, notice_key=result.result_key)
                 return
 
             if parsed.action == 'admin_live_audit':

@@ -1,10 +1,12 @@
 import json
 import logging
+import math
 
 import telebot
 from telebot.types import CallbackQuery, Message
 
 from app.config import settings
+from app.version import APP_VERSION
 from app.keyboards.inline import (
     admin_home_keyboard,
     admin_groups_keyboard,
@@ -14,6 +16,8 @@ from app.keyboards.inline import (
     owner_analytics_keyboard,
     owner_release_keyboard,
     owner_provider_keyboard,
+    owner_provider_category_keyboard,
+    owner_provider_services_keyboard,
     engagement_growth_keyboard,
     engagement_mode_keyboard,
     engagement_obligations_keyboard,
@@ -21,6 +25,8 @@ from app.keyboards.inline import (
     community_rules_keyboard,
     legal_docs_keyboard,
     marketplace_keyboard,
+    marketplace_category_keyboard,
+    marketplace_services_keyboard,
     smart_hub_keyboard,
     admin_required_chats_keyboard,
     admin_queue_keyboard,
@@ -123,6 +129,8 @@ SCREEN_REQUIRED_SUBSCRIPTION = 'required_subscription'
 SCREEN_MAIN_MENU = 'main_menu'
 SCREEN_SMART_HUB = 'smart_hub'
 SCREEN_MARKETPLACE = 'marketplace'
+SCREEN_MARKETPLACE_CATEGORY_PREFIX = 'marketplace:cat:'
+SCREEN_MARKETPLACE_SUBCATEGORY_PREFIX = 'marketplace:sub:'
 SCREEN_ENGAGEMENT_GROWTH = 'engagement_growth'
 SCREEN_ENGAGEMENT_MODE = 'engagement_mode'
 SCREEN_ENGAGEMENT_OBLIGATIONS = 'engagement_obligations'
@@ -159,6 +167,8 @@ SCREEN_ADMIN_PATTERNS = 'admin_patterns'
 SCREEN_OWNER_ANALYTICS = 'owner_analytics'
 SCREEN_OWNER_RELEASE = 'owner_release'
 SCREEN_OWNER_PROVIDER = 'owner_provider'
+SCREEN_OWNER_PROVIDER_CATEGORY_PREFIX = 'owner_provider:cat:'
+SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX = 'owner_provider:sub:'
 SCREEN_ADMIN_QUEUE = 'admin_queue'
 SCREEN_ADMIN_QUEUE_PREFIX = 'admin_queue:'
 SCREEN_ADMIN_BOT_RIGHTS_PREFIX = 'admin_bot_rights:'
@@ -508,20 +518,93 @@ def _build_smart_hub_text(user_id: int) -> str:
     )
 
 
-def _build_marketplace_text(user_id: int) -> tuple[str, list]:
-    summary = BoostoreProviderService.marketplace_summary(limit=10)
-    services = summary['services']
+def _catalog_page(raw: str | None) -> int:
+    try:
+        return max(1, int(raw or 1))
+    except Exception:
+        return 1
+
+
+def _catalog_parts(screen_key: str, prefix: str) -> list[str] | None:
+    if not screen_key.startswith(prefix):
+        return None
+    return [part.strip() for part in screen_key[len(prefix):].split(':') if part.strip()]
+
+
+def _build_marketplace_root_text(user_id: int) -> tuple[str, list[dict]]:
+    language = UserService.get_language(user_id)
+    categories = BoostoreProviderService.catalog_categories(enabled_only=True, language=language)
+    enabled = BoostoreProviderService.count_catalog_services(enabled_only=True)
+    if not categories:
+        return UserService.t(user_id, 'marketplace_catalog_empty'), []
+    return UserService.t(
+        user_id,
+        'marketplace_catalog_root',
+        services=enabled,
+        folders=len(categories),
+    ), categories
+
+
+def _build_marketplace_category_text(user_id: int, category: str) -> tuple[str, list[dict]]:
+    language = UserService.get_language(user_id)
+    taxonomy = BoostoreProviderService.catalog_categories(enabled_only=True, language=language)
+    current = next((item for item in taxonomy if item['code'] == category), None)
+    if not current:
+        return UserService.t(user_id, 'marketplace_catalog_empty'), []
+    subcategories = BoostoreProviderService.catalog_subcategories(
+        category, enabled_only=True, language=language
+    )
+    return UserService.t(
+        user_id,
+        'marketplace_catalog_category',
+        category=current['label'],
+        services=int(current['enabled']),
+        folders=len(subcategories),
+    ), subcategories
+
+
+def _build_marketplace_services_text(
+    user_id: int, category: str, subcategory: str, page: int
+) -> tuple[str, list, int]:
+    language = UserService.get_language(user_id)
+    category_items = BoostoreProviderService.catalog_categories(enabled_only=True, language=language)
+    category_item = next((item for item in category_items if item['code'] == category), None)
+    sub_items = BoostoreProviderService.catalog_subcategories(category, enabled_only=True, language=language)
+    sub_item = next((item for item in sub_items if item['code'] == subcategory), None)
+    if not category_item or not sub_item:
+        return UserService.t(user_id, 'marketplace_catalog_empty'), [], 1
+    total = BoostoreProviderService.count_catalog_services(
+        enabled_only=True, category=category, subcategory=subcategory
+    )
+    total_pages = max(1, math.ceil(total / 8))
+    page = min(max(1, page), total_pages)
+    services = BoostoreProviderService.list_catalog_services(
+        enabled_only=True,
+        category=category,
+        subcategory=subcategory,
+        limit=8,
+        offset=(page - 1) * 8,
+    )
     rows = []
-    for row in services[:10]:
-        rows.append(UserService.t(user_id, 'marketplace_service_row',
-            name=str(row['name'])[:64], category=str(row['category'] or '—')[:32],
-            service_type=str(row['service_type'] or '—')[:32],
-            min_qty=int(row['min_quantity'] or 0), max_qty=int(row['max_quantity'] or 0),
-            markup=int(row['markup_percent'] or 0)))
-    items = '\n'.join(rows) if rows else UserService.t(user_id, 'marketplace_empty')
-    provider_state = BoostoreProviderService.readiness_summary()['state']
-    return UserService.t(user_id, 'marketplace_screen', total=summary['total_services'],
-        enabled=summary['enabled_services'], provider_state=UserService.t(user_id, f'boostore_state_{provider_state}'), items=items), services
+    for row in services:
+        rows.append(UserService.t(
+            user_id,
+            'marketplace_catalog_service_row',
+            name=str(row['name'] or '')[:80],
+            min_qty=int(row['min_quantity'] or 0),
+            max_qty=int(row['max_quantity'] or 0),
+        ))
+    items = '\n'.join(rows) if rows else UserService.t(user_id, 'marketplace_catalog_empty')
+    text = UserService.t(
+        user_id,
+        'marketplace_catalog_services',
+        category=category_item['label'],
+        subcategory=sub_item['label'],
+        page=page,
+        pages=total_pages,
+        items=items,
+    )
+    return text, services, total_pages
 
 
 def _build_engagement_mode_text(user_id: int) -> str:
@@ -655,26 +738,106 @@ def _build_engagement_growth_text(user_id: int) -> str:
     )
 
 
-def _build_owner_provider_text(user_id: int) -> tuple[str, list]:
+def _build_owner_provider_text(user_id: int) -> tuple[str, list[dict]]:
     readiness = BoostoreProviderService.readiness_summary()
     order_summary = BoostoreProviderService.order_summary()
-    services = BoostoreProviderService.list_services(enabled_only=False, limit=12)
+    language = UserService.get_language(user_id)
+    categories = BoostoreProviderService.catalog_categories(
+        enabled_only=False, language=language
+    )
+    telegram_total = BoostoreProviderService.count_catalog_services(enabled_only=False)
+    telegram_enabled = BoostoreProviderService.count_catalog_services(enabled_only=True)
+    text = UserService.t(
+        user_id,
+        'owner_catalog_root',
+        state=UserService.t(user_id, f"boostore_state_{readiness['state']}"),
+        score=int(readiness['score']),
+        enabled='ON' if readiness['enabled'] else 'OFF',
+        configured='YES' if readiness['configured'] else 'NO',
+        has_key='YES' if readiness['has_key'] else 'NO',
+        api_url=readiness['api_url'],
+        total=readiness['total_services'],
+        telegram_total=telegram_total,
+        telegram_enabled=telegram_enabled,
+        markup=readiness['markup_percent'],
+        auto_sync='ON' if readiness['auto_sync'] else 'OFF',
+        auto_order='ON' if order_summary.get('auto_order_enabled') else 'OFF',
+        provider_orders=int(order_summary.get('total') or 0),
+        provider_failed=int(order_summary.get('failed') or 0),
+        folders=len(categories),
+    )
+    return text, categories
+
+
+def _build_owner_provider_category_text(user_id: int, category: str) -> tuple[str, list[dict]]:
+    language = UserService.get_language(user_id)
+    categories = BoostoreProviderService.catalog_categories(enabled_only=False, language=language)
+    current = next((item for item in categories if item['code'] == category), None)
+    if not current:
+        return UserService.t(user_id, 'owner_catalog_empty'), []
+    subcategories = BoostoreProviderService.catalog_subcategories(
+        category, enabled_only=False, language=language
+    )
+    text = UserService.t(
+        user_id,
+        'owner_catalog_category',
+        category=current['label'],
+        enabled=int(current['enabled']),
+        total=int(current['total']),
+        folders=len(subcategories),
+    )
+    return text, subcategories
+
+
+def _build_owner_provider_services_text(
+    user_id: int, category: str, subcategory: str, page: int
+) -> tuple[str, list, int]:
+    language = UserService.get_language(user_id)
+    categories = BoostoreProviderService.catalog_categories(enabled_only=False, language=language)
+    current = next((item for item in categories if item['code'] == category), None)
+    subcategories = BoostoreProviderService.catalog_subcategories(
+        category, enabled_only=False, language=language
+    )
+    sub = next((item for item in subcategories if item['code'] == subcategory), None)
+    if not current or not sub:
+        return UserService.t(user_id, 'owner_catalog_empty'), [], 1
+    total = BoostoreProviderService.count_catalog_services(
+        enabled_only=False, category=category, subcategory=subcategory
+    )
+    total_pages = max(1, math.ceil(total / 8))
+    page = min(max(1, page), total_pages)
+    services = BoostoreProviderService.list_catalog_services(
+        enabled_only=False,
+        category=category,
+        subcategory=subcategory,
+        limit=8,
+        offset=(page - 1) * 8,
+    )
     rows = []
-    for row in services[:12]:
-        rows.append(UserService.t(user_id, 'owner_provider_service_row',
-            enabled='✅' if int(row['is_enabled'] or 0) else '▫️', sid=str(row['external_service_id']),
-            name=str(row['name'])[:56], category=str(row['category'] or '—')[:24],
-            rate=str(row['rate_text'] or '—'), min_qty=int(row['min_quantity'] or 0),
-            max_qty=int(row['max_quantity'] or 0)))
-    items = '\n'.join(rows) if rows else UserService.t(user_id, 'owner_provider_empty')
-    return UserService.t(user_id, 'owner_provider_screen',
-        state=UserService.t(user_id, f"boostore_state_{readiness['state']}"), score=int(readiness['score']),
-        enabled='ON' if readiness['enabled'] else 'OFF', configured='YES' if readiness['configured'] else 'NO',
-        has_key='YES' if readiness['has_key'] else 'NO', api_url=readiness['api_url'],
-        total=readiness['total_services'], whitelist=readiness['enabled_services'],
-        markup=readiness['markup_percent'], auto_sync='ON' if readiness['auto_sync'] else 'OFF',
-        auto_order='ON' if order_summary.get('auto_order_enabled') else 'OFF', provider_orders=int(order_summary.get('total') or 0),
-        provider_failed=int(order_summary.get('failed') or 0), items=items), services
+    for row in services:
+        rows.append(UserService.t(
+            user_id,
+            'owner_catalog_service_row',
+            enabled='✅' if int(row['is_enabled'] or 0) else '▫️',
+            sid=str(row['external_service_id']),
+            name=str(row['name'] or '')[:72],
+            rate=str(row['rate_text'] or '—'),
+            min_qty=int(row['min_quantity'] or 0),
+            max_qty=int(row['max_quantity'] or 0),
+        ))
+    text = UserService.t(
+        user_id,
+        'owner_catalog_services',
+        category=current['label'],
+        subcategory=sub['label'],
+        enabled=int(sub['enabled']),
+        total=int(sub['total']),
+        page=page,
+        pages=total_pages,
+        items='\n'.join(rows) if rows else UserService.t(user_id, 'owner_catalog_empty'),
+    )
+    return text, services, total_pages
+
 
 def _build_profile_text(user_id: int) -> str:
     wallet = WalletService.get_summary(user_id)
@@ -1402,7 +1565,7 @@ def _build_owner_release_text(user_id: int) -> str:
     rc1_state = UserService.t(user_id, f"release_state_{rc1_gate['state']}")
 
     if language == 'en':
-        title = '<b>Boostora v3.2.9 release center</b>'
+        title = f'<b>{APP_VERSION} release center</b>'
         attention_title = '<b>Priority checks</b>'
         flow_title = '<b>Critical flows</b>'
         guard_title = '<b>Launch checks</b>'
@@ -1417,7 +1580,7 @@ def _build_owner_release_text(user_id: int) -> str:
             'ready': 'ready',
         }
     else:
-        title = '<b>Релиз-центр Boostora v3.2.9</b>'
+        title = f'<b>Релиз-центр {APP_VERSION}</b>'
         attention_title = '<b>Приоритетные проверки</b>'
         flow_title = '<b>Критические сценарии</b>'
         guard_title = '<b>Проверки запуска</b>'
@@ -1918,9 +2081,60 @@ def render_screen(
         return
 
     if screen_key == SCREEN_MARKETPLACE:
-        text_body, services = _build_marketplace_text(user_id)
+        text_body, categories = _build_marketplace_root_text(user_id)
         text = _prepend_notice(user_id, text_body, notice_key, notice_text)
-        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_MARKETPLACE, text=text, reply_markup_builder=lambda version: marketplace_keyboard(user_id, version, services))
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_MARKETPLACE,
+            text=text,
+            reply_markup_builder=lambda version: marketplace_keyboard(user_id, version, categories),
+        )
+        return
+
+    marketplace_category_parts = _catalog_parts(screen_key, SCREEN_MARKETPLACE_CATEGORY_PREFIX)
+    if marketplace_category_parts:
+        category = marketplace_category_parts[0]
+        text_body, subcategories = _build_marketplace_category_text(user_id, category)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=screen_key,
+            text=text,
+            reply_markup_builder=lambda version: marketplace_category_keyboard(user_id, version, category, subcategories),
+        )
+        return
+
+    marketplace_subcategory_parts = _catalog_parts(screen_key, SCREEN_MARKETPLACE_SUBCATEGORY_PREFIX)
+    if marketplace_subcategory_parts and len(marketplace_subcategory_parts) >= 2:
+        category = marketplace_subcategory_parts[0]
+        subcategory = marketplace_subcategory_parts[1]
+        page = _catalog_page(marketplace_subcategory_parts[2] if len(marketplace_subcategory_parts) > 2 else '1')
+        text_body, services, total_pages = _build_marketplace_services_text(user_id, category, subcategory, page)
+        page = min(page, total_pages)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=f'{SCREEN_MARKETPLACE_SUBCATEGORY_PREFIX}{category}:{subcategory}:{page}',
+            text=text,
+            reply_markup_builder=lambda version: marketplace_services_keyboard(
+                user_id,
+                version,
+                category=category,
+                subcategory=subcategory,
+                services=services,
+                page=page,
+                total_pages=total_pages,
+            ),
+        )
         return
 
     if screen_key == SCREEN_PROFILE:
@@ -2246,9 +2460,66 @@ def render_screen(
         if not UserService.is_owner(user_id):
             render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
             return
-        text_body, services = _build_owner_provider_text(user_id)
+        text_body, categories = _build_owner_provider_text(user_id)
         text = _prepend_notice(user_id, text_body, notice_key, notice_text)
-        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_OWNER_PROVIDER, text=text, reply_markup_builder=lambda version: owner_provider_keyboard(user_id, version, services))
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_OWNER_PROVIDER,
+            text=text,
+            reply_markup_builder=lambda version: owner_provider_keyboard(user_id, version, categories),
+        )
+        return
+
+    owner_category_parts = _catalog_parts(screen_key, SCREEN_OWNER_PROVIDER_CATEGORY_PREFIX)
+    if owner_category_parts:
+        if not UserService.is_owner(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        category = owner_category_parts[0]
+        text_body, subcategories = _build_owner_provider_category_text(user_id, category)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=screen_key,
+            text=text,
+            reply_markup_builder=lambda version: owner_provider_category_keyboard(user_id, version, category, subcategories),
+        )
+        return
+
+    owner_subcategory_parts = _catalog_parts(screen_key, SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX)
+    if owner_subcategory_parts and len(owner_subcategory_parts) >= 2:
+        if not UserService.is_owner(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        category = owner_subcategory_parts[0]
+        subcategory = owner_subcategory_parts[1]
+        page = _catalog_page(owner_subcategory_parts[2] if len(owner_subcategory_parts) > 2 else '1')
+        text_body, services, total_pages = _build_owner_provider_services_text(user_id, category, subcategory, page)
+        page = min(page, total_pages)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=f'{SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX}{category}:{subcategory}:{page}',
+            text=text,
+            reply_markup_builder=lambda version: owner_provider_services_keyboard(
+                user_id,
+                version,
+                category=category,
+                subcategory=subcategory,
+                services=services,
+                page=page,
+                total_pages=total_pages,
+            ),
+        )
         return
 
     if screen_key == SCREEN_OWNER_ANALYTICS:

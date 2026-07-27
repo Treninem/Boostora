@@ -1001,8 +1001,10 @@ class ReleaseReadinessService:
         index = project_root / 'miniapp_example/index.html'
         assets = project_root / 'miniapp_example/assets'
         required = [
-            'hero-growth.svg', 'liker.svg', 'commenter.svg', 'standard.svg',
-            'pro.svg', 'obligations.svg', 'boostore.svg', 'rules.svg', 'wallet.svg',
+            'hero-growth.webp', 'telegram-profile.webp', 'server-status.webp', 'bot-actions.webp',
+            'liker.webp', 'commenter.webp', 'boostore.webp', 'standard.webp', 'pro.webp',
+            'obligations.webp', 'community-rules.webp', 'wallet-hold.webp',
+            'release-center.webp', 'boostora-logo.png',
         ]
         existing = sum(1 for name in required if (assets / name).is_file())
         checks = {
