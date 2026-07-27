@@ -230,10 +230,31 @@ def _configure_telegram_menu(bot: telebot.TeleBot, stop_event: threading.Event) 
         LOGGER.warning('Current pyTelegramBotAPI build has no MenuButtonWebApp support')
         return
 
-    menu_button = MenuButtonWebApp(
-        text=settings.brand_name[:64],
-        web_app=WebAppInfo(url=settings.mini_app_url),
-    )
+    try:
+        web_app_info = WebAppInfo(url=settings.mini_app_url)
+        try:
+            menu_button = MenuButtonWebApp(
+                type='web_app',
+                text=settings.brand_name[:64],
+                web_app=web_app_info,
+            )
+        except TypeError as exc:
+            # Compatibility with older pyTelegramBotAPI builds where ``type``
+            # was injected internally instead of being an explicit argument.
+            if "unexpected keyword argument 'type'" not in str(exc):
+                raise
+            menu_button = MenuButtonWebApp(
+                text=settings.brand_name[:64],
+                web_app=web_app_info,
+            )
+    except Exception as exc:
+        # A non-critical menu-button incompatibility must never stop polling or
+        # the embedded Mini App server. The in-bot Mini App entry remains usable.
+        LOGGER.warning(
+            'Telegram Mini App menu button object could not be created: %s',
+            _short_error(exc),
+        )
+        return
     delay = POLLING_BACKOFF_START_SECONDS
     for attempt in range(1, REMOVE_WEBHOOK_ATTEMPTS + 1):
         if stop_event.is_set():

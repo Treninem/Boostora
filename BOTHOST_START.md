@@ -1,4 +1,4 @@
-# Boostora v3.2.6 — запуск бота и Mini App на Bothost
+# Boostora v3.2.7 — запуск бота и Mini App на Bothost
 
 ## Что запускается
 
@@ -81,7 +81,7 @@ https://boostora.bothost.tech/api/config
 Ожидаемый ответ `/health`:
 
 ```json
-{"ok":true,"service":"boostora","version":"Boostora v3.2.6","webapp":true}
+{"ok":true,"service":"boostora","version":"Boostora v3.2.7","webapp":true}
 ```
 
 ## Telegram
@@ -92,7 +92,7 @@ https://boostora.bothost.tech/api/config
 Embedded Mini App is listening on http://0.0.0.0:3000
 Telegram Mini App public URL: https://boostora.bothost.tech
 Telegram Mini App menu button configured
-Boostora v3.2.6 started with update guard
+Boostora v3.2.7 started with update guard
 ```
 
 Если кнопка меню в старом диалоге не обновилась, полностью закрой Telegram, открой снова и отправь боту `/start`. Кнопка Mini App также остаётся внутри раздела «Центр».
@@ -109,3 +109,8 @@ Boostora v3.2.6 started with update guard
 ## Важно
 
 Не добавляй в GitHub `.env`, рабочую БД, токен Telegram или `BOOSTORE_API_KEY`. Рабочая база должна находиться в `/app/data/boostora.db`.
+
+
+## Исправление v3.2.7
+
+В pyTelegramBotAPI 4.28.0 конструктору `MenuButtonWebApp` обязательно передаётся `type=web_app`. В этой версии параметр добавлен, а сбой настройки глобальной кнопки больше не завершает весь процесс.

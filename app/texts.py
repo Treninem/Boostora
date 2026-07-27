@@ -3113,3 +3113,16 @@ TEXTS['en'].update({
 
 TEXTS['ru'].update({'stable_action_embedded_miniapp_runtime_ready': 'Mini App раздаётся основным процессом, имеет /health, безопасную Telegram-сессию, серверное подтверждение открытия, кнопку меню и корректную остановку.', 'final_audit_action_embedded_mini_app_ok': 'веб-сервер, healthcheck, Telegram initData, серверное событие открытия, кнопка меню и интерфейс Mini App соединены в одном runtime.'})
 TEXTS['en'].update({'stable_action_embedded_miniapp_runtime_ready': 'the main runtime serves Mini App, exposes /health, validates Telegram sessions, records signed open events, configures the menu button and stops cleanly.', 'final_audit_action_embedded_mini_app_ok': 'web server, healthcheck, Telegram initData, signed open events, menu button and Mini App UI are connected in one runtime.'})
+
+
+# Boostora v3.2.7 — Telegram menu button compatibility hotfix.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.2.7</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.7</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nИсправлена совместимость глобальной кнопки Mini App с pyTelegramBotAPI 4.28.0; ошибка кнопки больше не останавливает бота.',
+    'stable_contract_patch_327_policy': 'v3.2.7: MenuButtonWebApp создаётся с обязательным type=web_app, поддерживает старые сигнатуры библиотеки и не может аварийно остановить основной runtime.',
+    'version_text': '<b>{version}</b>\nИсправлена кнопка Mini App для pyTelegramBotAPI 4.28.0. Ошибка настройки глобального меню больше не останавливает бота и веб-сервер.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.2.7 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.7</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release contract</b>\n{stable_contract}\n\nThe global Mini App menu button is compatible with pyTelegramBotAPI 4.28.0 and can no longer abort the runtime.',
+    'stable_contract_patch_327_policy': 'v3.2.7: MenuButtonWebApp receives the required type=web_app argument, retains compatibility with older signatures and cannot crash the main runtime.',
+    'version_text': '<b>{version}</b>\nThe Mini App menu button is fixed for pyTelegramBotAPI 4.28.0. Menu configuration failures no longer stop the bot or web server.',
+})

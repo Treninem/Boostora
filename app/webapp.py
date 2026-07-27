@@ -108,7 +108,7 @@ def _validate_telegram_init_data(init_data: str) -> tuple[bool, str, dict[str, A
 
 
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.2.6'
+    server_version = 'BoostoraWeb/3.2.7'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):
