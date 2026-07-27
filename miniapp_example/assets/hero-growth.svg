@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-label="Boostora hero-growth.svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7b3cff"/><stop offset=".55" stop-color="#d93df2"/><stop offset="1" stop-color="#f3b447"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe18a"/><stop offset="1" stop-color="#d1841b"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".35"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="640" height="420" rx="42" fill="#170c27"/>
+  <circle cx="96" cy="72" r="110" fill="#6b2aff" opacity=".25"/>
+  <circle cx="560" cy="360" r="130" fill="#f3b447" opacity=".18"/>
+  
+  <g filter="url(#shadow)">
+    <rect x="68" y="82" width="430" height="250" rx="34" fill="rgba(255,255,255,.09)" stroke="rgba(255,255,255,.22)"/>
+    <path d="M108 278 C166 224 202 238 246 190 S339 129 445 112" fill="none" stroke="url(#gold)" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="445" cy="112" r="23" fill="url(#gold)" filter="url(#glow)"/>
+    <rect x="112" y="224" width="44" height="62" rx="14" fill="#7b3cff"/>
+    <rect x="178" y="194" width="44" height="92" rx="14" fill="#9d50ff"/>
+    <rect x="244" y="158" width="44" height="128" rx="14" fill="#d93df2"/>
+    <rect x="310" y="122" width="44" height="164" rx="14" fill="#f3b447"/>
+  </g>
+  <g transform="translate(462 78)">
+    <circle cx="60" cy="60" r="58" fill="url(#g)" filter="url(#shadow)"/>
+    <text x="60" y="82" text-anchor="middle" font-size="62" font-family="Arial" fill="white">🚀</text>
+  </g>
+
+</svg>

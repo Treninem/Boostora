@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from app.services.activity import ActivityService
 from app.services.campaigns import CampaignService
 from app.services.economy import calculate_campaign_pricing, recommend_unit_prices, supported_task_types, task_meta
+from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.wallets import WalletService
 
@@ -32,12 +33,38 @@ class ClientCampaignService:
             InputSessionService.clear_session(user_id)
 
     @staticmethod
-    def start_draft(user_id: int, task_type: str) -> tuple[bool, str]:
+    def start_draft(user_id: int, task_type: str, engagement_mode: str | None = None) -> tuple[bool, str]:
         if task_type not in TASK_TYPES:
             return False, 'campaign_invalid_task_type'
         payload = {'task_type': task_type}
+        if engagement_mode:
+            payload['engagement_mode'] = str(engagement_mode)
+            payload['reciprocal_required_actions'] = EngagementModeService.required_actions() if str(engagement_mode) == 'standard' else 0
         InputSessionService.set_session(user_id, MODE_TARGET, json.dumps(payload, ensure_ascii=False))
         return True, 'campaign_type_saved'
+
+    @staticmethod
+    def start_preset(user_id: int, task_type: str, quantity: int, preset_code: str = '', engagement_mode: str | None = None) -> tuple[bool, str]:
+        """Start a campaign draft with a preselected quantity.
+
+        The user still has to provide the target link and price, so this does
+        not bypass wallet, proof, hold, moderation or antifraud logic. It only
+        removes one repetitive input step for common engagement products.
+        """
+        if task_type not in TASK_TYPES:
+            return False, 'campaign_invalid_task_type'
+        if int(quantity) <= 0 or int(quantity) > 100000:
+            return False, 'campaign_quantity_invalid'
+        payload = {
+            'task_type': task_type,
+            'preset_code': str(preset_code or ''),
+            'preset_quantity': int(quantity),
+        }
+        if engagement_mode:
+            payload['engagement_mode'] = str(engagement_mode)
+            payload['reciprocal_required_actions'] = EngagementModeService.required_actions() if str(engagement_mode) == 'standard' else 0
+        InputSessionService.set_session(user_id, MODE_TARGET, json.dumps(payload, ensure_ascii=False))
+        return True, 'engagement_preset_started'
 
     @staticmethod
     def get_draft(user_id: int) -> dict[str, Any] | None:
@@ -129,6 +156,21 @@ class ClientCampaignService:
             result_key = 'campaign_target_saved_miniapp'
 
         draft['target_url'] = target
+        preset_quantity = draft.get('preset_quantity')
+        if str(preset_quantity or '').isdigit():
+            total_quantity = int(preset_quantity)
+            if 0 < total_quantity <= 100000:
+                floor = calculate_campaign_pricing(str(draft['task_type']), total_quantity)
+                draft['total_quantity'] = total_quantity
+                draft['client_floor_price'] = int(floor['client_floor_price'])
+                draft['performer_floor_reward'] = int(floor['performer_floor_reward'])
+                draft['discount_percent'] = int(floor['discount_percent'])
+                draft['base_client_floor_price'] = int(floor['base_client_floor_price'])
+                draft['recommended_unit_price'] = int(floor['recommended_unit_price'])
+                draft['fast_unit_price'] = int(floor['fast_unit_price'])
+                draft['priority_unit_price'] = int(floor['priority_unit_price'])
+                InputSessionService.set_session(user_id, MODE_PRICE, json.dumps(draft, ensure_ascii=False))
+                return True, 'campaign_target_preset_quantity_saved', MODE_PRICE
         InputSessionService.set_session(user_id, MODE_QUANTITY, json.dumps(draft, ensure_ascii=False))
         return True, result_key, MODE_QUANTITY
 
@@ -229,6 +271,8 @@ class ClientCampaignService:
                 'recommended_unit_price': int(draft.get('recommended_unit_price') or draft['unit_price']),
                 'fast_unit_price': int(draft.get('fast_unit_price') or draft['unit_price']),
                 'priority_unit_price': int(draft.get('priority_unit_price') or draft['unit_price']),
+                'engagement_mode': str(draft.get('engagement_mode') or ''),
+                'reciprocal_required_actions': int(draft.get('reciprocal_required_actions') or 0),
             },
             total_quantity=int(draft['total_quantity']),
             status='draft',
@@ -238,6 +282,8 @@ class ClientCampaignService:
             ok, result_key = CampaignService.update_status(user_id, campaign_id, 'active')
             if not ok:
                 return False, result_key, None
+        if launch_now and str(draft.get('engagement_mode') or '') == 'standard':
+            EngagementModeService.create_obligation_for_campaign(user_id, campaign_id, str(draft['task_type']), int(draft['total_quantity']))
         InputSessionService.clear_session(user_id)
         return True, 'campaign_created_active' if launch_now else 'campaign_created_draft', campaign_id
 

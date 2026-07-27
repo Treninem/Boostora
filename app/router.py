@@ -13,6 +13,15 @@ from app.keyboards.inline import (
     admin_logs_keyboard,
     owner_analytics_keyboard,
     owner_release_keyboard,
+    owner_provider_keyboard,
+    engagement_growth_keyboard,
+    engagement_mode_keyboard,
+    engagement_obligations_keyboard,
+    admin_engagement_obligations_keyboard,
+    community_rules_keyboard,
+    legal_docs_keyboard,
+    marketplace_keyboard,
+    smart_hub_keyboard,
     admin_required_chats_keyboard,
     admin_queue_keyboard,
     admin_bot_chats_keyboard,
@@ -54,8 +63,16 @@ from app.services.campaigns import CampaignService
 from app.services.client_dashboard import action_tip, boost_options_text, campaign_progress, dashboard_summary, health_label
 from app.services.economy import completion_speed_explanation, recommend_unit_prices
 from app.services.client_campaigns import MODE_CONFIRM, MODE_PRICE, ClientCampaignService
+from app.services.community_rules import CommunityRulesService
+from app.services.engagement_modes import EngagementModeService
+from app.services.engagement_growth import EngagementGrowthService
 from app.services.performer import PerformerService, normalize_target_url
+from app.services.proof_guides import ProofGuideService
 from app.services.owner_analytics import OwnerAnalyticsService
+from app.services.boostore_provider import BoostoreProviderService
+from app.services.standard_admin import StandardAdminService
+from app.services.legal_docs import LegalDocsService
+from app.services.smart_hub import SmartHubService
 from app.services.release_readiness import ReleaseReadinessService
 from app.services.redemptions import RedemptionService
 from app.services.quality import speed_label, trust_tip, verification_label
@@ -104,6 +121,14 @@ SCREEN_LANGUAGE = 'language'
 SCREEN_ROLE = 'role'
 SCREEN_REQUIRED_SUBSCRIPTION = 'required_subscription'
 SCREEN_MAIN_MENU = 'main_menu'
+SCREEN_SMART_HUB = 'smart_hub'
+SCREEN_MARKETPLACE = 'marketplace'
+SCREEN_ENGAGEMENT_GROWTH = 'engagement_growth'
+SCREEN_ENGAGEMENT_MODE = 'engagement_mode'
+SCREEN_ENGAGEMENT_OBLIGATIONS = 'engagement_obligations'
+SCREEN_ADMIN_ENGAGEMENT_OBLIGATIONS = 'admin_engagement_obligations'
+SCREEN_COMMUNITY_RULES = 'community_rules'
+SCREEN_LEGAL_DOCS = 'legal_docs'
 SCREEN_PROFILE = 'profile'
 SCREEN_TASKS = 'tasks'
 SCREEN_TASK_DETAIL_PREFIX = 'task:'
@@ -133,6 +158,7 @@ SCREEN_ADMIN_GROUPS = 'admin_groups'
 SCREEN_ADMIN_PATTERNS = 'admin_patterns'
 SCREEN_OWNER_ANALYTICS = 'owner_analytics'
 SCREEN_OWNER_RELEASE = 'owner_release'
+SCREEN_OWNER_PROVIDER = 'owner_provider'
 SCREEN_ADMIN_QUEUE = 'admin_queue'
 SCREEN_ADMIN_QUEUE_PREFIX = 'admin_queue:'
 SCREEN_ADMIN_BOT_RIGHTS_PREFIX = 'admin_bot_rights:'
@@ -147,6 +173,14 @@ SCREEN_ADMIN_BOT_CHATS_PREFIX = 'admin_bot_chats:'
 SCREEN_ADMIN_USERS_PREFIX = 'admin_users:'
 
 SECTION_TO_SCREEN = {
+    'smart_hub': SCREEN_SMART_HUB,
+    'marketplace': SCREEN_MARKETPLACE,
+    'engagement_growth': SCREEN_ENGAGEMENT_GROWTH,
+    'engagement_mode': SCREEN_ENGAGEMENT_MODE,
+    'engagement_obligations': SCREEN_ENGAGEMENT_OBLIGATIONS,
+    'admin_engagement_obligations': SCREEN_ADMIN_ENGAGEMENT_OBLIGATIONS,
+    'community_rules': SCREEN_COMMUNITY_RULES,
+    'legal_docs': SCREEN_LEGAL_DOCS,
     'profile': SCREEN_PROFILE,
     'tasks': SCREEN_TASKS,
     'wallet': SCREEN_WALLET,
@@ -164,6 +198,7 @@ SECTION_TO_SCREEN = {
     'admin_patterns': SCREEN_ADMIN_PATTERNS,
     'owner_analytics': SCREEN_OWNER_ANALYTICS,
     'owner_release': SCREEN_OWNER_RELEASE,
+    'owner_provider': SCREEN_OWNER_PROVIDER,
     'admin_logs': SCREEN_ADMIN_LOGS,
     'admin_required_chats': SCREEN_ADMIN_REQUIRED_CHATS,
 }
@@ -425,6 +460,222 @@ def _build_main_menu_text(user_id: int) -> str:
 
 
 
+
+
+def _build_community_rules_text(user_id: int) -> str:
+    rows = []
+    for section in CommunityRulesService.sections():
+        rows.append(UserService.t(user_id, 'community_rules_section_row',
+            title=UserService.t(user_id, section.title_key),
+            body=UserService.t(user_id, section.body_key)))
+    accepted = CommunityRulesService.is_accepted(user_id)
+    return UserService.t(user_id, 'community_rules_screen',
+        brand=settings.brand_name,
+        version=CommunityRulesService.CURRENT_VERSION,
+        state=UserService.t(user_id, 'community_rules_state_accepted' if accepted else 'community_rules_state_required'),
+        sections='\n\n'.join(rows))
+
+
+def _build_legal_docs_text(user_id: int) -> str:
+    rows = []
+    for section in LegalDocsService.sections():
+        rows.append(UserService.t(user_id, 'legal_docs_section_row',
+            title=UserService.t(user_id, section.title_key),
+            body=UserService.t(user_id, section.body_key)))
+    accepted = LegalDocsService.is_accepted(user_id)
+    return UserService.t(user_id, 'legal_docs_screen',
+        brand=settings.brand_name,
+        version=LegalDocsService.CURRENT_VERSION,
+        state=UserService.t(user_id, 'legal_docs_state_accepted' if accepted else 'legal_docs_state_required'),
+        sections='\n\n'.join(rows))
+
+def _build_smart_hub_text(user_id: int) -> str:
+    data = SmartHubService.dashboard(user_id)
+    wallet = data['wallet']
+    tips = '\n'.join('• ' + UserService.t(user_id, key) for key in data['tips'])
+    provider = data['provider']
+    return UserService.t(
+        user_id, 'smart_hub_screen', brand=settings.brand_name,
+        role=UserService.role_label(user_id, data['role']),
+        available=wallet['available_balance'], internal=wallet['internal_balance'],
+        bonus=wallet['bonus_balance'], hold=wallet['hold_balance'],
+        active_tasks=data['active_tasks'], task_limit=data['task_limit'],
+        available_tasks=data['available_tasks'], manual_review=data['manual_review'],
+        client_campaigns=data['client_campaigns'], client_active=data['client_active'],
+        client_drafts=data['client_drafts'], provider_enabled=provider['enabled_services'],
+        provider_state=UserService.t(user_id, f"boostore_state_{provider['state']}"),
+        internal_name=UserService.internal_currency_label(user_id), tips=tips,
+    )
+
+
+def _build_marketplace_text(user_id: int) -> tuple[str, list]:
+    summary = BoostoreProviderService.marketplace_summary(limit=10)
+    services = summary['services']
+    rows = []
+    for row in services[:10]:
+        rows.append(UserService.t(user_id, 'marketplace_service_row',
+            name=str(row['name'])[:64], category=str(row['category'] or '—')[:32],
+            service_type=str(row['service_type'] or '—')[:32],
+            min_qty=int(row['min_quantity'] or 0), max_qty=int(row['max_quantity'] or 0),
+            markup=int(row['markup_percent'] or 0)))
+    items = '\n'.join(rows) if rows else UserService.t(user_id, 'marketplace_empty')
+    provider_state = BoostoreProviderService.readiness_summary()['state']
+    return UserService.t(user_id, 'marketplace_screen', total=summary['total_services'],
+        enabled=summary['enabled_services'], provider_state=UserService.t(user_id, f'boostore_state_{provider_state}'), items=items), services
+
+
+def _build_engagement_mode_text(user_id: int) -> str:
+    summary = EngagementModeService.mode_summary(user_id)
+    mode_key = f"engagement_mode_state_{summary['mode']}"
+    return UserService.t(
+        user_id,
+        'engagement_mode_screen',
+        mode=UserService.t(user_id, mode_key),
+        required=int(summary['required_actions']),
+        pro_price=int(summary['pro_price_stars']),
+        open_obligations=int(summary['open_obligations']),
+        open_required=int(summary['open_required_total']),
+        outgoing_30d=int(summary['outgoing_30d']),
+        pro_until=summary['pro_expires_at'] or UserService.t(user_id, 'engagement_mode_no_pro_until'),
+    )
+
+
+
+def _format_engagement_due(raw: str) -> str:
+    return str(raw or '').replace('T', ' ')[:16] if raw else '—'
+
+
+def _build_engagement_obligations_text(user_id: int) -> str:
+    dashboard = EngagementModeService.obligation_dashboard(user_id)
+    if dashboard['items']:
+        rows = []
+        for item in dashboard['items'][:10]:
+            rows.append(UserService.t(
+                user_id,
+                'engagement_obligation_row',
+                task_type=UserService.t(user_id, item['task_label_key']),
+                done=int(item['done']),
+                required=int(item['required']),
+                remaining=int(item['remaining']),
+                percent=int(item['percent']),
+                state=UserService.t(user_id, f"engagement_obligation_state_{item['state']}"),
+                due=_format_engagement_due(str(item['due_at'])),
+                campaign=int(item['campaign_id'] or 0),
+            ))
+        items = '\n\n'.join(rows)
+    else:
+        items = UserService.t(user_id, 'engagement_obligations_empty')
+    restriction_state = EngagementModeService.soft_restriction(user_id)
+    restriction = UserService.t(user_id, 'engagement_obligations_restriction_active', remaining=int(restriction_state['remaining'])) if restriction_state['restricted'] else UserService.t(user_id, 'engagement_obligations_restriction_clear')
+    return UserService.t(
+        user_id,
+        'engagement_obligations_screen',
+        status=UserService.t(user_id, f"engagement_obligation_dashboard_state_{dashboard['status']}"),
+        restriction=restriction,
+        open_count=int(dashboard['open_count']),
+        overdue_count=int(dashboard['overdue_count']),
+        due_soon_count=int(dashboard['due_soon_count']),
+        total_done=int(dashboard['total_done']),
+        total_required=int(dashboard['total_required']),
+        total_remaining=int(dashboard['total_remaining']),
+        outgoing_30d=int(dashboard['outgoing_30d']),
+        completed_total=int(dashboard['completed_total']),
+        items=items,
+    )
+
+
+def _build_admin_engagement_obligations_text(user_id: int) -> str:
+    overview = EngagementModeService.admin_obligation_overview(limit=15)
+    if overview['items']:
+        rows = []
+        for item in overview['items'][:15]:
+            name = item.get('username') or item.get('first_name') or str(item['user_id'])
+            rows.append(UserService.t(
+                user_id,
+                'admin_engagement_obligation_row',
+                user_id=int(item['user_id']),
+                name=str(name)[:32],
+                task_type=UserService.t(user_id, item['task_label_key']),
+                done=int(item['done']),
+                required=int(item['required']),
+                remaining=int(item['remaining']),
+                state=UserService.t(user_id, f"engagement_obligation_state_{item['state']}"),
+                due=_format_engagement_due(str(item['due_at'])),
+                campaign=int(item['campaign_id'] or 0),
+            ))
+        items = '\n'.join(rows)
+    else:
+        items = UserService.t(user_id, 'admin_engagement_obligations_empty')
+    return UserService.t(
+        user_id,
+        'admin_engagement_obligations_screen',
+        table_state=UserService.t(user_id, 'status_ready' if overview['table_ready'] else 'status_blocker'),
+        open_total=int(overview['open_total']),
+        overdue_total=int(overview['overdue_total']),
+        due_soon_total=int(overview['due_soon_total']),
+        required=int(overview['required_actions']),
+        items=items,
+    )
+
+
+def _build_engagement_growth_text(user_id: int) -> str:
+    summary = EngagementGrowthService.summary()
+    products = []
+    for product in summary['products']:
+        products.append('• ' + UserService.t(user_id, product.description_key))
+    product_rows = '\n'.join(products)
+    presets = []
+    for preset in summary.get('presets', []):
+        presets.append('• ' + UserService.t(user_id, preset.description_key))
+    preset_rows = '\n'.join(presets[:9])
+    mode = EngagementModeService.mode_summary(user_id)
+    restriction_state = EngagementModeService.soft_restriction(user_id)
+    restriction_block = UserService.t(user_id, 'engagement_growth_overdue_block', remaining=int(restriction_state['remaining'])) if restriction_state['restricted'] else UserService.t(user_id, 'engagement_growth_overdue_clear')
+    mode_block = UserService.t(
+        user_id,
+        'engagement_growth_mode_block',
+        mode=UserService.t(user_id, f"engagement_mode_state_{mode['mode']}"),
+        required=int(mode['required_actions']),
+        pro_price=int(mode['pro_price_stars']),
+        open_obligations=int(mode['open_obligations']),
+        open_required=int(mode['open_required_total']),
+        outgoing_30d=int(mode['outgoing_30d']),
+        open_remaining=int(mode.get('open_remaining_total', mode['open_required_total'])),
+    )
+    return UserService.t(
+        user_id,
+        'engagement_growth_screen',
+        restriction_block=restriction_block,
+        product_count=int(summary['product_count']),
+        preset_count=int(summary.get('preset_count') or 0),
+        campaign_types=int(summary['campaign_types']),
+        product_rows=product_rows,
+        preset_rows=preset_rows,
+        mode_block=mode_block,
+    )
+
+
+def _build_owner_provider_text(user_id: int) -> tuple[str, list]:
+    readiness = BoostoreProviderService.readiness_summary()
+    order_summary = BoostoreProviderService.order_summary()
+    services = BoostoreProviderService.list_services(enabled_only=False, limit=12)
+    rows = []
+    for row in services[:12]:
+        rows.append(UserService.t(user_id, 'owner_provider_service_row',
+            enabled='✅' if int(row['is_enabled'] or 0) else '▫️', sid=str(row['external_service_id']),
+            name=str(row['name'])[:56], category=str(row['category'] or '—')[:24],
+            rate=str(row['rate_text'] or '—'), min_qty=int(row['min_quantity'] or 0),
+            max_qty=int(row['max_quantity'] or 0)))
+    items = '\n'.join(rows) if rows else UserService.t(user_id, 'owner_provider_empty')
+    return UserService.t(user_id, 'owner_provider_screen',
+        state=UserService.t(user_id, f"boostore_state_{readiness['state']}"), score=int(readiness['score']),
+        enabled='ON' if readiness['enabled'] else 'OFF', configured='YES' if readiness['configured'] else 'NO',
+        has_key='YES' if readiness['has_key'] else 'NO', api_url=readiness['api_url'],
+        total=readiness['total_services'], whitelist=readiness['enabled_services'],
+        markup=readiness['markup_percent'], auto_sync='ON' if readiness['auto_sync'] else 'OFF',
+        auto_order='ON' if order_summary.get('auto_order_enabled') else 'OFF', provider_orders=int(order_summary.get('total') or 0),
+        provider_failed=int(order_summary.get('failed') or 0), items=items), services
+
 def _build_profile_text(user_id: int) -> str:
     wallet = WalletService.get_summary(user_id)
     active_tasks = PerformerService.get_active_submission_count(user_id)
@@ -510,6 +761,7 @@ def _build_task_detail_text(user_id: int, campaign_id: int) -> tuple[str, dict[s
         trust_level=trust['level_label'],
         trust_score=trust['score'],
         trust_bonus=trust['task_bonus'],
+        task_guide=ProofGuideService.task_detail_block(str(campaign['task_type']), language),
     )
     return text, {
         'target_url': normalize_target_url(str(campaign['target_url'])),
@@ -640,6 +892,8 @@ def _build_campaign_input_text(user_id: int, step: str) -> str:
         target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_start')
     if task_type_code == 'mini_app_open':
         target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_miniapp_senddata')
+    if task_type_code:
+        target_prompt += '\n\n' + ProofGuideService.client_hint(task_type_code, language)
     prompt_map = {
         'target': target_prompt,
         'quantity': UserService.t(user_id, 'campaign_quantity_prompt'),
@@ -700,6 +954,7 @@ def _build_campaign_preview_text(user_id: int) -> str:
         speed_label=speed_label(speed, language),
         verification=verification_label(task_type_code, language),
         trust_tip=trust_tip(task_type_code, language),
+        proof_guide=ProofGuideService.preview_block(task_type_code, language),
         internal_name=UserService.internal_currency_label(user_id),
     )
 
@@ -1472,6 +1727,8 @@ def resolve_next_screen(bot: telebot.TeleBot, user_id: int, chat_id: int, chat_u
     role = UserService.get_role(user_id)
     if not role:
         return SCREEN_ROLE
+    if not CommunityRulesService.is_accepted(user_id) and not UserService.is_admin(user_id):
+        return SCREEN_COMMUNITY_RULES
     if SubscriptionService.should_enforce_required_chat(chat_id, chat_username=chat_username):
         check = SubscriptionService.get_subscription_check_result(bot, user_id)
         if not check.is_subscribed and not check.is_unknown:
@@ -1543,6 +1800,19 @@ def render_screen(
         )
         return
 
+    if screen_key == SCREEN_COMMUNITY_RULES:
+        text = _prepend_notice(user_id, _build_community_rules_text(user_id), notice_key, notice_text)
+        render_managed_screen(
+            bot,
+            target=target,
+            profile_id=user_id,
+            chat_id=chat_id,
+            screen_key=SCREEN_COMMUNITY_RULES,
+            text=text,
+            reply_markup_builder=lambda version: community_rules_keyboard(user_id, version, accepted=CommunityRulesService.is_accepted(user_id)),
+        )
+        return
+
     if screen_key == SCREEN_BLOCKED:
         text = _prepend_notice(user_id, _build_blocked_text(user_id), notice_key, notice_text)
         render_managed_screen(
@@ -1556,8 +1826,16 @@ def render_screen(
         )
         return
 
+    protected_open_screens = {SCREEN_LANGUAGE, SCREEN_ROLE, SCREEN_REQUIRED_SUBSCRIPTION, SCREEN_BLOCKED, SCREEN_COMMUNITY_RULES, SCREEN_LEGAL_DOCS}
+    if screen_key not in protected_open_screens and not CommunityRulesService.is_accepted(user_id) and not UserService.is_admin(user_id):
+        render_screen(bot, target, SCREEN_COMMUNITY_RULES, notice_key='community_rules_required_notice')
+        return
+    if screen_key not in protected_open_screens and not LegalDocsService.is_accepted(user_id) and not UserService.is_admin(user_id):
+        render_screen(bot, target, SCREEN_LEGAL_DOCS, notice_key='legal_docs_required_notice')
+        return
+
     if (
-        screen_key in {SCREEN_ADMIN, SCREEN_ADMIN_QUEUE, SCREEN_ADMIN_LOGS, SCREEN_ADMIN_REQUIRED_CHATS, SCREEN_ADMIN_REQUIRED_CHAT_ADD}
+        screen_key in {SCREEN_ADMIN, SCREEN_ADMIN_QUEUE, SCREEN_ADMIN_LOGS, SCREEN_ADMIN_REQUIRED_CHATS, SCREEN_ADMIN_REQUIRED_CHAT_ADD, SCREEN_OWNER_PROVIDER, SCREEN_ADMIN_ENGAGEMENT_OBLIGATIONS}
         or screen_key.startswith(SCREEN_ADMIN_BOT_CHATS_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_USERS_PREFIX)
         or screen_key.startswith(SCREEN_ADMIN_SUBMISSION_PREFIX)
@@ -1586,6 +1864,45 @@ def render_screen(
             text=text,
             reply_markup_builder=lambda version: main_menu_keyboard(user_id, role, version),
         )
+        return
+
+
+    if screen_key == SCREEN_LEGAL_DOCS:
+        text = _prepend_notice(user_id, _build_legal_docs_text(user_id), notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_LEGAL_DOCS, text=text, reply_markup_builder=lambda version: legal_docs_keyboard(user_id, version, accepted=LegalDocsService.is_accepted(user_id)))
+        return
+
+    if screen_key == SCREEN_SMART_HUB:
+        data = SmartHubService.dashboard(user_id)
+        text = _prepend_notice(user_id, _build_smart_hub_text(user_id), notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_SMART_HUB, text=text, reply_markup_builder=lambda version: smart_hub_keyboard(user_id, version, data['role']))
+        return
+
+    if screen_key == SCREEN_ENGAGEMENT_MODE:
+        text = _prepend_notice(user_id, _build_engagement_mode_text(user_id), notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_ENGAGEMENT_MODE, text=text, reply_markup_builder=lambda version: engagement_mode_keyboard(user_id, version))
+        return
+
+    if screen_key == SCREEN_ENGAGEMENT_OBLIGATIONS:
+        text = _prepend_notice(user_id, _build_engagement_obligations_text(user_id), notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_ENGAGEMENT_OBLIGATIONS, text=text, reply_markup_builder=lambda version: engagement_obligations_keyboard(user_id, version))
+        return
+
+    if screen_key == SCREEN_ADMIN_ENGAGEMENT_OBLIGATIONS:
+        text = _prepend_notice(user_id, _build_admin_engagement_obligations_text(user_id), notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_ADMIN_ENGAGEMENT_OBLIGATIONS, text=text, reply_markup_builder=lambda version: admin_engagement_obligations_keyboard(user_id, version, EngagementModeService.admin_obligation_overview(limit=5)['items']))
+        return
+
+    if screen_key == SCREEN_ENGAGEMENT_GROWTH:
+        text_body = _build_engagement_growth_text(user_id)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_ENGAGEMENT_GROWTH, text=text, reply_markup_builder=lambda version: engagement_growth_keyboard(user_id, version))
+        return
+
+    if screen_key == SCREEN_MARKETPLACE:
+        text_body, services = _build_marketplace_text(user_id)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_MARKETPLACE, text=text, reply_markup_builder=lambda version: marketplace_keyboard(user_id, version, services))
         return
 
     if screen_key == SCREEN_PROFILE:
@@ -1649,7 +1966,16 @@ def render_screen(
 
     proof_submission_id = _screen_payload(screen_key, SCREEN_PROOF_WAIT_PREFIX)
     if proof_submission_id is not None:
-        text = _prepend_notice(user_id, UserService.t(user_id, 'proof_prompt', internal_name=UserService.internal_currency_label(user_id)), notice_key, notice_text)
+        submission = PerformerService.get_submission(proof_submission_id)
+        task_type_code = ''
+        target_url = ''
+        if submission and int(submission['performer_user_id']) == user_id:
+            campaign = PerformerService.get_campaign(int(submission['campaign_id']))
+            if campaign:
+                task_type_code = str(campaign['task_type'])
+                target_url = str(campaign['target_url'])
+        guide_block = ProofGuideService.proof_prompt_block(task_type_code, target_url, UserService.get_language(user_id))
+        text = _prepend_notice(user_id, UserService.t(user_id, 'proof_prompt', internal_name=UserService.internal_currency_label(user_id), proof_guide=guide_block), notice_key, notice_text)
         render_managed_screen(
             bot,
             target=target,
@@ -1896,6 +2222,16 @@ def render_screen(
         )
         return
 
+
+
+    if screen_key == SCREEN_OWNER_PROVIDER:
+        if not UserService.is_owner(user_id):
+            render_screen(bot, target, SCREEN_ADMIN, notice_key='admin_access_denied')
+            return
+        text_body, services = _build_owner_provider_text(user_id)
+        text = _prepend_notice(user_id, text_body, notice_key, notice_text)
+        render_managed_screen(bot, target=target, profile_id=user_id, chat_id=chat_id, screen_key=SCREEN_OWNER_PROVIDER, text=text, reply_markup_builder=lambda version: owner_provider_keyboard(user_id, version, services))
+        return
 
     if screen_key == SCREEN_OWNER_ANALYTICS:
         if not UserService.is_owner(user_id):

@@ -1246,15 +1246,15 @@ TEXTS['ru'].update({
     'campaign_target_require_admin_rights': 'Для реакций и контроля участников дайте боту админ-права в целевом чате.',
     'campaign_target_require_post_link': 'Для этого типа нужен прямой линк на пост / сообщение, а не только @username.',
     'campaign_target_require_bot_start': 'Укажите ссылку вида https://t.me/ИмяБота?start=метка. Без параметра start бот не сможет честно проверить запуск.',
-    'campaign_target_require_miniapp_senddata': 'Укажите ссылку Mini App с параметром startapp, например https://t.me/ИмяБота/app?startapp=promo42. Внутри Mini App после открытия нужно вызвать Telegram.WebApp.sendData(JSON.stringify({"boostora":"mini_app_open","hint":"promo42"})).',
+    'campaign_target_require_miniapp_senddata': 'Укажите ссылку Mini App с параметром startapp, например https://t.me/ИмяБота/app?startapp=promo42. В Mini App Boostora открытие подтверждается встроенным защищённым API по Telegram initData. Для стороннего Mini App нужна совместимая серверная интеграция.',
     'campaign_target_chat_ref_required': 'Для этого задания нужна ссылка или @username целевого чата / канала.',
     'campaign_target_message_link_required': 'Для этого задания нужна прямая ссылка на конкретный пост или сообщение.',
     'campaign_target_bot_not_in_chat': 'Бот должен быть добавлен в целевой чат или канал, иначе это задание создать нельзя.',
     'campaign_target_admin_recommended': 'Цель сохранена. Для реакций и контроля участников лучше сразу выдать боту админ-права.',
     'campaign_target_admin_required': 'Для этого типа задания бот должен быть администратором целевого чата или канала.',
     'campaign_target_bot_start_invalid': 'Для запуска бота нужна ссылка с параметром start: https://t.me/ИмяБота?start=метка',
-    'campaign_target_mini_app_invalid': 'Для Mini App нужна ссылка с параметром startapp и интеграция Telegram.WebApp.sendData внутри приложения.',
-    'campaign_target_saved_miniapp': 'Цель сохранена. Не забудьте отправлять WebApp.sendData из Mini App, иначе автопроверка не сработает.',
+    'campaign_target_mini_app_invalid': 'Для Mini App нужна ссылка с параметром startapp и совместимая интеграция подтверждения открытия.',
+    'campaign_target_saved_miniapp': 'Цель сохранена. Mini App должна передать подписанное подтверждение открытия в Boostora.',
 })
 
 TEXTS['en'].update({
@@ -1262,15 +1262,15 @@ TEXTS['en'].update({
     'campaign_target_require_admin_rights': 'For reactions and member control, grant the bot admin rights in the target chat.',
     'campaign_target_require_post_link': 'This task type requires a direct link to a post or message, not only @username.',
     'campaign_target_require_bot_start': 'Use a link like https://t.me/BotUsername?start=marker. Without the start parameter the bot cannot verify launch honestly.',
-    'campaign_target_require_miniapp_senddata': 'Use a Mini App link with startapp, for example https://t.me/BotUsername/app?startapp=promo42. Inside the Mini App call Telegram.WebApp.sendData(JSON.stringify({"boostora":"mini_app_open","hint":"promo42"})) after opening.',
+    'campaign_target_require_miniapp_senddata': 'Use a Mini App link with startapp, for example https://t.me/BotUsername/app?startapp=promo42. Boostora Mini App confirms the open event through its signed initData backend API. Third-party apps require a compatible server integration.',
     'campaign_target_chat_ref_required': 'This task requires a target chat/channel link or @username.',
     'campaign_target_message_link_required': 'This task requires a direct link to a specific post or message.',
     'campaign_target_bot_not_in_chat': 'The bot must be added to the target chat or channel before this task can be created.',
     'campaign_target_admin_recommended': 'Target saved. For reactions and member control it is better to grant the bot admin rights.',
     'campaign_target_admin_required': 'For this task type the bot must be an administrator in the target chat or channel.',
     'campaign_target_bot_start_invalid': 'Bot start tasks require a link with start parameter: https://t.me/BotUsername?start=marker',
-    'campaign_target_mini_app_invalid': 'Mini App tasks require a link with startapp and Telegram.WebApp.sendData integration inside the app.',
-    'campaign_target_saved_miniapp': 'Target saved. Do not forget to send WebApp.sendData from the Mini App, otherwise auto verification will fail.',
+    'campaign_target_mini_app_invalid': 'Mini App tasks require a startapp link and a compatible open-event integration.',
+    'campaign_target_saved_miniapp': 'Target saved. The Mini App must send a signed open confirmation to Boostora.',
 })
 
 
@@ -1404,7 +1404,7 @@ TEXTS['ru'].update({
     'campaign_create_intro': '<b>Создать задание</b>\n\nЗадание создаётся в 3 шага:\n● цель задания\n○ количество\n○ цена за выполнение\n\nДля подписок и вступлений бот старается проверять выполнение автоматически. Для сложных действий включается ручная модерация без лишней переписки.',
     'campaign_type_saved': 'Тип задания выбран. Перехожу к шагу 1/3.',
     'campaign_target_saved': 'Цель сохранена. Шаг 2/3 — количество выполнений.',
-    'campaign_target_saved_miniapp': 'Цель Mini App сохранена. Шаг 2/3 — количество выполнений. Не забудьте WebApp.sendData внутри Mini App.',
+    'campaign_target_saved_miniapp': 'Цель Mini App сохранена. Шаг 2/3 — количество выполнений. Нужна совместимая передача подтверждения открытия.',
     'campaign_quantity_saved': 'Количество сохранено. Шаг 3/3 — цена за выполнение.',
     'campaign_price_saved': 'Цена сохранена. Проверьте итог перед запуском.',
     'campaign_target_invalid': 'Ссылка не распознана. Пришлите @username, t.me/... или полную https:// ссылку.',
@@ -1436,7 +1436,7 @@ TEXTS['en'].update({
     'campaign_create_intro': '<b>Create task</b>\n\nTask creation has 3 steps:\n● target\n○ quantity\n○ price per completion\n\nSubscriptions and joins are verified automatically where possible. Complex actions go to manual review without extra chat noise.',
     'campaign_type_saved': 'Task type selected. Moving to step 1/3.',
     'campaign_target_saved': 'Target saved. Step 2/3 — quantity.',
-    'campaign_target_saved_miniapp': 'Mini App target saved. Step 2/3 — quantity. Remember WebApp.sendData inside the Mini App.',
+    'campaign_target_saved_miniapp': 'Mini App target saved. Step 2/3 — quantity. A compatible signed open confirmation is required.',
     'campaign_quantity_saved': 'Quantity saved. Step 3/3 — price per completion.',
     'campaign_price_saved': 'Price saved. Check the final preview.',
     'campaign_target_invalid': 'Invalid target. Send @username, t.me/... or a full https:// link.',
@@ -2235,3 +2235,881 @@ TEXTS['en'].update({
     'stable_contract_patch_303_policy': 'v3.0.3 is a runtime-stability patch: SQLite busy-timeout, WAL, stale queue checks and no breaking changes.',
     'version_text': '<b>{version}</b>\nStable runtime patch: SQLite busy-timeout, WAL guard, stale input checks, old invoices, overdue holds, ad queue control and old-data safety without breaking migrations.',
 })
+
+
+# Boostora v3.0.4 stable patch text overrides.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.0.4</b>\n\nСтабильный gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nСостояние запуска: <b>{launch_state}</b> · live-готовность: <b>{live_score}/100</b>\nRC1-gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.0.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nЭкран только читает базу, .env и накопленные сигналы. Данные не меняются.',
+    'owner_analytics_screen': '<b>Коммерция владельца v3.0.4</b>\n\nСостояние: <b>{state}</b>\nИндекс монетизации: <b>{score}/100</b>\n\n<b>Пользователи</b>\nВсего: <b>{users}</b> · активных: <b>{active_users}</b>\nЗаказчики: <b>{clients_count}</b> · исполнители: <b>{performers_count}</b>\nЗаблокировано: <b>{blocked}</b>\n\n<b>Кампании и выполнение</b>\nКампаний: <b>{campaigns}</b> · активных: <b>{active_campaigns}</b> · пополненных: <b>{funded_campaigns}</b> · черновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b> · отклонено: <b>{rejected}</b> · прогресс: <b>{completion}%</b>\nРучная проверка: <b>{manual}</b> · доля ручной: <b>{manual_percent}%</b>\nОдобрение: <b>{approval_percent}%</b> · средний риск: <b>{avg_risk}</b>\n\n<b>Деньги и маржа</b>\nБюджет всех кампаний: <b>{budget}</b> {internal_name}\nПополненный бюджет: <b>{funded_budget}</b> {internal_name}\nОборот по выполненным: <b>{turnover}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nПлановая комиссия: <b>{planned_fee}</b> {internal_name}\nОценка фактической маржи: <b>{margin}</b> {internal_name} · <b>{margin_percent}%</b>\n\n<b>Обязательства кошельков</b>\nДоступно у пользователей: <b>{available}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nБонусы: <b>{bonus}</b> {internal_name}\n\n<b>Монетизация</b>\nStars-пополнения: <b>{stars}</b>\nVIP: <b>{vip}</b>\nПлатежи кампаний/ускорений: <b>{campaign_payments}</b> {internal_name}\n\n<b>Лучшие заказчики</b>\n{clients}\n\n<b>Лучшие исполнители</b>\n{performers}\n\n<b>Рекомендации владельцу</b>\n{tips}',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.0.4 — стабильный патч сети: тихий polling-loop, обработка 502/таймаутов, backoff, повтор remove webhook и защита от лишних TeleBot traceback.',
+    'stable_gate_network_resilience': 'Сеть Telegram и polling',
+    'stable_action_network_resilience_ok': 'polling защищён от 502/таймаутов, webhook удаляется с повторами, логи не засоряются лишними traceback.',
+    'stable_action_network_resilience_review': 'проверь app/bot.py: нужен controlled polling-loop, transient-коды, backoff и защита от встроенного шумного polling.',
+    'stable_contract_patch_304_policy': 'v3.0.4 — боевой патч сетевой устойчивости: Telegram 502/timeout не должны ронять бота; папка docs убрана из пользовательского архива.',
+    'version_text': '<b>{version}</b>\nСтабильный сетевой патч: тихий polling-loop, обработка Telegram 502/таймаутов, повтор remove webhook, backoff, защита от лишних TeleBot traceback и сохранение старых данных без ломающих миграций.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.0.4 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch state: <b>{launch_state}</b> · live readiness: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.0.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release rules</b>\n{stable_contract}\n\nThis screen only reads the database, .env and accumulated signals. It does not mutate data.',
+    'admin_home_screen': '<b>Boostora admin center</b>\n\nManual review: <b>{queue}</b>\nRisk queue: <b>{queue_high}</b> · Clean: <b>{queue_clean}</b> · Stale: <b>{queue_old}</b>\nGroups: performers <b>{groups_performer}</b> · tasks <b>{groups_campaign}</b> · risk <b>{groups_risk}</b>\n\nBlocked users: <b>{blocked}</b>\nHigh-risk users: <b>{high_risk}</b>\nUnblocked high-risk: <b>{high_risk_unblocked}</b>\nRejected total: <b>{rejected}</b>\n\nChats ready for ads: <b>{bot_chats_ready}</b>\nBot rights issues: <b>{bot_chats_issues}</b>\n\nAdmin v3.0.4 is a stable network patch: quiet polling loop, 502/timeout handling, backoff, webhook retry and TeleBot traceback guard.',
+    'stable_gate_network_resilience': 'Telegram network and polling',
+    'stable_action_network_resilience_ok': 'polling is protected against 502/timeouts, webhook removal retries, and noisy tracebacks are suppressed.',
+    'stable_action_network_resilience_review': 'review app/bot.py: controlled polling loop, transient codes, backoff and noisy built-in polling guard are required.',
+    'stable_contract_patch_304_policy': 'v3.0.4 is a production network-resilience patch: Telegram 502/timeouts should not kill the bot; docs are removed from the user bot archive.',
+    'version_text': '<b>{version}</b>\nStable network patch: quiet polling loop, Telegram 502/timeout handling, webhook retry, backoff, TeleBot traceback guard and old-data safety without breaking migrations.',
+})
+
+
+# Boostora v3.0.5 stable patch text overrides.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.0.5</b>\n\nСтабильный gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nСостояние запуска: <b>{launch_state}</b> · live-готовность: <b>{live_score}/100</b>\nRC1-gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.0.5</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nЭкран только читает базу, .env и накопленные сигналы. Данные не меняются.',
+    'owner_analytics_screen': '<b>Коммерция владельца v3.0.5</b>\n\nСостояние: <b>{state}</b>\nИндекс монетизации: <b>{score}/100</b>\n\n<b>Пользователи</b>\nВсего: <b>{users}</b> · активных: <b>{active_users}</b>\nЗаказчики: <b>{clients_count}</b> · исполнители: <b>{performers_count}</b>\nЗаблокировано: <b>{blocked}</b>\n\n<b>Кампании и выполнение</b>\nКампаний: <b>{campaigns}</b> · активных: <b>{active_campaigns}</b> · пополненных: <b>{funded_campaigns}</b> · черновиков: <b>{drafts}</b>\nВыполнено: <b>{completed}</b> · отклонено: <b>{rejected}</b> · прогресс: <b>{completion}%</b>\nРучная проверка: <b>{manual}</b> · доля ручной: <b>{manual_percent}%</b>\nОдобрение: <b>{approval_percent}%</b> · средний риск: <b>{avg_risk}</b>\n\n<b>Деньги и маржа</b>\nБюджет всех кампаний: <b>{budget}</b> {internal_name}\nПополненный бюджет: <b>{funded_budget}</b> {internal_name}\nОборот по выполненным: <b>{turnover}</b> {internal_name}\nВ резерве: <b>{reserved}</b> {internal_name}\nПлановая комиссия: <b>{planned_fee}</b> {internal_name}\nОценка фактической маржи: <b>{margin}</b> {internal_name} · <b>{margin_percent}%</b>\n\n<b>Обязательства кошельков</b>\nДоступно у пользователей: <b>{available}</b> {internal_name}\nВ холде: <b>{hold}</b> {internal_name}\nБонусы: <b>{bonus}</b> {internal_name}\n\n<b>Монетизация</b>\nStars-пополнения: <b>{stars}</b>\nVIP: <b>{vip}</b>\nПлатежи кампаний/ускорений: <b>{campaign_payments}</b> {internal_name}\n\n<b>Лучшие заказчики</b>\n{clients}\n\n<b>Лучшие исполнители</b>\n{performers}\n\n<b>Рекомендации владельцу</b>\n{tips}',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.0.5 — стабильный патч обработчиков: один битый update не должен зациклить polling и остановить остальных пользователей.',
+    'stable_gate_update_handler_safety': 'Защита обработчиков update',
+    'stable_action_update_handler_safety_ok': 'обработчики защищены от зацикливания на одном битом update; polling продолжит работу для остальных пользователей.',
+    'stable_action_update_handler_safety_review': 'проверь app/bot.py: нужен guard вокруг process_new_updates и безопасный переход offset после ошибки обработчика.',
+    'stable_contract_patch_305_policy': 'v3.0.5 — боевой патч обработчиков: один ошибочный callback/message не должен повторяться бесконечно и блокировать polling.',
+    'version_text': '<b>{version}</b>\nСтабильный патч обработчиков: защита от зацикливания на одном битом update, сохранение polling после ошибки callback/message, сетевые retry v3.0.4 и сохранение старых данных без ломающих миграций.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.0.5 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch state: <b>{launch_state}</b> · live readiness: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.0.5</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release rules</b>\n{stable_contract}\n\nThis screen only reads the database, .env and accumulated signals. It does not mutate data.',
+    'admin_home_screen': '<b>Boostora admin center</b>\n\nManual review: <b>{queue}</b>\nRisk queue: <b>{queue_high}</b> · Clean: <b>{queue_clean}</b> · Stale: <b>{queue_old}</b>\nGroups: performers <b>{groups_performer}</b> · tasks <b>{groups_campaign}</b> · risk <b>{groups_risk}</b>\n\nBlocked users: <b>{blocked}</b>\nHigh-risk users: <b>{high_risk}</b>\nUnblocked high-risk: <b>{high_risk_unblocked}</b>\nRejected total: <b>{rejected}</b>\n\nChats ready for ads: <b>{bot_chats_ready}</b>\nBot rights issues: <b>{bot_chats_issues}</b>\n\nAdmin v3.0.5 is a stable handler patch: one poisoned update should not trap polling or block other users.',
+    'stable_gate_update_handler_safety': 'Update handler guard',
+    'stable_action_update_handler_safety_ok': 'handlers are protected against a poisoned-update retry loop; polling can continue for other users.',
+    'stable_action_update_handler_safety_review': 'review app/bot.py: process_new_updates needs a guard and safe offset advance after handler errors.',
+    'stable_contract_patch_305_policy': 'v3.0.5 is a production handler patch: one broken callback/message should not repeat forever or block polling.',
+    'version_text': '<b>{version}</b>\nStable handler patch: poisoned-update retry-loop guard, polling survives callback/message handler errors, v3.0.4 network retries and old-data safety without breaking migrations.',
+})
+
+
+# Boostora v3.1.0 major modernization text overrides.
+TEXTS['ru'].update({
+    'smart_hub_button': '🚀 Центр',
+    'marketplace_button': '🧩 Витрина услуг',
+    'owner_provider_button': '🔌 Boostore API',
+    'mini_app_button': '📱 Открыть Mini App',
+    'bottom_nav_ready': 'Нижнее меню обновлено. Основная работа теперь в умном центре.',
+    'smart_hub_screen': '<b>🚀 Командный центр {brand}</b>\n\nРоль: <b>{role}</b>\nБаланс: <b>{internal}</b> {internal_name} · бонусы: <b>{bonus}</b> · холд: <b>{hold}</b>\n\n<b>Исполнитель</b>\nДоступно заданий: <b>{available_tasks}</b>\nАктивно: <b>{active_tasks}/{task_limit}</b> · на проверке: <b>{manual_review}</b>\n\n<b>Заказчик</b>\nКампаний: <b>{client_campaigns}</b> · активных: <b>{client_active}</b> · черновиков: <b>{client_drafts}</b>\n\n<b>Витрина поставщика</b>\nСостояние: <b>{provider_state}</b> · разрешено услуг: <b>{provider_enabled}</b>\n\n<b>Что делать дальше</b>\n{tips}',
+    'smart_tip_client_first_campaign': 'Создай первое задание или рекламу — бот подскажет цену и скорость.',
+    'smart_tip_provider_marketplace': 'Открой витрину услуг: там можно продавать услуги поставщика с твоей наценкой.',
+    'smart_tip_topup': 'Пополнить Искры перед запуском платного задания.',
+    'smart_tip_performer_take_task': 'Возьми доступное задание и отправь proof после выполнения.',
+    'smart_tip_task_limit': 'Лимит активных заданий заполнен — заверши текущие или купи VIP.',
+    'smart_tip_bonus_to_work': 'Бонусы есть — используй их для старта внутри системы.',
+    'smart_tip_all_good': 'Система в норме. Проверь задания, кошелёк или витрину.',
+    'marketplace_screen': '<b>🧩 Витрина услуг</b>\n\nПоставщик: <b>Boostore API</b> · состояние: <b>{provider_state}</b>\nВ кэше услуг: <b>{total}</b> · разрешено владельцем: <b>{enabled}</b>\n\n<b>Разрешённые услуги</b>\n{items}\n\nПока это безопасная витрина/whitelist. Автозаказы включаются следующим этапом после live-проверки ключа и баланса.',
+    'marketplace_service_row': '• <b>{name}</b>\n  {category} · {service_type} · лимит {min_qty}-{max_qty} · наценка {markup}%',
+    'marketplace_empty': 'Пока нет разрешённых услуг. Владелец должен открыть админку → Boostore API → синхронизировать и включить нужные позиции.',
+    'owner_provider_screen': '<b>🔌 Boostore API / Provider Center</b>\n\nСостояние: <b>{state}</b> · score <b>{score}/100</b>\nBOOSTORE_ENABLED: <b>{enabled}</b> · ключ: <b>{has_key}</b> · настроено: <b>{configured}</b>\nAPI: <code>{api_url}</code>\nНаценка по умолчанию: <b>{markup}%</b> · auto-sync: <b>{auto_sync}</b>\n\nУслуг в кэше: <b>{total}</b> · включено в whitelist: <b>{whitelist}</b>\n\n<b>Первые услуги</b>\n{items}\n\nНажатие на услугу включает/выключает её для витрины. Все услуги подряд не включаются специально — это защита качества и репутации.',
+    'owner_provider_service_row': '{enabled} <b>#{sid}</b> {name}\n  {category} · rate {rate} · лимит {min_qty}-{max_qty}',
+    'owner_provider_empty': 'Кэш пуст. Укажи BOOSTORE_API_KEY и нажми «Синхронизировать услуги».',
+    'boostore_sync_button': '🔄 Синхронизировать услуги',
+    'boostore_sync_success': 'Синхронизировано услуг: {count}',
+    'boostore_service_enabled': 'Услуга включена в витрину',
+    'boostore_service_disabled': 'Услуга выключена из витрины',
+    'boostore_service_not_found': 'Услуга не найдена в кэше',
+    'boostore_not_configured': 'Boostore API не настроен: включи BOOSTORE_ENABLED=1 и добавь BOOSTORE_API_KEY',
+    'boostore_timeout': 'Boostore API не ответил вовремя',
+    'boostore_network_error': 'Сетевая ошибка Boostore API',
+    'boostore_temporary_error': 'Временная ошибка Boostore API, попробуй позже',
+    'boostore_http_error': 'HTTP-ошибка Boostore API',
+    'boostore_bad_json': 'Boostore API вернул не JSON',
+    'boostore_api_error': 'Boostore API вернул ошибку',
+    'boostore_services_empty': 'Boostore API не вернул список услуг',
+    'boostore_api_ok': 'Boostore API отвечает',
+    'boostore_state_disabled': 'выключено',
+    'boostore_state_needs_key': 'нужен API-ключ',
+    'boostore_state_needs_sync': 'нужна синхронизация',
+    'boostore_state_needs_whitelist': 'нужно включить услуги',
+    'boostore_state_ready': 'готово',
+    'stable_gate_boostore_provider': 'Boostore API и витрина услуг',
+    'stable_action_boostore_provider_ready': 'поставщик настроен, услуги синхронизированы и whitelist заполнен.',
+    'stable_action_boostore_provider_disabled': 'Boostore Provider выключен; это допустимо, если внешние услуги пока не продаём.',
+    'stable_action_boostore_provider_needs_key': 'добавь BOOSTORE_API_KEY и проверь баланс поставщика.',
+    'stable_action_boostore_provider_needs_sync': 'синхронизируй список услуг в админке владельца.',
+    'stable_action_boostore_provider_needs_whitelist': 'включи только безопасные услуги в whitelist.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.1.2</b>\n\nСтабильный gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nСостояние запуска: <b>{launch_state}</b> · live-готовность: <b>{live_score}/100</b>\nRC1-gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.2</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nЭкран только читает базу, .env и накопленные сигналы. Данные не меняются.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.2 — крупная модернизация: умный центр, compact нижнее меню, Mini App, Boostore Provider Center и whitelist внешних услуг.',
+    'version_text': '<b>{version}</b>\nКрупная модернизация: умный командный центр, compact/hidden нижнее меню, Mini App-шаблон, Boostore API Provider Center, whitelist услуг и сохранение старой логики без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'smart_hub_button': '🚀 Hub',
+    'marketplace_button': '🧩 Marketplace',
+    'owner_provider_button': '🔌 Boostore API',
+    'mini_app_button': '📱 Open Mini App',
+    'bottom_nav_ready': 'Bottom menu updated. Main work now lives in the smart hub.',
+    'smart_hub_screen': '<b>🚀 {brand} command center</b>\n\nRole: <b>{role}</b>\nBalance: <b>{internal}</b> {internal_name} · bonus: <b>{bonus}</b> · hold: <b>{hold}</b>\n\n<b>Performer</b>\nAvailable tasks: <b>{available_tasks}</b>\nActive: <b>{active_tasks}/{task_limit}</b> · review: <b>{manual_review}</b>\n\n<b>Client</b>\nCampaigns: <b>{client_campaigns}</b> · active: <b>{client_active}</b> · drafts: <b>{client_drafts}</b>\n\n<b>Provider marketplace</b>\nState: <b>{provider_state}</b> · whitelisted services: <b>{provider_enabled}</b>\n\n<b>Next best actions</b>\n{tips}',
+    'smart_tip_client_first_campaign': 'Create the first task or ad; Boostora will suggest price and speed.',
+    'smart_tip_provider_marketplace': 'Open the services marketplace with owner-approved provider services.',
+    'smart_tip_topup': 'Top up Sparks before launching paid traffic.',
+    'smart_tip_performer_take_task': 'Take an available task and submit proof after completion.',
+    'smart_tip_task_limit': 'Active task limit is full; finish tasks or buy VIP.',
+    'smart_tip_bonus_to_work': 'You have bonuses; use them to start working.',
+    'smart_tip_all_good': 'System looks fine. Check tasks, wallet or marketplace.',
+    'marketplace_screen': '<b>🧩 Services marketplace</b>\n\nProvider: <b>Boostore API</b> · state: <b>{provider_state}</b>\nCached services: <b>{total}</b> · owner whitelist: <b>{enabled}</b>\n\n<b>Allowed services</b>\n{items}\n\nThis is a safe whitelist showcase. Auto-orders should be enabled next after live key/balance checks.',
+    'marketplace_service_row': '• <b>{name}</b>\n  {category} · {service_type} · limit {min_qty}-{max_qty} · markup {markup}%',
+    'marketplace_empty': 'No whitelisted services yet. Owner should open admin → Boostore API → sync and enable selected services.',
+    'owner_provider_screen': '<b>🔌 Boostore API / Provider Center</b>\n\nState: <b>{state}</b> · score <b>{score}/100</b>\nBOOSTORE_ENABLED: <b>{enabled}</b> · key: <b>{has_key}</b> · configured: <b>{configured}</b>\nAPI: <code>{api_url}</code>\nDefault markup: <b>{markup}%</b> · auto-sync: <b>{auto_sync}</b>\n\nCached services: <b>{total}</b> · whitelist: <b>{whitelist}</b>\n\n<b>First services</b>\n{items}',
+    'owner_provider_service_row': '{enabled} <b>#{sid}</b> {name}\n  {category} · rate {rate} · limit {min_qty}-{max_qty}',
+    'owner_provider_empty': 'Cache is empty. Set BOOSTORE_API_KEY and press sync services.',
+    'boostore_sync_button': '🔄 Sync services',
+    'boostore_sync_success': 'Synced services: {count}',
+    'boostore_service_enabled': 'Service enabled in marketplace',
+    'boostore_service_disabled': 'Service disabled from marketplace',
+    'boostore_service_not_found': 'Service not found in cache',
+    'boostore_not_configured': 'Boostore API is not configured: set BOOSTORE_ENABLED=1 and BOOSTORE_API_KEY',
+    'boostore_timeout': 'Boostore API timed out',
+    'boostore_network_error': 'Boostore API network error',
+    'boostore_temporary_error': 'Temporary Boostore API error, try later',
+    'boostore_http_error': 'Boostore API HTTP error',
+    'boostore_bad_json': 'Boostore API returned non-JSON',
+    'boostore_api_error': 'Boostore API returned an error',
+    'boostore_services_empty': 'Boostore API returned no services',
+    'boostore_api_ok': 'Boostore API responds',
+    'boostore_state_disabled': 'disabled',
+    'boostore_state_needs_key': 'needs API key',
+    'boostore_state_needs_sync': 'needs sync',
+    'boostore_state_needs_whitelist': 'needs whitelist',
+    'boostore_state_ready': 'ready',
+    'stable_gate_boostore_provider': 'Boostore API and service marketplace',
+    'stable_action_boostore_provider_ready': 'provider configured, services synced and whitelist filled.',
+    'stable_action_boostore_provider_disabled': 'Boostore Provider is disabled; OK if external services are not sold yet.',
+    'stable_action_boostore_provider_needs_key': 'add BOOSTORE_API_KEY and check provider balance.',
+    'stable_action_boostore_provider_needs_sync': 'sync services in owner admin panel.',
+    'stable_action_boostore_provider_needs_whitelist': 'enable only safe services in whitelist.',
+    'version_text': '<b>{version}</b>\nMajor modernization: smart command center, compact/hidden bottom menu, Mini App template, Boostore API Provider Center, service whitelist and old logic preserved without breaking migration.',
+})
+
+
+# Boostora v3.1.1 engagement superapp launch text overrides.
+TEXTS['ru'].update({
+    'engagement_growth_button': '🔥 Продвижение',
+    'engagement_growth_screen': '<b>🔥 Оживи свой Telegram-канал</b>\n\nХочешь, чтобы посты выглядели живыми, а канал не казался пустым? В Boostora теперь есть быстрый запуск взаимной активности: реакции, лайки и комментарии от реальных исполнителей внутри системы.\n\n<b>Что можно запустить</b>\n{product_rows}\n\n<b>Почему это работает для восприятия</b>\n✅ Пост с реакциями выглядит живым, а не заброшенным.\n✅ Комментарии создают диалог и продолжают контент под постом.\n✅ Новые читатели охотнее доверяют каналу, где уже есть движение.\n✅ Это не магия и не обещание официальных алгоритмов Telegram — это нормальная социальная активность, proof и взаимная польза.\n\n<b>Как всё устроено</b>\n1. Выбираешь тип продвижения.\n2. Отправляешь ссылку на пост/канал.\n3. Указываешь количество и цену.\n4. Исполнители выполняют задание и отправляют подтверждение.\n5. Админка, антифрод, холды и кошелёк работают по старым правилам.\n\nДоступно быстрых продуктов: <b>{product_count}</b> · типов кампаний: <b>{campaign_types}</b>.',
+    'engagement_product_liker_title': '🔥 Телеграм Лайкер — реакции под постом',
+    'engagement_product_liker_desc': '<b>Телеграм Лайкер</b> — быстрый запуск реакций под конкретным постом, чтобы публикация выглядела живой.',
+    'engagement_product_commenter_title': '💬 Телеграм Комментер — комментарии под постом',
+    'engagement_product_commenter_desc': '<b>Телеграм Комментер</b> — взаимные комментарии, обсуждение и социальное доказательство под публикацией.',
+    'engagement_product_likes_title': '❤️ Лайки/эмодзи — простая активность',
+    'engagement_product_likes_desc': '<b>Лайки/эмодзи</b> — лёгкая активность для постов, где не нужен большой комментарий.',
+    'smart_hub_screen': '<b>🚀 Командный центр {brand}</b>\n\nРоль: <b>{role}</b>\nБаланс: <b>{internal}</b> {internal_name} · бонус: <b>{bonus}</b> · холд: <b>{hold}</b>\n\n<b>Продвижение</b>\n🔥 Быстрый запуск реакций, лайков и комментариев — в разделе «Продвижение».\n\n<b>Исполнитель</b>\nДоступно заданий: <b>{available_tasks}</b>\nАктивные: <b>{active_tasks}/{task_limit}</b> · на проверке: <b>{manual_review}</b>\n\n<b>Заказчик</b>\nКампаний: <b>{client_campaigns}</b> · активных: <b>{client_active}</b> · черновиков: <b>{client_drafts}</b>\n\n<b>Витрина провайдера</b>\nСостояние: <b>{provider_state}</b> · разрешённых услуг: <b>{provider_enabled}</b>\n\n<b>Что сделать дальше</b>\n{tips}',
+    'main_menu': '<b>{brand}</b> — центр продвижения Telegram\n\nРоль: <b>{role}</b>\n\n🔥 Продвижение — реакции, лайки и комментарии.\n🧩 Витрина — внешние услуги через whitelist.\n🚀 Центр — кошелёк, задания, кампании и советы.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.2 — крупная витрина продвижения: Лайкер, Комментер, быстрый запуск реакций/комментариев, Smart Hub, Mini App и Boostore Provider Center.',
+    'version_text': '<b>{version}</b>\nКрупная модернизация продвижения: экран «Оживи Telegram-канал», Телеграм Лайкер, Телеграм Комментер, быстрые реакции/лайки/комментарии, Smart Hub, Mini App, Provider Center и сохранение старой логики без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'engagement_growth_button': '🔥 Growth',
+    'engagement_growth_screen': '<b>🔥 Make your Telegram channel feel alive</b>\n\nBoostora now has a quick launch screen for mutual engagement: reactions, likes and comments from real performers inside the system.\n\n<b>What you can launch</b>\n{product_rows}\n\n<b>Why it helps perception</b>\n✅ Posts with reactions look alive, not abandoned.\n✅ Comments turn a post into a discussion.\n✅ New readers trust active channels more easily.\n✅ This is not magic or an official Telegram algorithm promise — it is real social activity, proof and mutual value.\n\n<b>How it works</b>\n1. Choose the growth product.\n2. Send a post/channel link.\n3. Set quantity and price.\n4. Performers complete the task and submit proof.\n5. Admin tools, antifraud, holds and wallets keep the old safe logic.\n\nQuick products: <b>{product_count}</b> · campaign types: <b>{campaign_types}</b>.',
+    'engagement_product_liker_title': '🔥 Telegram Liker — post reactions',
+    'engagement_product_liker_desc': '<b>Telegram Liker</b> — quick reactions for a specific post so it feels alive.',
+    'engagement_product_commenter_title': '💬 Telegram Commenter — post comments',
+    'engagement_product_commenter_desc': '<b>Telegram Commenter</b> — mutual comments, discussion and social proof under a post.',
+    'engagement_product_likes_title': '❤️ Likes/emojis — light activity',
+    'engagement_product_likes_desc': '<b>Likes/emojis</b> — lightweight activity for posts where a long comment is not needed.',
+    'version_text': '<b>{version}</b>\nMajor growth modernization: make-channel-alive screen, Telegram Liker, Telegram Commenter, quick reactions/likes/comments, Smart Hub, Mini App, Provider Center and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['engagement_growth_button', 'engagement_growth_screen', 'engagement_product_liker_title', 'engagement_product_liker_desc', 'engagement_product_commenter_title', 'engagement_product_commenter_desc', 'engagement_product_likes_title', 'engagement_product_likes_desc']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+
+# Boostora v3.1.2 fast engagement presets.
+TEXTS['ru'].update({
+    'engagement_quick_presets_title': '⚡ Быстрые пресеты',
+    'engagement_preset_started': 'Пресет выбран: {quantity} шт. Теперь отправь ссылку на пост.',
+    'engagement_preset_not_found': 'Пресет не найден. Выбери другой вариант.',
+    'campaign_target_preset_quantity_saved': 'Ссылка сохранена, количество из пресета уже подставлено. Осталось выбрать цену.',
+    'engagement_preset_react_10': '10',
+    'engagement_preset_react_50': '50',
+    'engagement_preset_react_100': '100',
+    'engagement_preset_comment_5': '5',
+    'engagement_preset_comment_20': '20',
+    'engagement_preset_comment_50': '50',
+    'engagement_preset_like_10': '10',
+    'engagement_preset_like_50': '50',
+    'engagement_preset_like_100': '100',
+    'engagement_preset_react_10_desc': '10 реакций — быстрый старт для нового поста.',
+    'engagement_preset_react_50_desc': '50 реакций — нормальный разгон живости публикации.',
+    'engagement_preset_react_100_desc': '100 реакций — сильный визуальный эффект толпы.',
+    'engagement_preset_comment_5_desc': '5 комментариев — лёгкое начало обсуждения.',
+    'engagement_preset_comment_20_desc': '20 комментариев — заметный живой диалог под постом.',
+    'engagement_preset_comment_50_desc': '50 комментариев — крупная дискуссия для важной публикации.',
+    'engagement_preset_like_10_desc': '10 лайков/эмодзи — мягкий старт активности.',
+    'engagement_preset_like_50_desc': '50 лайков/эмодзи — заметная активность под постом.',
+    'engagement_preset_like_100_desc': '100 лайков/эмодзи — сильный социальный сигнал.',
+    'engagement_growth_screen': '<b>🔥 Оживи свой Telegram-канал</b>\n\nХочешь, чтобы посты выглядели живыми, а канал не казался пустым? В Boostora есть быстрый запуск взаимной активности: реакции, лайки и комментарии от реальных исполнителей внутри системы.\n\n<b>Что можно запустить</b>\n{product_rows}\n\n<b>⚡ Быстрые пресеты</b>\n{preset_rows}\n\n<b>Почему это работает для восприятия</b>\n✅ Пост с реакциями выглядит живым, а не заброшенным.\n✅ Комментарии создают диалог и продолжают контент под постом.\n✅ Новые читатели охотнее доверяют каналу, где уже есть движение.\n✅ Это не магия и не обещание официальных алгоритмов Telegram — это нормальная социальная активность, proof и взаимная польза.\n\n<b>Как всё устроено</b>\n1. Выбираешь тип продвижения или готовый пресет.\n2. Отправляешь ссылку на пост.\n3. Если выбран пресет, количество уже подставлено.\n4. Выбираешь цену: минимум, рекомендуемую, быструю или приоритетную.\n5. Исполнители выполняют задание и отправляют подтверждение.\n\nПродуктов: <b>{product_count}</b> · пресетов: <b>{preset_count}</b> · типов кампаний: <b>{campaign_types}</b>.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.2 — быстрые пресеты продвижения: 10/50/100 реакций, 5/20/50 комментариев, 10/50/100 лайков, Smart Hub, Mini App и Boostore Provider Center.',
+    'version_text': '<b>{version}</b>\nКрупная модернизация продвижения: быстрые пресеты 10/50/100 реакций, 5/20/50 комментариев, 10/50/100 лайков, быстрый запуск кампаний, Smart Hub, Mini App, Provider Center и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'engagement_quick_presets_title': '⚡ Fast presets',
+    'engagement_preset_started': 'Preset selected: {quantity}. Now send the post link.',
+    'engagement_preset_not_found': 'Preset not found. Choose another option.',
+    'campaign_target_preset_quantity_saved': 'Link saved, preset quantity is already applied. Choose the price next.',
+    'engagement_preset_react_10': '10',
+    'engagement_preset_react_50': '50',
+    'engagement_preset_react_100': '100',
+    'engagement_preset_comment_5': '5',
+    'engagement_preset_comment_20': '20',
+    'engagement_preset_comment_50': '50',
+    'engagement_preset_like_10': '10',
+    'engagement_preset_like_50': '50',
+    'engagement_preset_like_100': '100',
+    'engagement_preset_react_10_desc': '10 reactions — quick start for a new post.',
+    'engagement_preset_react_50_desc': '50 reactions — visible engagement boost.',
+    'engagement_preset_react_100_desc': '100 reactions — strong crowd effect.',
+    'engagement_preset_comment_5_desc': '5 comments — light discussion starter.',
+    'engagement_preset_comment_20_desc': '20 comments — noticeable live discussion.',
+    'engagement_preset_comment_50_desc': '50 comments — large discussion for an important post.',
+    'engagement_preset_like_10_desc': '10 likes/emojis — soft activity start.',
+    'engagement_preset_like_50_desc': '50 likes/emojis — visible post activity.',
+    'engagement_preset_like_100_desc': '100 likes/emojis — strong social signal.',
+    'engagement_growth_screen': '<b>🔥 Make your Telegram channel feel alive</b>\n\nBoostora has a quick launch screen for mutual engagement: reactions, likes and comments from real performers inside the system.\n\n<b>What you can launch</b>\n{product_rows}\n\n<b>⚡ Fast presets</b>\n{preset_rows}\n\n<b>How it works</b>\n1. Choose a growth product or preset.\n2. Send the post link.\n3. If a preset is selected, quantity is already applied.\n4. Choose minimum, recommended, fast or priority price.\n5. Performers complete the task and submit proof.\n\nProducts: <b>{product_count}</b> · presets: <b>{preset_count}</b> · campaign types: <b>{campaign_types}</b>.',
+    'version_text': '<b>{version}</b>\nMajor growth modernization: fast presets for reactions, comments and likes, quicker campaign launch, Smart Hub, Mini App, Provider Center and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in [
+            'engagement_quick_presets_title', 'engagement_preset_started', 'engagement_preset_not_found',
+            'campaign_target_preset_quantity_saved', 'engagement_preset_react_10', 'engagement_preset_react_50',
+            'engagement_preset_react_100', 'engagement_preset_comment_5', 'engagement_preset_comment_20',
+            'engagement_preset_comment_50', 'engagement_preset_like_10', 'engagement_preset_like_50',
+            'engagement_preset_like_100', 'engagement_preset_react_10_desc', 'engagement_preset_react_50_desc',
+            'engagement_preset_react_100_desc', 'engagement_preset_comment_5_desc', 'engagement_preset_comment_20_desc',
+            'engagement_preset_comment_50_desc', 'engagement_preset_like_10_desc', 'engagement_preset_like_50_desc',
+            'engagement_preset_like_100_desc'
+        ]:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+TEXTS['ru'].update({
+    'stable_gate_engagement_presets': 'Быстрые пресеты продвижения',
+    'stable_action_engagement_presets_ready': 'пресеты реакций, комментариев и лайков готовы.',
+    'stable_action_engagement_presets_review': 'проверь быстрые пресеты продвижения.',
+    'stable_contract_major_312_policy': 'v3.1.2: быстрые пресеты ускоряют запуск, но не обходят proof, hold, кошельки, антифрод и старый campaign-flow.',
+})
+TEXTS['en'].update({
+    'stable_gate_engagement_presets': 'Fast engagement presets',
+    'stable_action_engagement_presets_ready': 'reaction, comment and like presets are ready.',
+    'stable_action_engagement_presets_review': 'review fast engagement presets.',
+    'stable_contract_major_312_policy': 'v3.1.2: fast presets speed up launch but do not bypass proof, hold, wallets, antifraud or old campaign flow.',
+})
+
+# Boostora v3.1.3 community rules and acceptance gate.
+TEXTS['ru'].update({
+    'community_rules_button': '📜 Правила',
+    'admin_rules_button': '📜 Правила',
+    'support_button': '🛟 Поддержка',
+    'community_rules_accept_button': '✅ Согласен, вступаю в сообщество',
+    'community_rules_reopen_button': '📜 Читать правила',
+    'community_rules_accepted_notice': 'Правила приняты. Добро пожаловать в работу.',
+    'community_rules_required_notice': 'Перед участием нужно принять правила сообщества.',
+    'community_rules_required_alert': 'Сначала прими правила сообщества.',
+    'community_rules_state_required': 'требуется согласие',
+    'community_rules_state_accepted': 'принято',
+    'community_rules_section_row': '<b>{title}</b>\n{body}',
+    'community_rules_screen': '<b>📜 Правила сообщества {brand}</b>\n\nСтатус: <b>{state}</b> · версия: <code>{version}</code>\n\nЭто внутренние правила участия. Текст написан заново под Boostora: смысл сохранён, но это не копия чужого клуба.\n\n{sections}\n\nНажимая кнопку согласия, участник подтверждает, что понял правила и принимает формат сообщества.',
+    'community_rules_entry_title': '1. Вход и участие',
+    'community_rules_entry_body': 'Участие открыто для пользователей, которые хотят развивать свои площадки через честную взаимную активность и готовы соблюдать порядок внутри сервиса. Администрация может отказать в участии или ограничить доступ при нарушениях, угрозах безопасности или злоупотреблениях.',
+    'community_rules_content_title': '2. Материалы и внутренняя информация',
+    'community_rules_content_body': 'Материалы, инструкции, внутренние подсказки, механики и переписки сообщества предназначены только для участников. Нельзя копировать, сливать, перепродавать или публиковать их вне Boostora без разрешения владельца.',
+    'community_rules_no_groups_title': '3. Никаких параллельных актив-чатов',
+    'community_rules_no_groups_body': 'Запрещено собирать участников в сторонние группы, клубы, школы, чаты активности или уводить людей в похожие проекты. Любые такие приглашения считаются нарушением доверия.',
+    'community_rules_self_promo_title': '4. Самореклама без спама',
+    'community_rules_self_promo_body': 'Нельзя навязывать свои услуги, товары, каналы или личные проекты без разрешения администрации. Исключение: если участник сам попросил рекомендацию специалиста или услугу по теме, можно аккуратно предложить помощь без давления и рассылок.',
+    'community_rules_respect_title': '5. Общение без конфликтов',
+    'community_rules_respect_body': 'Оскорбления, травля, провокации, унижение участников, кураторов или администрации запрещены. Политика, религия, расовые, гендерные и другие конфликтные темы не выносятся в рабочие чаты. Если начинается срач, ответственность несут не только зачинщики, но и те, кто подогревает конфликт.',
+    'community_rules_activity_title': '6. Активность и качество участия',
+    'community_rules_activity_body': 'Сообщество держится на взаимной пользе. Участник должен выполнять задания честно, отправлять понятные подтверждения, не обманывать систему и не портить качество общей активности.',
+    'community_rules_support_title': '7. Технические вопросы',
+    'community_rules_support_body': 'Ошибки, вопросы по оплате, заданиям, доступу, ботам и приложениям лучше сразу отправлять в поддержку или администраторам, а не устраивать спор в общем чате.',
+    'community_rules_feedback_title': '8. Критика и предложения',
+    'community_rules_feedback_body': 'Конструктивные предложения приветствуются. Но публичные обвинения, давление на участников и попытки разрушить репутацию сообщества запрещены. Если нужно что-то улучшить — напиши администратору спокойно и по делу.',
+    'community_rules_exit_title': '9. Выход и повторный доступ',
+    'community_rules_exit_body': 'Если пользователь сам выходит из закрытого формата или нарушает правила, повторный доступ может быть ограничен до следующего окна входа либо закрыт полностью по решению администрации.',
+    'community_rules_finance_title': '10. PRO-режимы, оплаты и возвраты',
+    'community_rules_finance_body': 'Стоимость платных режимов и PRO-возможностей задаётся владельцем и может отличаться по типам активности. Возвраты и ограничения доступа рассматриваются по обращению, фактическому использованию услуги, правилам сервиса и применимым требованиям закона. При грубых нарушениях доступ может быть ограничен.',
+    'stable_gate_community_rules': 'Правила сообщества и согласие',
+    'stable_action_community_rules_ready': 'экран правил, новая формулировка и фиксация согласия готовы.',
+    'stable_action_community_rules_review': 'проверь экран правил и таблицу community_rule_acceptances.',
+    'stable_contract_major_313_policy': 'v3.1.3: пользователь до заданий/продвижения принимает оригинально перефразированные правила сообщества; старые данные и flow не ломаются.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.3 — добавлены правила сообщества, фиксация согласия и защита входа в задания/продвижение до принятия правил.',
+    'version_text': '<b>{version}</b>\nКрупная модернизация сообщества: оригинально перефразированные правила, экран согласия перед участием, фиксация версии правил, быстрые пресеты продвижения, Smart Hub, Mini App и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'community_rules_button': '📜 Rules',
+    'admin_rules_button': '📜 Rules',
+    'support_button': '🛟 Support',
+    'community_rules_accept_button': '✅ I agree and join',
+    'community_rules_reopen_button': '📜 Read rules',
+    'community_rules_accepted_notice': 'Rules accepted. Welcome.',
+    'community_rules_required_notice': 'Accept the community rules before participating.',
+    'community_rules_required_alert': 'Accept the community rules first.',
+    'community_rules_state_required': 'agreement required',
+    'community_rules_state_accepted': 'accepted',
+    'community_rules_section_row': '<b>{title}</b>\n{body}',
+    'community_rules_screen': '<b>📜 {brand} community rules</b>\n\nStatus: <b>{state}</b> · version: <code>{version}</code>\n\nThese rules are written specifically for Boostora and are not copied from another community.\n\n{sections}\n\nBy pressing agree, the participant confirms that the rules are understood and accepted.',
+    'community_rules_entry_title': '1. Entry and participation',
+    'community_rules_entry_body': 'Participation is for users who want fair mutual engagement and agree to keep the community safe. Access may be limited for rule violations or abuse.',
+    'community_rules_content_title': '2. Internal materials',
+    'community_rules_content_body': 'Internal instructions, mechanics and community discussions are for members only and must not be copied, leaked, resold or published without permission.',
+    'community_rules_no_groups_title': '3. No parallel engagement groups',
+    'community_rules_no_groups_body': 'Do not move members into outside groups, clubs, schools or similar engagement projects.',
+    'community_rules_self_promo_title': '4. No spam self-promotion',
+    'community_rules_self_promo_body': 'Services, channels and personal projects may not be advertised without admin permission. A soft answer is allowed only when another member asks for that exact help.',
+    'community_rules_respect_title': '5. Respectful communication',
+    'community_rules_respect_body': 'Insults, harassment, provocation and conflict topics are not allowed. People who fuel a conflict may be treated as part of it.',
+    'community_rules_activity_title': '6. Honest activity',
+    'community_rules_activity_body': 'Members should complete tasks honestly, submit clear proof and avoid behavior that harms overall quality.',
+    'community_rules_support_title': '7. Support questions',
+    'community_rules_support_body': 'Technical, payment and access issues should go to support or admins instead of public arguments.',
+    'community_rules_feedback_title': '8. Feedback',
+    'community_rules_feedback_body': 'Constructive feedback is welcome, but public attacks and reputation damage are not. Send improvement ideas to admins calmly.',
+    'community_rules_exit_title': '9. Leaving and return access',
+    'community_rules_exit_body': 'After leaving or breaking rules, return access may be delayed or refused by the administration.',
+    'community_rules_finance_title': '10. PRO modes and payments',
+    'community_rules_finance_body': 'Paid modes are set by the owner and may differ by activity type. Refunds and access limits are reviewed according to use, service rules and applicable law.',
+    'stable_gate_community_rules': 'Community rules and consent',
+    'stable_action_community_rules_ready': 'rules screen, original wording and consent recording are ready.',
+    'stable_action_community_rules_review': 'review community rules screen and community_rule_acceptances table.',
+    'stable_contract_major_313_policy': 'v3.1.3: users accept original community rules before tasks/growth flows; old data and flows stay safe.',
+    'version_text': '<b>{version}</b>\nCommunity modernization: original rules, consent gate, rules version recording, fast growth presets, Smart Hub, Mini App and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['community_rules_button','admin_rules_button','support_button','community_rules_accept_button','community_rules_reopen_button','community_rules_accepted_notice','community_rules_required_notice','community_rules_required_alert','community_rules_state_required','community_rules_state_accepted','community_rules_section_row','community_rules_screen','stable_gate_community_rules','stable_action_community_rules_ready','stable_action_community_rules_review','stable_contract_major_313_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.1.3</b>\n\nСтабильный gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nСостояние запуска: <b>{launch_state}</b> · live-готовность: <b>{live_score}/100</b>\nRC1-gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.3</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nЭкран только читает базу, .env и накопленные сигналы. Данные не меняются.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.1.3 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch state: <b>{launch_state}</b> · live readiness: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.3</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release rules</b>\n{stable_contract}\n\nThis screen only reads the database, .env and accumulated signals. It does not mutate data.',
+})
+
+TEXTS['ru'].update({'proof_manual_button': '✍️ Текстовый proof', 'proof_manual_started': 'Отправьте подтверждение одним сообщением по шаблону ниже.', 'proof_prompt': '<b>Подтверждение выполнения</b>\n\n{proof_guide}\n\nОтправьте proof одним сообщением. Если автопроверка уже сработала, повторно отправлять ничего не нужно.', 'task_detail': '<b>{title}</b>\n\nТип: <b>{task_type}</b>\nНаграда: <b>{reward}</b> {internal_name}\nДоступно: <b>{remaining}</b>\nСтатус: <b>{status}</b>\n\nПроверка: <b>{verification}</b>\nВаш уровень доверия: <b>{trust_level}</b> · <b>{trust_score}/100</b>\nБонус к лимиту активных заданий: <b>+{trust_bonus}</b>\n<i>{trust_tip}</i>\n\n<b>Как выполнить</b>\n{task_guide}\n\nОткройте цель задания, затем возьмите его. После выполнения нажмите автопроверку или отправьте текстовый proof.', 'campaign_preview_screen': '<b>Предпросмотр задания</b>\n\n<b>● ● ● · Готово к запуску</b>\n\nТип: <b>{task_type}</b>\nЦель: <code>{target_url}</code>\nКоличество: <b>{quantity}</b>\nЦена за 1 выполнение: <b>{unit_price}</b> {internal_name}\nРекомендованная цена: <b>{recommended}</b> {internal_name}\nБыстрая цена: <b>{fast}</b> {internal_name}\nПриоритетная цена: <b>{priority}</b> {internal_name}\nПозиция цены: <b>{price_position}%</b>\nНаграда исполнителю: <b>{reward}</b> {internal_name}\nБазовая награда: <b>{reward_floor}</b> {internal_name}\nКомиссия сервиса: <b>{fee}</b> {internal_name}\nСкидка за объём: <b>{discount}%</b>\nСкорость выполнения: <b>{speed}%</b> · <b>{speed_label}</b>\nПочему так: <i>{speed_explanation}</i>\nТип проверки: <b>{verification}</b>\nПодсказка: <i>{trust_tip}</i>\n\n{proof_guide}\n\nИтоговый бюджет: <b>{budget}</b> {internal_name}\n\nЗапустите сразу или сохраните как черновик.', 'stable_gate_proof_guides': 'Шаблоны proof и инструкции выполнения', 'stable_action_proof_guides_ready': 'готовы подсказки для заказчика, исполнителя и шаблоны proof по ключевым типам заданий.', 'stable_action_proof_guides_review': 'проверь proof guides для реакций, лайков и комментариев.', 'stable_contract_major_314_policy': 'v3.1.4: добавлены подсказки и шаблоны proof без обхода автопроверки, холдов, антифрода и модерации.', 'owner_release_screen': '<b>Релиз-центр Boostora v3.1.4</b>\n\nСтабильный gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nСостояние запуска: <b>{launch_state}</b> · live-готовность: <b>{live_score}/100</b>\nRC1-gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nЭкран только читает базу, .env и накопленные сигналы. Данные не меняются.', 'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.4 — добавлены proof-шаблоны, инструкции выполнения и подсказки заказчика без обхода старой модерации.', 'version_text': '<b>{version}</b>\nКрупная модернизация выполнения: шаблоны proof, подсказки заказчику и исполнителю, быстрые пресеты продвижения, правила сообщества, Smart Hub, Mini App и старая логика без ломающей миграции.'})
+TEXTS['en'].update({'proof_manual_button': '✍️ Text proof', 'proof_manual_started': 'Send completion proof as one message using the template below.', 'proof_prompt': '<b>Task proof</b>\n\n{proof_guide}\n\nSend proof as one message. If automatic verification already worked, no extra proof is needed.', 'task_detail': '<b>{title}</b>\n\nType: <b>{task_type}</b>\nReward: <b>{reward}</b> {internal_name}\nAvailable: <b>{remaining}</b>\nStatus: <b>{status}</b>\n\nVerification: <b>{verification}</b>\nYour trust level: <b>{trust_level}</b> · <b>{trust_score}/100</b>\nActive limit trust bonus: <b>+{trust_bonus}</b>\n<i>{trust_tip}</i>\n\n<b>How to complete</b>\n{task_guide}\n\nOpen the target, take the task, then use auto-check or send text proof.', 'campaign_preview_screen': '<b>Task preview</b>\n\n<b>● ● ● · Ready to launch</b>\n\nType: <b>{task_type}</b>\nTarget: <code>{target_url}</code>\nQuantity: <b>{quantity}</b>\nPrice per completion: <b>{unit_price}</b> {internal_name}\nRecommended price: <b>{recommended}</b> {internal_name}\nFast price: <b>{fast}</b> {internal_name}\nPriority price: <b>{priority}</b> {internal_name}\nPrice position: <b>{price_position}%</b>\nPerformer reward: <b>{reward}</b> {internal_name}\nBase reward: <b>{reward_floor}</b> {internal_name}\nService fee: <b>{fee}</b> {internal_name}\nVolume discount: <b>{discount}%</b>\nCompletion speed: <b>{speed}%</b> · <b>{speed_label}</b>\nWhy: <i>{speed_explanation}</i>\nVerification: <b>{verification}</b>\nTip: <i>{trust_tip}</i>\n\n{proof_guide}\n\nTotal budget: <b>{budget}</b> {internal_name}\n\nLaunch now or save as draft.', 'stable_gate_proof_guides': 'Proof templates and completion guides', 'stable_action_proof_guides_ready': 'client hints, performer steps and proof templates are ready for key task types.', 'stable_action_proof_guides_review': 'review proof guides for reactions, likes and comments.', 'stable_contract_major_314_policy': 'v3.1.4: proof templates and completion hints were added without bypassing auto-checks, holds, antifraud or moderation.', 'owner_release_screen': '<b>Boostora v3.1.4 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch state: <b>{launch_state}</b> · live readiness: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release rules</b>\n{stable_contract}\n\nThis screen only reads the database, .env and accumulated signals. It does not mutate data.', 'version_text': '<b>{version}</b>\nExecution modernization: proof templates, client and performer hints, fast engagement presets, community rules, Smart Hub, Mini App and old logic preserved without breaking migration.'})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['proof_manual_button','proof_manual_started','stable_gate_proof_guides','stable_action_proof_guides_ready','stable_action_proof_guides_review','stable_contract_major_314_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+
+# Boostora v3.1.4 engagement modes: Standard reciprocal / PRO paid mode.
+TEXTS['ru'].update({
+    'engagement_mode_select_button': '⚙️ Выбрать режим: Стандарт или PRO',
+    'engagement_mode_standard_button': '✅ Стандарт · бесплатно, взаимность',
+    'engagement_mode_pro_button': '⭐ PRO · только получать, без ответных действий',
+    'engagement_mode_standard_title': '✅ Режим Стандарт',
+    'engagement_mode_standard_desc': 'Бесплатный режим: получаешь активность и взамен выполняешь ответные лайки/реакции/комментарии другим участникам.',
+    'engagement_mode_pro_title': '⭐ Режим PRO',
+    'engagement_mode_pro_desc': 'Платный режим для тех, кто ценит время: получаешь активность без обязанности делать ответные действия.',
+    'engagement_mode_state_not_selected': 'не выбран',
+    'engagement_mode_state_standard': 'Стандарт',
+    'engagement_mode_state_pro': 'PRO',
+    'engagement_mode_no_pro_until': 'нет активного PRO',
+    'engagement_mode_screen': '<b>🔥 Выбери режим продвижения</b>\n\n<b>Текущий режим:</b> {mode}\nPRO активен до: <b>{pro_until}</b>\n\n<b>✅ Стандарт</b>\nБесплатный режим на взаимной основе. Ты можешь получать реакции, лайки и комментарии, но взамен должен выполнять ответные действия другим участникам. Норма: <b>{required}</b> лайков/реакций/комментариев за цикл. Обычно это занимает 10–15 минут в день.\n\n<b>⭐ PRO</b>\nПлатный режим для тех, кто хочет только получать активность и не тратить время на ответные действия. Стоимость: <b>{pro_price}</b> ⭐ за 30 дней.\n\n<b>Твой статус</b>\nОткрытых обязательств: <b>{open_obligations}</b> · нужно закрыть действий: <b>{open_required}</b>\nВыполнено ответных действий за 30 дней: <b>{outgoing_30d}</b>\n\nВыбери режим ниже.',
+    'engagement_growth_mode_block': '<b>Режим продвижения</b>\nСейчас: <b>{mode}</b>\n✅ Стандарт: бесплатно, но нужно делать <b>{required}</b> ответных лайков/реакций/комментариев.\n⭐ PRO: <b>{pro_price}</b> ⭐ / 30 дней, без ответных действий.\nОткрытых обязательств: <b>{open_obligations}</b> · нужно действий: <b>{open_required}</b> · сделано за 30 дней: <b>{outgoing_30d}</b>',
+    'engagement_mode_required_notice': 'Сначала выбери режим: Стандарт или PRO.',
+    'engagement_mode_required_alert': 'Сначала выбери режим продвижения.',
+    'engagement_mode_standard_saved': 'Включён режим Стандарт: бесплатно, но с ответными действиями.',
+    'engagement_pro_invoice_title': 'Boostora PRO',
+    'engagement_pro_invoice_desc': 'PRO-режим продвижения на {days} дней: получать активность без ответных лайков и комментариев.',
+    'engagement_pro_activated_notice': '⭐ PRO активирован на 30 дней. Теперь можно получать активность без ответных действий.',
+    'engagement_growth_screen': '<b>🔥 Оживи свой Telegram-канал</b>\n\nВ Boostora можно продвигаться двумя способами: бесплатно на взаимности или платно в PRO.\n\n{mode_block}\n\n<b>Что можно запустить</b>\n{product_rows}\n\n<b>⚡ Быстрые пресеты</b>\n{preset_rows}\n\n<b>Как работает Стандарт</b>\nТы получаешь реакции/лайки/комментарии на свои посты, а взамен выполняешь ответные действия другим участникам. Не фейки и не боты — внутри системы работают реальные пользователи.\n\n<b>Как работает PRO</b>\nТы оплачиваешь режим PRO и просто получаешь активность, не выполняя обязательные ответные задания.\n\n<b>Что запрещено продвигать</b>\n⛔ Острые политические, религиозные, расовые, гендерные и конфликтные темы.\n⛔ Призывы к насилию, травля, оскорбления, спам и грязная реклама.\n⛔ Материалы, которые могут испортить репутацию сообщества.\n\nПродуктов: <b>{product_count}</b> · пресетов: <b>{preset_count}</b> · типов кампаний: <b>{campaign_types}</b>.',
+    'stable_gate_engagement_modes': 'Режимы Стандарт/PRO для продвижения',
+    'stable_action_engagement_modes_ready': 'готовы режимы: Стандарт с ответными действиями и PRO без обязательств.',
+    'stable_action_engagement_modes_review': 'проверь таблицы engagement_memberships/engagement_obligations и цены PRO.',
+    'stable_contract_major_314_modes_policy': 'v3.1.4: добавлены режимы Стандарт/PRO; бесплатное продвижение создаёт обязательство ответных действий, PRO освобождает от него.',
+    'version_text': '<b>{version}</b>\nМодернизация продвижения: режим Стандарт бесплатно на взаимности, режим PRO без ответных действий, proof-шаблоны, быстрые пресеты, правила сообщества, Smart Hub и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'engagement_mode_select_button': '⚙️ Choose mode: Standard or PRO',
+    'engagement_mode_standard_button': '✅ Standard · free reciprocal mode',
+    'engagement_mode_pro_button': '⭐ PRO · receive only, no reciprocal work',
+    'engagement_mode_state_not_selected': 'not selected',
+    'engagement_mode_state_standard': 'Standard',
+    'engagement_mode_state_pro': 'PRO',
+    'engagement_mode_no_pro_until': 'no active PRO',
+    'engagement_mode_screen': '<b>🔥 Choose growth mode</b>\n\n<b>Current mode:</b> {mode}\nPRO active until: <b>{pro_until}</b>\n\n✅ Standard: free reciprocal mode, requires <b>{required}</b> outgoing actions per cycle.\n⭐ PRO: <b>{pro_price}</b> ⭐ / 30 days, no reciprocal obligations.\n\nOpen obligations: <b>{open_obligations}</b> · required actions: <b>{open_required}</b>\nOutgoing actions in 30 days: <b>{outgoing_30d}</b>',
+    'engagement_growth_mode_block': '<b>Growth mode</b>\nCurrent: <b>{mode}</b>\n✅ Standard: free, requires <b>{required}</b> reciprocal actions.\n⭐ PRO: <b>{pro_price}</b> ⭐ / 30 days, no reciprocal obligations.\nOpen obligations: <b>{open_obligations}</b> · required: <b>{open_required}</b> · done in 30 days: <b>{outgoing_30d}</b>',
+    'engagement_mode_required_notice': 'Choose Standard or PRO first.',
+    'engagement_mode_required_alert': 'Choose growth mode first.',
+    'engagement_mode_standard_saved': 'Standard mode is enabled: free reciprocal growth.',
+    'engagement_pro_invoice_title': 'Boostora PRO',
+    'engagement_pro_invoice_desc': 'PRO growth mode for {days} days: receive engagement without reciprocal actions.',
+    'engagement_pro_activated_notice': '⭐ PRO activated for 30 days. You can now receive engagement without reciprocal obligations.',
+    'engagement_growth_screen': '<b>🔥 Make your Telegram channel feel alive</b>\n\nBoostora supports two growth modes: free reciprocal Standard or paid PRO.\n\n{mode_block}\n\n<b>What you can launch</b>\n{product_rows}\n\n<b>⚡ Quick presets</b>\n{preset_rows}\n\nQuick products: <b>{product_count}</b> · presets: <b>{preset_count}</b> · campaign types: <b>{campaign_types}</b>.',
+    'stable_gate_engagement_modes': 'Standard/PRO engagement modes',
+    'stable_action_engagement_modes_ready': 'Standard reciprocal mode and paid PRO mode are ready.',
+    'stable_action_engagement_modes_review': 'review engagement mode tables and PRO pricing.',
+    'stable_contract_major_314_modes_policy': 'v3.1.4: Standard/PRO modes were added; Standard creates reciprocal obligations, PRO removes them.',
+    'version_text': '<b>{version}</b>\nGrowth modernization: free reciprocal Standard, paid PRO without reciprocal actions, proof templates, quick presets, community rules, Smart Hub and old logic preserved without breaking migration.',
+})
+
+
+# Boostora v3.1.5 Standard obligation dashboard and admin debtor overview.
+TEXTS['ru'].update({
+    'engagement_obligations_button': '📊 Мои 0/10',
+    'engagement_obligations_do_tasks_button': '✅ Выполнить ответные задания',
+    'engagement_obligation_dashboard_state_clear': 'всё закрыто',
+    'engagement_obligation_dashboard_state_open': 'есть обязательства',
+    'engagement_obligation_dashboard_state_due_soon': 'скоро срок',
+    'engagement_obligation_dashboard_state_overdue': 'есть просрочка',
+    'engagement_obligation_state_open': 'открыто',
+    'engagement_obligation_state_due_soon': 'скоро срок',
+    'engagement_obligation_state_overdue': 'просрочено',
+    'engagement_obligation_state_completed': 'закрыто',
+    'engagement_obligations_empty': 'Сейчас открытых обязательств нет. Можно получать активность в Стандарте без долгов или перейти на PRO, чтобы не делать ответные действия.',
+    'engagement_obligation_row': '• <b>{task_type}</b> · кампания #{campaign}\nПрогресс: <b>{done}/{required}</b> · осталось: <b>{remaining}</b> · {percent}%\nСтатус: <b>{state}</b> · срок: <code>{due}</code>',
+    'engagement_obligations_screen': '<b>📊 Кабинет обязательств Standard</b>\n\nСтатус: <b>{status}</b>\nОткрыто циклов: <b>{open_count}</b> · скоро срок: <b>{due_soon_count}</b> · просрочено: <b>{overdue_count}</b>\nВсего прогресс: <b>{total_done}/{total_required}</b> · осталось действий: <b>{total_remaining}</b>\nОтветных действий за 30 дней: <b>{outgoing_30d}</b>\nЗакрыто циклов всего: <b>{completed_total}</b>\n\n<b>Как закрыть 0/10</b>\n1. Нажми «Выполнить ответные задания».\n2. Выбери доступные лайки, реакции или комментарии других участников.\n3. Выполни действие и отправь нормальное proof-подтверждение.\n4. После одобрения админом прогресс обновится автоматически.\n\n<b>Открытые обязательства</b>\n{items}',
+    'admin_engagement_obligations_button': '📊 Долги Standard',
+    'admin_engagement_obligations_empty': 'Открытых Standard-обязательств сейчас нет.',
+    'admin_engagement_obligation_row': '• <b>{name}</b> · <code>{user_id}</code> · {task_type} · кампания #{campaign}\n{done}/{required}, осталось <b>{remaining}</b> · <b>{state}</b> · срок <code>{due}</code>',
+    'admin_engagement_obligations_screen': '<b>📊 Standard-обязательства участников</b>\n\nТаблица: <b>{table_state}</b>\nОткрыто всего: <b>{open_total}</b> · скоро срок: <b>{due_soon_total}</b> · просрочено: <b>{overdue_total}</b>\nНорма Standard: <b>{required}</b> ответных действий.\n\n<b>Кого проверить</b>\n{items}\n\nПодсказка: просрочка не списывает деньги автоматически. Это обзор для ручного контроля, предупреждений и мягкой модерации.',
+    'engagement_growth_mode_block': '<b>Режим продвижения</b>\nСейчас: <b>{mode}</b>\n✅ Стандарт: бесплатно, но нужно делать <b>{required}</b> ответных лайков/реакций/комментариев.\n⭐ PRO: <b>{pro_price}</b> ⭐ / 30 дней, без ответных действий.\nОткрытых обязательств: <b>{open_obligations}</b> · осталось действий: <b>{open_remaining}</b> · сделано за 30 дней: <b>{outgoing_30d}</b>',
+    'stable_gate_engagement_obligations': 'Кабинет обязательств Standard 0/10',
+    'stable_action_engagement_obligations_ready': 'кабинет 0/10 и админский обзор обязательств готовы.',
+    'stable_action_engagement_obligations_review': 'проверь просроченные Standard-обязательства и кабинет 0/10.',
+    'stable_contract_major_315_policy': 'v3.1.5: добавлен кабинет Standard-обязательств 0/10, напоминания и админский обзор должников без автоматического наказания и без ломающей миграции.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.1.5</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.5</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.5 — Standard/PRO, кабинет обязательств 0/10, обзор должников, быстрые пресеты, правила, Smart Hub, Mini App и Provider Center.',
+    'version_text': '<b>{version}</b>\nМодернизация продвижения: кабинет Standard-обязательств 0/10, напоминания, админский обзор должников, режим PRO без ответных действий, proof-шаблоны, быстрые пресеты и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'engagement_obligations_button': '📊 My 0/10',
+    'engagement_obligations_do_tasks_button': '✅ Complete reciprocal tasks',
+    'engagement_obligation_dashboard_state_clear': 'clear',
+    'engagement_obligation_dashboard_state_open': 'open obligations',
+    'engagement_obligation_dashboard_state_due_soon': 'due soon',
+    'engagement_obligation_dashboard_state_overdue': 'overdue',
+    'engagement_obligation_state_open': 'open',
+    'engagement_obligation_state_due_soon': 'due soon',
+    'engagement_obligation_state_overdue': 'overdue',
+    'engagement_obligation_state_completed': 'completed',
+    'engagement_obligations_empty': 'No open obligations now.',
+    'engagement_obligation_row': '• <b>{task_type}</b> · campaign #{campaign}\nProgress: <b>{done}/{required}</b> · remaining: <b>{remaining}</b> · {percent}%\nState: <b>{state}</b> · due: <code>{due}</code>',
+    'engagement_obligations_screen': '<b>📊 Standard obligation dashboard</b>\n\nState: <b>{status}</b>\nOpen cycles: <b>{open_count}</b> · due soon: <b>{due_soon_count}</b> · overdue: <b>{overdue_count}</b>\nProgress: <b>{total_done}/{total_required}</b> · remaining actions: <b>{total_remaining}</b>\nOutgoing actions in 30 days: <b>{outgoing_30d}</b>\nCompleted cycles total: <b>{completed_total}</b>\n\n<b>Open obligations</b>\n{items}',
+    'admin_engagement_obligations_button': '📊 Standard debts',
+    'admin_engagement_obligations_empty': 'No open Standard obligations.',
+    'admin_engagement_obligation_row': '• <b>{name}</b> · <code>{user_id}</code> · {task_type} · campaign #{campaign}\n{done}/{required}, remaining <b>{remaining}</b> · <b>{state}</b> · due <code>{due}</code>',
+    'admin_engagement_obligations_screen': '<b>📊 Standard obligations</b>\n\nTable: <b>{table_state}</b>\nOpen total: <b>{open_total}</b> · due soon: <b>{due_soon_total}</b> · overdue: <b>{overdue_total}</b>\nStandard norm: <b>{required}</b> reciprocal actions.\n\n<b>Review list</b>\n{items}',
+    'engagement_growth_mode_block': '<b>Growth mode</b>\nCurrent: <b>{mode}</b>\n✅ Standard: free, requires <b>{required}</b> reciprocal actions.\n⭐ PRO: <b>{pro_price}</b> ⭐ / 30 days, no reciprocal obligations.\nOpen obligations: <b>{open_obligations}</b> · remaining actions: <b>{open_remaining}</b> · done in 30 days: <b>{outgoing_30d}</b>',
+    'stable_gate_engagement_obligations': 'Standard obligation dashboard 0/10',
+    'stable_action_engagement_obligations_ready': '0/10 dashboard and admin obligation overview are ready.',
+    'stable_action_engagement_obligations_review': 'review overdue Standard obligations and 0/10 dashboard.',
+    'stable_contract_major_315_policy': 'v3.1.5: Standard obligation dashboard 0/10, reminders and admin debtor overview added without automatic punishment or breaking migration.',
+    'version_text': '<b>{version}</b>\nGrowth modernization: Standard obligation dashboard 0/10, reminders, admin debtor overview, PRO without reciprocal work, proof templates, quick presets and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['engagement_obligations_button','engagement_obligations_do_tasks_button','engagement_obligations_empty','engagement_obligation_row','engagement_obligations_screen','admin_engagement_obligations_button','admin_engagement_obligations_empty','admin_engagement_obligation_row','admin_engagement_obligations_screen','stable_gate_engagement_obligations','stable_action_engagement_obligations_ready','stable_action_engagement_obligations_review','stable_contract_major_315_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+
+# Boostora v3.1.7 soft Standard enforcement, reminders and admin warnings.
+TEXTS['ru'].update({
+    'engagement_overdue_launch_blocked': 'Есть просрочка Standard 0/10. Сначала закрой ответные действия, потом снова запускай продвижение.',
+    'engagement_launch_allowed': 'Можно запускать продвижение.',
+    'engagement_growth_overdue_block': '⚠️ <b>Есть просрочка Standard</b>\nПока не закрыто <b>{remaining}</b> ответных действий, новые лайки/реакции/комментарии в Стандарте временно недоступны. Нажми «Мои 0/10» и выполни ответные задания.',
+    'engagement_growth_overdue_clear': '✅ Ограничений Standard сейчас нет.',
+    'engagement_obligations_restriction_active': '⚠️ Новые Standard-кампании временно ограничены. Осталось закрыть: <b>{remaining}</b> ответных действий.',
+    'engagement_obligations_restriction_clear': '✅ Ограничений нет. Если появится долг 0/10, здесь будет видно что закрывать.',
+    'engagement_reminder_due_soon_message': '<b>⏳ Напоминание Boostora</b>\n\nПо режиму Standard осталось выполнить <b>{remaining}/{required}</b> ответных действий до <code>{due}</code>.\n\nОткрой «📊 Мои 0/10» и выбери ответные задания. Поддержка: {support}',
+    'engagement_reminder_overdue_message': '<b>⚠️ Просрочка Standard 0/10</b>\n\nОсталось выполнить <b>{remaining}</b> ответных действий. Пока долг не закрыт, новые Standard-запуски лайков/реакций/комментариев могут быть ограничены.\n\nОткрой «📊 Мои 0/10» → «Выполнить ответные задания». Поддержка: {support}',
+    'engagement_admin_overdue_message': '<b>⚠️ Standard-просрочка</b>\n\nПользователь: <b>{name}</b> · <code>{user_id}</code>\nКампания: <b>#{campaign}</b>\nОсталось: <b>{remaining}/{required}</b> ответных действий.\n\nПроверь в админке «📊 Долги Standard».',
+    'engagement_obligations_screen': '<b>📊 Кабинет обязательств Standard</b>\n\nСтатус: <b>{status}</b>\n{restriction}\n\nОткрыто циклов: <b>{open_count}</b> · скоро срок: <b>{due_soon_count}</b> · просрочено: <b>{overdue_count}</b>\nВсего прогресс: <b>{total_done}/{total_required}</b> · осталось действий: <b>{total_remaining}</b>\nОтветных действий за 30 дней: <b>{outgoing_30d}</b>\nЗакрыто циклов всего: <b>{completed_total}</b>\n\n<b>Как закрыть 0/10</b>\n1. Нажми «Выполнить ответные задания».\n2. Выбери лайки, реакции или комментарии других участников.\n3. Выполни действие и отправь нормальное proof-подтверждение.\n4. После одобрения админом прогресс обновится автоматически.\n\n<b>Открытые обязательства</b>\n{items}',
+    'engagement_growth_screen': '<b>🔥 Оживи свой Telegram-канал</b>\n\nBoostora поддерживает два режима: бесплатный Стандарт на взаимности или платный PRO без ответных действий.\n\n{mode_block}\n\n{restriction_block}\n\n<b>Что можно запустить</b>\n{product_rows}\n\n<b>⚡ Быстрые пакеты</b>\n{preset_rows}\n\nБыстрых продуктов: <b>{product_count}</b> · пресетов: <b>{preset_count}</b> · типов кампаний: <b>{campaign_types}</b>.',
+    'stable_gate_boostore_api_diagnostics': 'Мягкие ограничения Standard и напоминания',
+    'stable_action_boostore_api_diagnostics_ready': 'мягкие ограничения, напоминания и админские предупреждения готовы.',
+    'stable_action_boostore_api_diagnostics_review': 'проверь просрочки Standard, напоминания и настройки мягкого ограничения.',
+    'stable_contract_major_316_policy': 'v3.1.6: просроченный Standard мягко удерживается в ответных заданиях, получает напоминания, админ получает предупреждение; денег и старых данных это не трогает.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.1.7</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.6</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.6 — мягкие ограничения Standard при просрочке, авто-напоминания, долги 0/10, PRO, правила, Smart Hub, Mini App и Provider Center.',
+    'version_text': '<b>{version}</b>\nМодернизация продвижения: мягкие ограничения Standard при просрочке, авто-напоминания, предупреждения админам, кабинет 0/10, PRO без ответных действий, пресеты и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'engagement_overdue_launch_blocked': 'There is an overdue Standard 0/10 obligation. Complete reciprocal actions before launching new engagement.',
+    'engagement_launch_allowed': 'Engagement launch allowed.',
+    'engagement_growth_overdue_block': '⚠️ <b>Overdue Standard obligation</b>\nComplete <b>{remaining}</b> reciprocal actions before launching new Standard likes/reactions/comments.',
+    'engagement_growth_overdue_clear': '✅ No Standard restrictions now.',
+    'engagement_obligations_restriction_active': '⚠️ New Standard campaigns are temporarily limited. Remaining actions: <b>{remaining}</b>.',
+    'engagement_obligations_restriction_clear': '✅ No restrictions now.',
+    'engagement_reminder_due_soon_message': '<b>⏳ Boostora reminder</b>\n\nStandard requires <b>{remaining}/{required}</b> reciprocal actions before <code>{due}</code>. Support: {support}',
+    'engagement_reminder_overdue_message': '<b>⚠️ Standard 0/10 overdue</b>\n\nRemaining actions: <b>{remaining}</b>. New Standard engagement launches may be limited until this is complete. Support: {support}',
+    'engagement_admin_overdue_message': '<b>⚠️ Standard overdue</b>\n\nUser: <b>{name}</b> · <code>{user_id}</code>\nCampaign: <b>#{campaign}</b>\nRemaining: <b>{remaining}/{required}</b>.',
+    'engagement_obligations_screen': '<b>📊 Standard obligation dashboard</b>\n\nState: <b>{status}</b>\n{restriction}\n\nOpen cycles: <b>{open_count}</b> · due soon: <b>{due_soon_count}</b> · overdue: <b>{overdue_count}</b>\nProgress: <b>{total_done}/{total_required}</b> · remaining actions: <b>{total_remaining}</b>\nOutgoing actions in 30 days: <b>{outgoing_30d}</b>\nCompleted cycles total: <b>{completed_total}</b>\n\n<b>Open obligations</b>\n{items}',
+    'engagement_growth_screen': '<b>🔥 Make your Telegram channel feel alive</b>\n\nBoostora supports free reciprocal Standard or paid PRO without reciprocal actions.\n\n{mode_block}\n\n{restriction_block}\n\n<b>What you can launch</b>\n{product_rows}\n\n<b>⚡ Quick presets</b>\n{preset_rows}\n\nProducts: <b>{product_count}</b> · presets: <b>{preset_count}</b> · campaign types: <b>{campaign_types}</b>.',
+    'stable_gate_boostore_api_diagnostics': 'Standard soft enforcement and reminders',
+    'stable_action_boostore_api_diagnostics_ready': 'soft restrictions, reminders and admin warnings are ready.',
+    'stable_action_boostore_api_diagnostics_review': 'review Standard overdue obligations, reminders and soft-limit settings.',
+    'stable_contract_major_316_policy': 'v3.1.6: overdue Standard users are softly guided to reciprocal tasks with reminders and admin warnings; money and old data are not touched.',
+    'version_text': '<b>{version}</b>\nGrowth modernization: soft Standard restrictions for overdue 0/10, auto-reminders, admin warnings, PRO without reciprocal actions, presets and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['engagement_overdue_launch_blocked','engagement_growth_overdue_block','engagement_growth_overdue_clear','engagement_obligations_restriction_active','engagement_obligations_restriction_clear','engagement_reminder_due_soon_message','engagement_reminder_overdue_message','engagement_admin_overdue_message','stable_gate_boostore_api_diagnostics','stable_action_boostore_api_diagnostics_ready','stable_action_boostore_api_diagnostics_review','stable_contract_major_316_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+# Boostora v3.1.7 Boostore API diagnostics: key is never shown raw.
+TEXTS['ru'].update({
+    'boostore_check_button': '🧪 Проверить API и баланс',
+    'boostore_check_success': 'Boostore API отвечает',
+    'boostore_check_warning': 'Boostore API требует внимания',
+    'boostore_disabled': 'Boostore Provider выключен',
+    'boostore_state_api_error': 'ошибка API',
+    'boostore_check_report': '<b>🧪 Проверка Boostore API</b>\n\nСостояние: <b>{state}</b> · score <b>{score}/100</b>\nКлюч: <code>{key}</code>\nБаланс: <b>{balance}</b>\nКэш услуг: <b>{cached}</b> · whitelist: <b>{whitelist}</b>\nОтвет API: <b>{result}</b>\nОшибка: <code>{error}</code>\n\nСырой API-ключ в интерфейсе и логах не показывается.',
+    'owner_provider_screen': '<b>🔌 Boostore API / Provider Center</b>\n\nСостояние: <b>{state}</b> · score <b>{score}/100</b>\nBOOSTORE_ENABLED: <b>{enabled}</b> · ключ: <b>{has_key}</b> · настроено: <b>{configured}</b>\nAPI: <code>{api_url}</code>\nНаценка по умолчанию: <b>{markup}%</b> · auto-sync: <b>{auto_sync}</b>\n\nУслуг в кэше: <b>{total}</b> · включено в whitelist: <b>{whitelist}</b>\n\n<b>Проверка ключа</b>\nНажми «🧪 Проверить API и баланс». Бот проверит ключ из .env/Bothost, покажет баланс и ошибку, но не покажет сам ключ.\n\n<b>Первые услуги</b>\n{items}\n\nНажатие на услугу включает/выключает её для витрины. Все услуги подряд не включаются специально — это защита качества и репутации.',
+    'stable_gate_boostore_api_diagnostics': 'Диагностика Boostore API и баланса',
+    'stable_action_boostore_api_diagnostics_ready': 'кнопка проверки API, баланс и маскирование ключа готовы.',
+    'stable_action_boostore_api_diagnostics_review': 'проверь Provider Center и кнопку live-проверки Boostore API.',
+    'stable_contract_major_317_policy': 'v3.1.7: Boostore API-ключ хранится только в .env/Bothost, в архив не вшивается; в админке доступна безопасная проверка API и баланса без показа сырого ключа.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.1.7</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.1.7</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы.',
+    'admin_home_screen': '<b>Админ-центр Boostora</b>\n\nРучная проверка: <b>{queue}</b>\nРиск-заявки: <b>{queue_high}</b> · Чистые: <b>{queue_clean}</b> · Зависшие: <b>{queue_old}</b>\nГруппы: исполнители <b>{groups_performer}</b> · задания <b>{groups_campaign}</b> · риск <b>{groups_risk}</b>\n\nЗаблокировано пользователей: <b>{blocked}</b>\nПользователей с высоким риском: <b>{high_risk}</b>\nНе заблокированных high-risk: <b>{high_risk_unblocked}</b>\nОтклонено всего: <b>{rejected}</b>\n\nЧаты готовы к рекламе: <b>{bot_chats_ready}</b>\nПроблемы с правами бота: <b>{bot_chats_issues}</b>\n\nАдминка v3.1.7 — безопасная диагностика Boostore API/баланса, Standard 0/10, PRO, правила, Smart Hub, Mini App и Provider Center.',
+    'version_text': '<b>{version}</b>\nМодернизация Provider Center: безопасная проверка Boostore API и баланса без показа ключа, Standard 0/10, PRO, пресеты, Smart Hub, Mini App и старая логика без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'boostore_check_button': '🧪 Check API and balance',
+    'boostore_check_success': 'Boostore API responds',
+    'boostore_check_warning': 'Boostore API needs attention',
+    'boostore_disabled': 'Boostore Provider is disabled',
+    'boostore_state_api_error': 'API error',
+    'boostore_check_report': '<b>🧪 Boostore API check</b>\n\nState: <b>{state}</b> · score <b>{score}/100</b>\nKey: <code>{key}</code>\nBalance: <b>{balance}</b>\nCached services: <b>{cached}</b> · whitelist: <b>{whitelist}</b>\nAPI response: <b>{result}</b>\nError: <code>{error}</code>\n\nThe raw API key is never shown in UI or logs.',
+    'owner_provider_screen': '<b>🔌 Boostore API / Provider Center</b>\n\nState: <b>{state}</b> · score <b>{score}/100</b>\nBOOSTORE_ENABLED: <b>{enabled}</b> · key: <b>{has_key}</b> · configured: <b>{configured}</b>\nAPI: <code>{api_url}</code>\nDefault markup: <b>{markup}%</b> · auto-sync: <b>{auto_sync}</b>\n\nCached services: <b>{total}</b> · whitelist: <b>{whitelist}</b>\n\n<b>Key check</b>\nPress “🧪 Check API and balance”. The bot checks the .env/Bothost key and balance without showing the raw key.\n\n<b>First services</b>\n{items}',
+    'stable_gate_boostore_api_diagnostics': 'Boostore API and balance diagnostics',
+    'stable_action_boostore_api_diagnostics_ready': 'API check button, balance check and key masking are ready.',
+    'stable_action_boostore_api_diagnostics_review': 'review Provider Center and live Boostore API check button.',
+    'stable_contract_major_317_policy': 'v3.1.7: Boostore API key lives only in .env/Bothost, is not baked into archives; owner admin has a safe API/balance check without raw key exposure.',
+    'version_text': '<b>{version}</b>\nProvider Center modernization: safe Boostore API and balance check without exposing the key, Standard 0/10, PRO, presets, Smart Hub, Mini App and old logic preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['boostore_check_button','boostore_check_success','boostore_check_warning','boostore_disabled','boostore_state_api_error','boostore_check_report','stable_gate_boostore_api_diagnostics','stable_action_boostore_api_diagnostics_ready','stable_action_boostore_api_diagnostics_review','stable_contract_major_317_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+# Restore v3.1.6 soft-enforcement text keys after v3.1.7 stage update.
+TEXTS['ru'].update({
+    'stable_gate_engagement_soft_enforcement': 'Мягкие ограничения Standard и напоминания',
+    'stable_action_engagement_soft_enforcement_ready': 'мягкие ограничения, напоминания и админские предупреждения готовы.',
+    'stable_action_engagement_soft_enforcement_review': 'проверь просрочки Standard, напоминания и настройки мягкого ограничения.',
+})
+TEXTS['en'].update({
+    'stable_gate_engagement_soft_enforcement': 'Standard soft enforcement and reminders',
+    'stable_action_engagement_soft_enforcement_ready': 'soft restrictions, reminders and admin warnings are ready.',
+    'stable_action_engagement_soft_enforcement_review': 'review Standard overdue obligations, reminders and soft-limit settings.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['stable_gate_engagement_soft_enforcement','stable_action_engagement_soft_enforcement_ready','stable_action_engagement_soft_enforcement_review']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+# Boostora v3.2.0 final completion pack: legal docs, Standard admin actions, Boostore orders.
+TEXTS['ru'].update({
+    'legal_docs_required_notice': 'Перед продолжением нужно принять пользовательские и финансовые условия Boostora.',
+    'legal_docs_required_alert': 'Сначала прими условия Boostora.',
+    'legal_docs_accept_button': '✅ Согласен с условиями',
+    'legal_docs_accepted_notice': 'Условия приняты. Можно продолжать.',
+    'legal_docs_state_accepted': 'принято',
+    'legal_docs_state_required': 'требуется согласие',
+    'legal_docs_section_row': '<b>{title}</b>\n{body}',
+    'legal_docs_screen': '<b>📄 Условия Boostora</b>\n\nБренд: <b>{brand}</b>\nВерсия: <code>{version}</code>\nСтатус: <b>{state}</b>\n\n{sections}\n\nНажимая кнопку согласия, пользователь подтверждает, что понимает режимы Standard/PRO, правила возвратов, ограничения тематики и отсутствие гарантии конкретного коммерческого результата.',
+    'legal_section_agreement_title': '1. Общие условия',
+    'legal_section_agreement_body': 'Boostora помогает участникам запускать задания, получать живую активность и выполнять действия на взаимной основе. Участник отвечает за свои ссылки, контент и соблюдение правил площадок.',
+    'legal_section_standard_title': '2. Режим Standard',
+    'legal_section_standard_body': 'Standard работает по взаимности: чтобы получать лайки, реакции или комментарии, участник должен выполнить ответные действия другим участникам. Норма и срок задаются настройками бота.',
+    'legal_section_pro_title': '3. Режим PRO',
+    'legal_section_pro_body': 'PRO освобождает от ответных действий на период подписки. PRO не означает гарантию конкретных охватов, продаж или результатов алгоритмов Telegram.',
+    'legal_section_refunds_title': '4. Оплаты и возвраты',
+    'legal_section_refunds_body': 'Оплаты через Telegram Stars и внутренние Искры учитываются в системе. Возвраты и ручные корректировки выполняются администрацией по ситуации и с учётом использованных услуг.',
+    'legal_section_disclaimer_title': '5. Ограничения и отказ от гарантий',
+    'legal_section_disclaimer_body': 'Запрещены спам, травля, опасный/незаконный контент, острые политические, религиозные, расовые и конфликтные темы. Boostora не обещает официального продвижения алгоритмами Telegram и не управляет действиями сторонних сервисов.',
+    'standard_admin_extended': 'Срок Standard-долга продлён на 24 часа.',
+    'standard_admin_forgiven': 'Standard-долг закрыт вручную.',
+    'standard_admin_warning_sent': 'Ручное предупреждение отправлено.',
+    'standard_admin_warning_failed': 'Не удалось отправить предупреждение пользователю.',
+    'standard_admin_manual_pro_granted': 'PRO выдан вручную на 30 дней.',
+    'standard_admin_obligation_not_found': 'Обязательство не найдено или уже закрыто.',
+    'boostore_order_link_prompt': 'Отправь ссылку, которую нужно продвигать через выбранную услугу Boostore.',
+    'boostore_order_link_invalid': 'Ссылка выглядит неверно. Отправь https://, t.me/ или @username.',
+    'boostore_order_quantity_prompt': 'Теперь отправь количество для заказа Boostore.',
+    'boostore_order_quantity_invalid': 'Количество должно быть числом.',
+    'boostore_order_prepared': 'Заказ Boostore подготовлен к оплате.',
+    'boostore_order_not_found': 'Заказ Boostore не найден.',
+    'boostore_order_placed': 'Заказ Boostore создан после оплаты.',
+    'boostore_order_already_placed': 'Этот заказ Boostore уже был создан.',
+    'boostore_service_not_enabled': 'Эта услуга Boostore не включена владельцем.',
+    'boostore_quantity_out_of_range': 'Количество вне лимитов выбранной услуги.',
+    'boostore_invoice_title': 'Заказ Boostore',
+    'boostore_invoice_desc': 'Автозаказ через Boostore. Количество: {quantity}. Заказ отправится поставщику только после оплаты.',
+    'owner_provider_screen': '<b>🔌 Boostore API / Provider Center</b>\n\nСостояние: <b>{state}</b> · score <b>{score}/100</b>\nBOOSTORE_ENABLED: <b>{enabled}</b> · ключ: <b>{has_key}</b> · настроено: <b>{configured}</b>\nAPI: <code>{api_url}</code>\nНаценка: <b>{markup}%</b> · auto-sync: <b>{auto_sync}</b> · auto-order: <b>{auto_order}</b>\n\nУслуг в кэше: <b>{total}</b> · whitelist: <b>{whitelist}</b>\nProvider-заказов: <b>{provider_orders}</b> · ошибок: <b>{provider_failed}</b>\n\n<b>Первые услуги</b>\n{items}\n\nНажатие на услугу включает/выключает её для витрины. Пользовательские заказы доступны только для whitelist-услуг и только после оплаты.',
+    'stable_gate_standard_admin_actions': 'Админ-действия по долгам Standard',
+    'stable_action_standard_admin_actions_ready': 'продление, прощение, предупреждения, ручной PRO и журнал решений готовы.',
+    'stable_action_standard_admin_actions_review': 'проверь таблицу решений и кнопки админа по долгам Standard.',
+    'stable_gate_boostore_auto_orders': 'Безопасные авто-заказы Boostore после оплаты',
+    'stable_action_boostore_auto_orders_ready': 'авто-заказы Boostore после оплаты готовы и включены.',
+    'stable_action_boostore_auto_orders_review': 'проверь whitelist, баланс и включи BOOSTORE_AUTO_ORDER_ENABLED только после live-теста.',
+    'stable_gate_legal_docs': 'Юридические условия и возвраты',
+    'stable_action_legal_docs_ready': 'экран условий, Standard/PRO, возвраты и отказ от гарантий готовы.',
+    'stable_action_legal_docs_review': 'проверь финальный текст условий перед массовым запуском.',
+    'stable_contract_major_320_policy': 'v3.2.0: закрыты основные недоделки — админ-долги Standard, ручной PRO, журнал решений, юридические условия, Boostore-заказы после оплаты и расширенный Mini App. Ключи хранятся только в .env.',
+    'version_text': '<b>{version}</b>\nЗавершающий пакет: админ-действия по Standard 0/10, ручной PRO, журнал решений, юридические условия, Boostore-заказы после оплаты, Mini App-кабинет и сохранение старых данных без ломающей миграции.',
+})
+TEXTS['en'].update({
+    'legal_docs_required_notice': 'Accept Boostora user and financial terms before continuing.',
+    'legal_docs_required_alert': 'Accept Boostora terms first.',
+    'legal_docs_accept_button': '✅ I accept the terms',
+    'legal_docs_accepted_notice': 'Terms accepted. You can continue.',
+    'legal_docs_state_accepted': 'accepted',
+    'legal_docs_state_required': 'acceptance required',
+    'legal_docs_section_row': '<b>{title}</b>\n{body}',
+    'legal_docs_screen': '<b>📄 Boostora terms</b>\n\nBrand: <b>{brand}</b>\nVersion: <code>{version}</code>\nState: <b>{state}</b>\n\n{sections}',
+    'legal_section_agreement_title': '1. General terms',
+    'legal_section_agreement_body': 'Boostora helps users launch tasks, receive engagement and perform reciprocal actions. Users are responsible for their links, content and platform rules.',
+    'legal_section_standard_title': '2. Standard mode',
+    'legal_section_standard_body': 'Standard is reciprocal: to receive likes, reactions or comments, the user completes reciprocal actions for other users.',
+    'legal_section_pro_title': '3. PRO mode',
+    'legal_section_pro_body': 'PRO removes reciprocal-action obligations for the paid period. It does not guarantee specific reach, sales or Telegram algorithm results.',
+    'legal_section_refunds_title': '4. Payments and refunds',
+    'legal_section_refunds_body': 'Telegram Stars and internal Sparks are tracked in the system. Refunds and manual adjustments are reviewed by admins.',
+    'legal_section_disclaimer_title': '5. Limits and disclaimer',
+    'legal_section_disclaimer_body': 'Spam, harassment, illegal content and conflict-heavy themes are not allowed. Boostora does not control third-party services or Telegram algorithms.',
+    'standard_admin_extended': 'Standard obligation extended by 24 hours.',
+    'standard_admin_forgiven': 'Standard obligation manually closed.',
+    'standard_admin_warning_sent': 'Manual warning sent.',
+    'standard_admin_warning_failed': 'Failed to send warning.',
+    'standard_admin_manual_pro_granted': 'PRO manually granted for 30 days.',
+    'standard_admin_obligation_not_found': 'Obligation not found or already closed.',
+    'boostore_order_link_prompt': 'Send the link to promote through the selected Boostore service.',
+    'boostore_order_link_invalid': 'Invalid link. Send https://, t.me/ or @username.',
+    'boostore_order_quantity_prompt': 'Now send the Boostore order quantity.',
+    'boostore_order_quantity_invalid': 'Quantity must be numeric.',
+    'boostore_order_prepared': 'Boostore order prepared for payment.',
+    'boostore_order_not_found': 'Boostore order not found.',
+    'boostore_order_placed': 'Boostore order created after payment.',
+    'boostore_order_already_placed': 'This Boostore order is already placed.',
+    'boostore_service_not_enabled': 'This Boostore service is not enabled by owner.',
+    'boostore_quantity_out_of_range': 'Quantity is outside selected service limits.',
+    'boostore_invoice_title': 'Boostore order',
+    'boostore_invoice_desc': 'Auto order through Boostore. Quantity: {quantity}. The order is sent only after payment.',
+    'stable_gate_standard_admin_actions': 'Standard debt admin actions',
+    'stable_action_standard_admin_actions_ready': 'extend, forgive, warn, manual PRO and decision log are ready.',
+    'stable_action_standard_admin_actions_review': 'review Standard debt admin buttons and decision log.',
+    'stable_gate_boostore_auto_orders': 'Safe Boostore orders after payment',
+    'stable_action_boostore_auto_orders_ready': 'Boostore auto orders after payment are ready and enabled.',
+    'stable_action_boostore_auto_orders_review': 'review whitelist, balance and enable BOOSTORE_AUTO_ORDER_ENABLED only after live test.',
+    'stable_gate_legal_docs': 'Legal terms and refunds',
+    'stable_action_legal_docs_ready': 'terms screen, Standard/PRO, refunds and disclaimer are ready.',
+    'stable_action_legal_docs_review': 'review final legal text before public launch.',
+    'stable_contract_major_320_policy': 'v3.2.0: main unfinished items closed — Standard admin actions, manual PRO, decision log, legal terms, Boostore orders after payment and expanded Mini App. Secrets remain only in .env.',
+    'version_text': '<b>{version}</b>\nCompletion pack: Standard 0/10 admin actions, manual PRO, decision log, legal terms, Boostore orders after payment, Mini App cabinet and old data preserved without breaking migration.',
+})
+for _lang, _mapping in TEXTS.items():
+    if _lang not in {'ru', 'en'}:
+        for _key in ['legal_docs_required_notice','legal_docs_accept_button','legal_docs_accepted_notice','standard_admin_extended','standard_admin_forgiven','standard_admin_warning_sent','standard_admin_manual_pro_granted','boostore_order_link_prompt','boostore_order_quantity_prompt','boostore_order_placed','stable_gate_standard_admin_actions','stable_gate_boostore_auto_orders','stable_gate_legal_docs','stable_contract_major_320_policy']:
+            _mapping.setdefault(_key, TEXTS['en'].get(_key, _key))
+
+# Boostora v3.2.2 — final completion audit.
+TEXTS['ru'].update({
+    'release_state_all_requested_done': 'всё из предложенного закрыто',
+    'release_state_guarded_ready': 'готово, но нужны живые проверки',
+    'stable_gate_final_completion_audit': 'Финальный аудит всех предложенных функций',
+    'stable_action_final_completion_audit_ready': 'все предложенные блоки найдены в коде: старое ядро, меню, Mini App, Standard/PRO, 0/10, админ-долги, правила, условия, Boostore и runtime-защита.',
+    'stable_action_final_completion_audit_review': 'проверь строки финального аудита: есть блоки, которые требуют внимания.',
+    'stable_contract_major_321_policy': 'v3.2.1: добавлен финальный аудит и Mini App с визуальными SVG-картинками; дальнейшие изменения — только после живого запуска и найденных ошибок.',
+    'final_audit_old_core_preserved': 'Старое ядро сохранено',
+    'final_audit_smart_menu_hub': 'Умное меню и 🚀 Центр',
+    'final_audit_mini_app_cabinet': 'Mini App / кабинет',
+    'final_audit_engagement_landing_presets': 'Продвижение и быстрые пресеты',
+    'final_audit_standard_pro_modes': 'Режимы Standard/PRO',
+    'final_audit_obligations_dashboard_soft_enforcement': 'Кабинет 0/10 и мягкие ограничения',
+    'final_audit_standard_admin_tools': 'Админ-действия по долгам Standard',
+    'final_audit_rules_and_legal_docs': 'Правила сообщества и юридические условия',
+    'final_audit_boostore_provider_auto_orders': 'Boostore Provider и авто-заказы после оплаты',
+    'final_audit_runtime_network_update_guard': 'Защита сети, polling и битых update',
+    'final_audit_secret_hygiene': 'Безопасность API-ключей',
+    'final_audit_action_old_core_ok': 'старые задания, кошельки, proof/hold и антифрод не удалены.',
+    'final_audit_action_old_core_fix': 'проверь таблицы campaigns, task_submissions и wallets.',
+    'final_audit_action_smart_menu_ok': 'Smart Hub и режимы нижнего меню доступны.',
+    'final_audit_action_smart_menu_fix': 'проверь smart_hub/router/menu.',
+    'final_audit_action_mini_app_ok': 'Mini App содержит витрину, Standard/PRO, 0/10 и Boostore-блоки.',
+    'final_audit_action_mini_app_fix': 'проверь miniapp_example/index.html.',
+    'final_audit_action_engagement_presets_ok': 'реакции, лайки и комментарии имеют быстрые пакеты.',
+    'final_audit_action_engagement_presets_fix': 'проверь engagement_growth presets.',
+    'final_audit_action_standard_pro_ok': 'Standard создаёт обязательства, PRO освобождает от них.',
+    'final_audit_action_standard_pro_fix': 'проверь engagement_memberships и engagement_modes.',
+    'final_audit_action_obligations_ok': 'кабинет 0/10, сроки, напоминания и ограничения доступны.',
+    'final_audit_action_obligations_fix': 'проверь engagement_obligations и soft enforcement.',
+    'final_audit_action_standard_admin_ok': 'админ может продлить, простить, предупредить и выдать PRO вручную.',
+    'final_audit_action_standard_admin_fix': 'проверь StandardAdminService и engagement_admin_decisions.',
+    'final_audit_action_rules_legal_ok': 'принятие правил и условий фиксируется по версиям.',
+    'final_audit_action_rules_legal_fix': 'проверь community_rule_acceptances и legal_doc_acceptances.',
+    'final_audit_action_boostore_ok': 'есть whitelist-услуги, диагностика, подготовка и отправка заказа после оплаты.',
+    'final_audit_action_boostore_fix': 'проверь provider_services/provider_orders и BoostoreProviderService.',
+    'final_audit_action_runtime_ok': 'polling защищён от сетевых сбоев и битых update.',
+    'final_audit_action_runtime_fix': 'проверь app/bot.py update guard.',
+    'final_audit_action_secret_ok': 'API-ключи не должны попадать в код и архивы.',
+    'final_audit_action_secret_fix': 'срочно убрать ключи из файлов и пересоздать ключ.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.2.4</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы. Для полной уверенности нужен живой запуск на Bothost.',
+    'version_text': '<b>{version}</b>\nФинальный аудит: проверены предложенные функции Boostora — старое ядро, продвижение, Standard/PRO, 0/10, админ-долги, правила, юридические условия, Boostore Provider, Mini App и runtime-защита.',
+})
+TEXTS['en'].update({
+    'release_state_all_requested_done': 'all requested items are implemented',
+    'release_state_guarded_ready': 'ready, live checks still required',
+    'stable_gate_final_completion_audit': 'Final audit of requested features',
+    'stable_action_final_completion_audit_ready': 'all requested blocks are present: old core, smart menu, Mini App, Standard/PRO, 0/10, admin debt tools, rules, legal docs, Boostore and runtime guards.',
+    'stable_action_final_completion_audit_review': 'review the final audit rows: some blocks need attention.',
+    'stable_contract_major_321_policy': 'v3.2.1: final requested-feature audit and Mini App visual SVG assets added; further changes should follow live launch findings only.',
+    'final_audit_old_core_preserved': 'Old core preserved',
+    'final_audit_smart_menu_hub': 'Smart menu and hub',
+    'final_audit_mini_app_cabinet': 'Mini App / cabinet',
+    'final_audit_engagement_landing_presets': 'Engagement landing and presets',
+    'final_audit_standard_pro_modes': 'Standard/PRO modes',
+    'final_audit_obligations_dashboard_soft_enforcement': '0/10 dashboard and soft enforcement',
+    'final_audit_standard_admin_tools': 'Admin Standard-debt actions',
+    'final_audit_rules_and_legal_docs': 'Community rules and legal docs',
+    'final_audit_boostore_provider_auto_orders': 'Boostore provider and paid auto-orders',
+    'final_audit_runtime_network_update_guard': 'Network, polling and update guards',
+    'final_audit_secret_hygiene': 'API-key hygiene',
+    'final_audit_action_old_core_ok': 'old tasks, wallets, proof/hold and antifraud are preserved.',
+    'final_audit_action_old_core_fix': 'check campaigns, task_submissions and wallets tables.',
+    'final_audit_action_smart_menu_ok': 'Smart Hub and bottom-menu modes are available.',
+    'final_audit_action_smart_menu_fix': 'check smart_hub/router/menu.',
+    'final_audit_action_mini_app_ok': 'Mini App includes marketplace, Standard/PRO, 0/10 and Boostore blocks.',
+    'final_audit_action_mini_app_fix': 'check miniapp_example/index.html.',
+    'final_audit_action_engagement_presets_ok': 'reactions, likes and comments have fast packages.',
+    'final_audit_action_engagement_presets_fix': 'check engagement_growth presets.',
+    'final_audit_action_standard_pro_ok': 'Standard creates obligations, PRO waives them.',
+    'final_audit_action_standard_pro_fix': 'check engagement_memberships and engagement_modes.',
+    'final_audit_action_obligations_ok': '0/10 dashboard, deadlines, reminders and restrictions are available.',
+    'final_audit_action_obligations_fix': 'check engagement_obligations and soft enforcement.',
+    'final_audit_action_standard_admin_ok': 'admin can extend, forgive, warn and grant manual PRO.',
+    'final_audit_action_standard_admin_fix': 'check StandardAdminService and engagement_admin_decisions.',
+    'final_audit_action_rules_legal_ok': 'rules and legal acceptance are versioned.',
+    'final_audit_action_rules_legal_fix': 'check community_rule_acceptances and legal_doc_acceptances.',
+    'final_audit_action_boostore_ok': 'whitelist services, diagnostics, prepare and place-after-payment flow are present.',
+    'final_audit_action_boostore_fix': 'check provider_services/provider_orders and BoostoreProviderService.',
+    'final_audit_action_runtime_ok': 'polling is guarded from network failures and bad updates.',
+    'final_audit_action_runtime_fix': 'check app/bot.py update guard.',
+    'final_audit_action_secret_ok': 'API keys must not be committed into code or archives.',
+    'final_audit_action_secret_fix': 'remove keys from files and rotate the key.',
+    'owner_release_screen': '<b>Boostora v3.2.4 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.4</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release rules</b>\n{stable_contract}\n\nThis screen does not mutate data: it only reads the database, .env and accumulated signals. A live Bothost launch is still required for full confidence.',
+    'version_text': '<b>{version}</b>\nFinal audit: requested Boostora features were checked — old core, engagement, Standard/PRO, 0/10, admin debt tools, rules, legal docs, Boostore Provider, Mini App and runtime guards.',
+})
+
+
+# Boostora v3.2.2 — Mini App visual assets.
+TEXTS['ru'].update({
+    'stable_contract_major_322_policy': 'v3.2.2: Mini App превращён из текстового шаблона в визуальный кабинет с отдельными SVG-картинками, карточками и мобильным UI.',
+    'final_audit_mini_app_visual_assets': 'Mini App с картинками',
+    'final_audit_action_mini_app_visual_ok': 'Mini App содержит отдельные SVG-иллюстрации, hero-графику и карточки услуг.',
+    'final_audit_action_mini_app_visual_fix': 'проверь папку miniapp_example/assets и изображения в index.html.',
+})
+TEXTS['en'].update({
+    'stable_contract_major_322_policy': 'v3.2.2: Mini App changed from a text template to a visual cabinet with SVG illustrations, service cards and mobile UI.',
+    'final_audit_mini_app_visual_assets': 'Mini App with images',
+    'final_audit_action_mini_app_visual_ok': 'Mini App contains separate SVG illustrations, hero artwork and service cards.',
+    'final_audit_action_mini_app_visual_fix': 'check miniapp_example/assets and image usage in index.html.',
+})
+
+
+TEXTS['ru'].update({
+    'stable_gate_miniapp_visual_assets': 'Mini App с визуальными картинками',
+    'stable_action_miniapp_visual_assets_ready': 'Mini App содержит SVG-картинки и использует их в карточках/hero.',
+    'stable_action_miniapp_visual_assets_review': 'проверь miniapp_example/assets и ссылки на картинки в index.html.',
+})
+TEXTS['en'].update({
+    'stable_gate_miniapp_visual_assets': 'Mini App visual images',
+    'stable_action_miniapp_visual_assets_ready': 'Mini App contains SVG images and uses them in cards/hero.',
+    'stable_action_miniapp_visual_assets_review': 'check miniapp_example/assets and image links in index.html.',
+})
+
+
+# Boostora v3.2.3 — release-quality hardening.
+TEXTS['ru'].update({
+    'stable_contract_patch_323_policy': 'v3.2.3: перезапуск по умолчанию сохраняет ожидающие Telegram-обновления, lock-файл освобождается в finally, Mini App подключён к Telegram WebApp SDK и учитывает safe-area/доступность.',
+    'stable_action_miniapp_visual_assets_ready': 'Mini App содержит SVG-картинки, Telegram WebApp SDK, safe-area и доступную мобильную навигацию.',
+    'stable_action_miniapp_visual_assets_review': 'проверь assets, Telegram WebApp SDK, safe-area и доступность в index.html.',
+    'final_audit_action_runtime_ok': 'polling защищён от сетевых ошибок и битых updates; перезапуск сохраняет очередь по умолчанию и корректно освобождает lock.',
+    'version_text': '<b>{version}</b>\nУсилены безопасный перезапуск, сохранение ожидающих updates, завершение процесса, Mini App и релизные проверки.',
+})
+TEXTS['en'].update({
+    'stable_contract_patch_323_policy': 'v3.2.3: restarts preserve queued Telegram updates by default, the lock file is released in finally, and Mini App uses Telegram WebApp SDK with safe-area/accessibility support.',
+    'stable_action_miniapp_visual_assets_ready': 'Mini App contains SVG artwork, Telegram WebApp SDK, safe-area support and accessible mobile navigation.',
+    'stable_action_miniapp_visual_assets_review': 'check assets, Telegram WebApp SDK, safe-area and accessibility in index.html.',
+    'final_audit_action_runtime_ok': 'polling is guarded from network failures and bad updates; restart preserves the queue by default and releases the lock cleanly.',
+    'version_text': '<b>{version}</b>\nSafe restart, queued-update preservation, clean shutdown, Mini App and release checks were hardened.',
+})
+
+# Boostora v3.2.4 — graceful shutdown and WAL-safe persistence.
+TEXTS['ru'].update({
+    'stable_contract_patch_324_policy': 'v3.2.4: SIGTERM/SIGINT завершают polling и фоновые задачи без долгих backoff-пауз; резервные копии SQLite создаются через backup API, проверяются и заменяются атомарно; legacy-зеркало отключено по умолчанию и ограничено интервалом.',
+    'stable_gate_database_snapshot_safety': 'Безопасные снимки SQLite',
+    'stable_action_database_snapshot_safety_ok': 'backup API, integrity_check и атомарная замена защищают копии базы; legacy-зеркало не создаёт копию после каждой записи.',
+    'stable_action_database_snapshot_safety_review': 'проверь app/db.py: backup API, integrity_check, os.replace и настройки legacy mirror.',
+    'final_audit_database_snapshot_safety': 'Резервные копии и legacy-зеркало SQLite',
+    'final_audit_action_database_snapshot_ok': 'копии базы создаются согласованно с WAL, проходят integrity_check и публикуются атомарно.',
+    'final_audit_action_database_snapshot_fix': 'проверь _copy_sqlite_snapshot и настройки LEGACY_DB_*.',
+    'final_audit_action_runtime_ok': 'polling защищён от сетевых ошибок и битых updates; SIGTERM/SIGINT останавливают backoff и фоновый worker, после чего lock освобождается.',
+    'version_text': '<b>{version}</b>\nУсилены безопасные SQLite-снимки, защита от лишних копирований базы и корректное завершение по SIGTERM/SIGINT.',
+})
+TEXTS['en'].update({
+    'stable_contract_patch_324_policy': 'v3.2.4: SIGTERM/SIGINT stop polling and background work without waiting through long backoff periods; SQLite snapshots use the backup API, integrity checks and atomic replacement; legacy mirroring is opt-in and throttled.',
+    'stable_gate_database_snapshot_safety': 'Safe SQLite snapshots',
+    'stable_action_database_snapshot_safety_ok': 'the backup API, integrity_check and atomic replacement protect database copies; legacy mirroring no longer copies the database after every write.',
+    'stable_action_database_snapshot_safety_review': 'check app/db.py for backup API, integrity_check, os.replace and legacy mirror settings.',
+    'final_audit_database_snapshot_safety': 'SQLite backups and legacy mirroring',
+    'final_audit_action_database_snapshot_ok': 'database copies are WAL-consistent, integrity-checked and published atomically.',
+    'final_audit_action_database_snapshot_fix': 'check _copy_sqlite_snapshot and LEGACY_DB_* settings.',
+    'final_audit_action_runtime_ok': 'polling is guarded from network failures and bad updates; SIGTERM/SIGINT interrupt backoff and stop the background worker before releasing the lock.',
+    'version_text': '<b>{version}</b>\nWAL-safe SQLite snapshots, reduced database copy amplification and graceful SIGTERM/SIGINT shutdown were added.',
+})
+
+
+# Boostora v3.2.5 — fault isolation and periodic WAL-safe backups.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.2.5</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.5</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы. Для полной уверенности нужен живой запуск на Bothost.',
+    'stable_contract_patch_325_policy': 'v3.2.5: каждый Telegram-update обрабатывается отдельно, сбой одной фоновой задачи не останавливает остальные, а WAL-безопасные копии базы создаются регулярно с ограничением количества файлов.',
+    'stable_action_database_snapshot_safety_ok': 'backup API, integrity_check, атомарная замена, периодический интервал и ротация защищают копии базы без лишней нагрузки.',
+    'stable_action_database_snapshot_safety_review': 'проверь create_periodic_backup, DB_BACKUP_INTERVAL_HOURS, DB_BACKUP_MAX_FILES и SQLite backup API.',
+    'stable_action_network_resilience_ok': 'polling, сигналы и фоновые задачи изолированы: сбой одного задания worker не блокирует остальные.',
+    'stable_action_update_handler_safety_ok': 'каждый update обрабатывается отдельно; ошибка одного обработчика не теряет соседние updates из того же пакета.',
+    'stable_action_update_handler_safety_review': 'проверь поштучную обработку updates и лог Only this update is skipped в app/bot.py.',
+    'final_audit_action_runtime_ok': 'polling защищён от сети и битых updates; пакет обрабатывается поштучно, фоновые задачи изолированы, SIGTERM/SIGINT завершают процесс корректно.',
+    'final_audit_action_database_snapshot_ok': 'копии базы согласованы с WAL, создаются регулярно, проходят integrity_check, публикуются атомарно и ротируются.',
+    'version_text': '<b>{version}</b>\nДобавлены поштучная изоляция Telegram-updates, независимый запуск фоновых задач и регулярные WAL-безопасные резервные копии SQLite.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.2.5 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.5</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release contract</b>\n{stable_contract}\n\nThis screen is read-only and requires a live Bothost check for full confidence.',
+    'stable_contract_patch_325_policy': 'v3.2.5: Telegram updates are processed individually, one background job failure cannot block the others, and WAL-safe database backups run periodically with retention limits.',
+    'stable_action_database_snapshot_safety_ok': 'the backup API, integrity checks, atomic replacement, periodic scheduling and retention protect database copies without unnecessary load.',
+    'stable_action_database_snapshot_safety_review': 'check create_periodic_backup, DB_BACKUP_INTERVAL_HOURS, DB_BACKUP_MAX_FILES and the SQLite backup API.',
+    'stable_action_network_resilience_ok': 'polling, shutdown signals and background jobs are isolated so one worker task failure cannot block the rest.',
+    'stable_action_update_handler_safety_ok': 'each update is processed separately; one broken handler does not discard neighboring updates from the same batch.',
+    'stable_action_update_handler_safety_review': 'check per-update processing and the Only this update is skipped log in app/bot.py.',
+    'final_audit_action_runtime_ok': 'polling is guarded from network failures and bad updates; batches are isolated per update, background jobs continue independently, and SIGTERM/SIGINT stop cleanly.',
+    'final_audit_action_database_snapshot_ok': 'database copies are WAL-consistent, periodic, integrity-checked, atomically published and retained safely.',
+    'version_text': '<b>{version}</b>\nPer-update Telegram fault isolation, independent background jobs and periodic WAL-safe SQLite backups were added.',
+})
+
+# Boostora v3.2.6 — embedded Bothost Mini App runtime.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.2.6</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.6</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Правила стабильного релиза</b>\n{stable_contract}\n\nДанные не меняются: экран только читает базу, .env и накопленные сигналы. После деплоя проверь домен, /health и кнопку Mini App в Telegram.',
+    'stable_gate_embedded_miniapp_runtime': 'Встроенный Mini App и HTTP-сервер Bothost',
+    'stable_action_embedded_miniapp_runtime_ready': 'Mini App раздаётся основным процессом, имеет /health, безопасную Telegram-сессию, кнопку меню и корректную остановку.',
+    'stable_action_embedded_miniapp_runtime_review': 'проверь WEBAPP_URL, PORT, app/webapp.py, кнопку меню Telegram и маршруты /health, /api/config, /api/telegram/session.',
+    'final_audit_embedded_mini_app_runtime': 'Рабочий Mini App в основном проекте Bothost',
+    'final_audit_action_embedded_mini_app_ok': 'веб-сервер, healthcheck, Telegram initData, кнопка меню и интерфейс Mini App соединены в одном runtime.',
+    'final_audit_action_embedded_mini_app_fix': 'проверь WEBAPP_URL/MINI_APP_URL, PORT, app/webapp.py и запуск сервера из app/bot.py.',
+    'stable_contract_patch_326_policy': 'v3.2.6: Mini App встроен в основной процесс Bothost, поддерживает WEBAPP_URL и MINI_APP_URL, публикует /health, проверяет Telegram initData и настраивает глобальную кнопку меню.',
+    'version_text': '<b>{version}</b>\nMini App теперь запускается вместе с ботом на одном домене Bothost: встроенный HTTP-сервер, /health, Telegram initData и кнопка меню.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.2.6 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate v3.2.6</b>\n{stable_gate}\n\n<b>Launch guardrails</b>\n{guardrails}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Regression pack</b>\n{regression}\n\n<b>Stable release contract</b>\n{stable_contract}\n\nThis screen is read-only. After deployment verify the domain, /health and the Telegram Mini App button.',
+    'stable_gate_embedded_miniapp_runtime': 'Embedded Bothost Mini App and HTTP server',
+    'stable_action_embedded_miniapp_runtime_ready': 'the main runtime serves Mini App, exposes /health, validates Telegram sessions, configures the menu button and stops cleanly.',
+    'stable_action_embedded_miniapp_runtime_review': 'check WEBAPP_URL, PORT, app/webapp.py, Telegram menu button and /health, /api/config, /api/telegram/session.',
+    'final_audit_embedded_mini_app_runtime': 'Working Mini App inside the Bothost project',
+    'final_audit_action_embedded_mini_app_ok': 'web server, healthcheck, Telegram initData, menu button and Mini App UI are connected in one runtime.',
+    'final_audit_action_embedded_mini_app_fix': 'check WEBAPP_URL/MINI_APP_URL, PORT, app/webapp.py and server startup from app/bot.py.',
+    'stable_contract_patch_326_policy': 'v3.2.6: Mini App is embedded into the main Bothost process, supports WEBAPP_URL and MINI_APP_URL, exposes /health, validates Telegram initData and configures the global menu button.',
+    'version_text': '<b>{version}</b>\nMini App now starts with the bot on the same Bothost domain using an embedded HTTP server, /health, Telegram initData validation and a menu button.',
+})
+
+TEXTS['ru'].update({'stable_action_embedded_miniapp_runtime_ready': 'Mini App раздаётся основным процессом, имеет /health, безопасную Telegram-сессию, серверное подтверждение открытия, кнопку меню и корректную остановку.', 'final_audit_action_embedded_mini_app_ok': 'веб-сервер, healthcheck, Telegram initData, серверное событие открытия, кнопка меню и интерфейс Mini App соединены в одном runtime.'})
+TEXTS['en'].update({'stable_action_embedded_miniapp_runtime_ready': 'the main runtime serves Mini App, exposes /health, validates Telegram sessions, records signed open events, configures the menu button and stops cleanly.', 'final_audit_action_embedded_mini_app_ok': 'web server, healthcheck, Telegram initData, signed open events, menu button and Mini App UI are connected in one runtime.'})

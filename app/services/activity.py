@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from typing import Any
@@ -206,6 +205,34 @@ class ActivityService:
             activity_type='bot_start',
             target_value=(start_arg or '').strip(),
             payload={'bot_username': (bot_username or '').lower()},
+        )
+
+    @staticmethod
+    def record_mini_app_open(
+        user_id: int,
+        *,
+        hint: str = '',
+        source: str = 'embedded_webapp',
+        payload: dict[str, Any] | None = None,
+    ) -> None:
+        """Record a server-validated Mini App open event.
+
+        Menu-button and inline-button Mini Apps cannot rely on WebApp.sendData;
+        their signed initData is validated by app.webapp before this method is
+        called. The event remains compatible with the existing auto-verifier.
+        """
+        clean_hint = (hint or '').strip()[:255]
+        event_payload = dict(payload or {})
+        event_payload.update({
+            'source': (source or 'embedded_webapp').strip()[:64],
+            'hint': clean_hint,
+            'validated_init_data': True,
+        })
+        ActivityService._insert_event(
+            user_id=int(user_id),
+            activity_type='mini_app_open',
+            target_value=clean_hint,
+            payload=event_payload,
         )
 
     @staticmethod

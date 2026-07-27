@@ -6,6 +6,14 @@ from typing import Any
 
 from app import db
 from app.config import CONFIG_WARNINGS, settings
+from app.services.boostore_provider import BoostoreProviderService
+from app.services.engagement_growth import EngagementGrowthService
+from app.services.engagement_modes import EngagementModeService
+from app.services.community_rules import CommunityRulesService
+from app.services.legal_docs import LegalDocsService
+from app.services.standard_admin import StandardAdminService
+from app.services.proof_guides import ProofGuideService
+from app.services.final_audit import FinalAuditService
 
 
 @dataclass(frozen=True)
@@ -612,6 +620,39 @@ class ReleaseReadinessService:
 
 
     @staticmethod
+    def database_snapshot_safety_summary() -> dict[str, Any]:
+        """Verify WAL-safe backups and throttled optional legacy mirroring."""
+        db_source_path = Path(__file__).resolve().parents[1] / 'db.py'
+        try:
+            source = db_source_path.read_text(encoding='utf-8')
+        except Exception:
+            source = ''
+        checks = {
+            'sqlite_backup_api': 'source_connection.backup(target_connection)' in source,
+            'snapshot_integrity': "PRAGMA integrity_check" in source,
+            'atomic_replace': 'os.replace(temporary, target)' in source,
+            'mirror_opt_in': 'settings.legacy_db_mirror_enabled' in source,
+            'mirror_throttle': 'settings.legacy_mirror_interval_seconds' in source and '_LAST_LEGACY_MIRROR_MONOTONIC' in source,
+            'periodic_backups': 'create_periodic_backup' in source and 'settings.db_backup_interval_hours' in source,
+            'backup_retention': 'settings.db_backup_max_files' in source and '_database_backup_files' in source,
+            'backup_race_guard': '_recent_backup_exists()' in source and 'with _SNAPSHOT_LOCK:' in source,
+        }
+        failed = [name for name, ok in checks.items() if not ok]
+        status = 'ready' if not failed else ('warning' if len(failed) <= 2 else 'blocker')
+        return {
+            'status': status,
+            'score': max(40, 100 - len(failed) * 15),
+            'warnings': len(failed),
+            'failed': ','.join(failed),
+            'mirror_enabled': int(settings.legacy_db_mirror_enabled),
+            'mirror_interval_seconds': int(settings.legacy_mirror_interval_seconds),
+            'backup_interval_hours': int(settings.db_backup_interval_hours),
+            'backup_max_files': int(settings.db_backup_max_files),
+            **{name: int(ok) for name, ok in checks.items()},
+        }
+
+
+    @staticmethod
     def runtime_safety_summary() -> dict[str, Any]:
         """Read-only runtime guard for DB locks, stale sessions and due queues.
 
@@ -714,6 +755,342 @@ class ReleaseReadinessService:
         }
 
     @staticmethod
+    def network_resilience_summary() -> dict[str, Any]:
+        """Read-only check for Telegram polling/network resilience.
+
+        This guard verifies that the production bot uses Boostora's controlled
+        polling loop instead of pyTelegramBotAPI's noisy built-in polling. It
+        is aimed at real-world Telegram 502/timeout outages: the bot should
+        keep retrying with backoff and write compact warnings, not die with
+        repeated TeleBot tracebacks.
+        """
+        bot_path = Path(__file__).resolve().parents[1] / 'bot.py'
+        try:
+            source = bot_path.read_text(encoding='utf-8')
+        except Exception:
+            source = ''
+
+        checks = {
+            'custom_poll_loop': '_poll_forever' in source and 'bot.get_updates' in source,
+            'transient_codes': 'TRANSIENT_TELEGRAM_ERROR_CODES' in source and '502' in source and '504' in source,
+            'webhook_retries': 'REMOVE_WEBHOOK_ATTEMPTS' in source and '_prepare_bot' in source,
+            'backoff': 'POLLING_BACKOFF_MAX_SECONDS' in source and '_next_backoff' in source,
+            'telebot_noise_guard': "logging.getLogger('TeleBot').setLevel(logging.CRITICAL)" in source,
+            'no_builtin_infinity_polling': '.infinity_polling(' not in source and '.polling(' not in source,
+            'preserve_updates_default': '_initial_poll_offset' in source and 'settings.drop_pending_updates' in source,
+            'clean_shutdown': '_release_single_instance_lock(lock_fd)' in source and 'finally:' in source,
+            'signal_shutdown': '_install_shutdown_handlers' in source and 'SIGTERM' in source and 'SIGINT' in source,
+            'interruptible_backoff': '_wait_for_shutdown' in source and 'effective_stop' in source,
+            'worker_join': 'promo_thread.join(timeout=5)' in source,
+            'background_job_isolation': '_run_background_job' in source and 'remaining jobs will continue' in source,
+            'worker_interval_config': 'settings.background_worker_interval_seconds' in source,
+        }
+        failed = [name for name, ok in checks.items() if not ok]
+        status = 'ready' if not failed else ('warning' if len(failed) <= 2 else 'blocker')
+        score = max(40, 100 - len(failed) * 12)
+        return {
+            'status': status,
+            'score': score,
+            'warnings': len(failed),
+            'failed': ','.join(failed),
+            **{name: int(ok) for name, ok in checks.items()},
+        }
+
+    @staticmethod
+    def update_handler_safety_summary() -> dict[str, Any]:
+        """Read-only check for poisoned update protection.
+
+        A single broken callback/message handler must not trap long polling on
+        the same update forever. Boostora v3.0.5 advances the offset for a
+        failed batch and writes a compact exception log, so the bot keeps
+        serving other users while the owner fixes the root cause.
+        """
+        bot_path = Path(__file__).resolve().parents[1] / 'bot.py'
+        try:
+            source = bot_path.read_text(encoding='utf-8')
+        except Exception:
+            source = ''
+
+        checks = {
+            'next_offset_helper': '_next_offset_from_updates' in source,
+            'per_update_processing': 'bot.process_new_updates([update])' in source,
+            'per_update_guard': 'for update in updates:' in source and 'except Exception:' in source,
+            'poisoned_update_log': 'Only this update is skipped' in source,
+            'offset_return_on_failure': 'return next_offset' in source,
+            'batch_peers_continue': 'the rest of the batch continues' in source,
+        }
+        failed = [name for name, ok in checks.items() if not ok]
+        status = 'ready' if not failed else ('warning' if len(failed) <= 2 else 'blocker')
+        score = max(45, 100 - len(failed) * 14)
+        return {
+            'status': status,
+            'score': score,
+            'warnings': len(failed),
+            'failed': ','.join(failed),
+            **{name: int(ok) for name, ok in checks.items()},
+        }
+
+    @staticmethod
+    def provider_modernization_summary() -> dict[str, Any]:
+        provider = BoostoreProviderService.readiness_summary()
+        warning = provider['state'] in {'needs_key', 'needs_sync', 'needs_whitelist'}
+        return {
+            'code': 'boostore_provider',
+            'title_key': 'stable_gate_boostore_provider',
+            'status': _status(int(provider['score']), warning=warning),
+            'score': int(provider['score']),
+            'value': int(provider['enabled_services']),
+            'action_key': 'stable_action_boostore_provider_ready' if provider['state'] == 'ready' else f"stable_action_boostore_provider_{provider['state']}",
+        }
+
+
+
+
+    @staticmethod
+    def boostore_api_diagnostics_summary() -> dict[str, Any]:
+        summary = BoostoreProviderService.diagnostics_summary()
+        status = str(summary.get('status') or 'warning')
+        return {
+            'code': 'boostore_api_diagnostics',
+            'title_key': 'stable_gate_boostore_api_diagnostics',
+            'status': status,
+            'score': int(summary.get('score') or 0),
+            'value': int(summary.get('warnings') or 0),
+            'action_key': 'stable_action_boostore_api_diagnostics_ready' if status == 'ready' else 'stable_action_boostore_api_diagnostics_review',
+        }
+
+    @staticmethod
+    def engagement_presets_summary() -> dict[str, Any]:
+        summary = EngagementGrowthService.summary()
+        presets = int(summary.get('preset_count') or 0)
+        products = int(summary.get('product_count') or 0)
+        ready = presets >= 9 and products >= 3
+        return {
+            'code': 'engagement_presets',
+            'title_key': 'stable_gate_engagement_presets',
+            'status': 'ready' if ready else 'warning',
+            'score': 100 if ready else 70,
+            'value': presets,
+            'action_key': 'stable_action_engagement_presets_ready' if ready else 'stable_action_engagement_presets_review',
+        }
+
+    @staticmethod
+    def community_rules_summary() -> dict[str, Any]:
+        summary = CommunityRulesService.summary()
+        ready = bool(summary.get('table_ready')) and int(summary.get('sections') or 0) >= 8
+        return {
+            'code': 'community_rules',
+            'title_key': 'stable_gate_community_rules',
+            'status': 'ready' if ready else 'warning',
+            'score': 100 if ready else 72,
+            'value': int(summary.get('accepted_users') or 0),
+            'action_key': 'stable_action_community_rules_ready' if ready else 'stable_action_community_rules_review',
+        }
+
+
+    @staticmethod
+    def engagement_modes_summary() -> dict[str, Any]:
+        summary = EngagementModeService.summary()
+        ready = bool(summary.get('table_ready')) and int(summary.get('required_actions') or 0) > 0 and int(summary.get('pro_price_stars') or 0) > 0
+        return {
+            'code': 'engagement_modes',
+            'title_key': 'stable_gate_engagement_modes',
+            'status': 'ready' if ready else 'warning',
+            'score': 100 if ready else 70,
+            'value': int(summary.get('members') or 0),
+            'action_key': 'stable_action_engagement_modes_ready' if ready else 'stable_action_engagement_modes_review',
+        }
+
+
+    @staticmethod
+    def engagement_obligations_summary() -> dict[str, Any]:
+        overview = EngagementModeService.admin_obligation_overview(limit=10)
+        ready = bool(overview.get('table_ready'))
+        overdue = int(overview.get('overdue_total') or 0)
+        open_total = int(overview.get('open_total') or 0)
+        status = 'ready' if ready and overdue == 0 else ('warning' if ready else 'blocker')
+        score = 100 if status == 'ready' else (78 if status == 'warning' else 45)
+        return {
+            'code': 'engagement_obligations',
+            'title_key': 'stable_gate_engagement_obligations',
+            'status': status,
+            'score': score,
+            'value': open_total,
+            'action_key': 'stable_action_engagement_obligations_ready' if status == 'ready' else 'stable_action_engagement_obligations_review',
+        }
+
+
+    @staticmethod
+    def engagement_soft_enforcement_summary() -> dict[str, Any]:
+        summary = EngagementModeService.soft_enforcement_summary()
+        ready = bool(summary.get('table_ready')) and bool(summary.get('block_enabled')) and bool(summary.get('reminders_enabled'))
+        overdue = int(summary.get('overdue') or 0)
+        status = 'ready' if ready and overdue == 0 else ('warning' if ready else 'blocker')
+        score = 100 if status == 'ready' else (78 if status == 'warning' else 48)
+        return {
+            'code': 'engagement_soft_enforcement',
+            'title_key': 'stable_gate_engagement_soft_enforcement',
+            'status': status,
+            'score': score,
+            'value': int(summary.get('blocked_users') or 0),
+            'action_key': 'stable_action_engagement_soft_enforcement_ready' if status == 'ready' else 'stable_action_engagement_soft_enforcement_review',
+        }
+
+    @staticmethod
+    def proof_guides_summary() -> dict[str, Any]:
+        summary = ProofGuideService.summary()
+        guide_count = int(summary.get('guide_count') or 0)
+        required_ready = int(summary.get('required_ready') or 0)
+        required_total = int(summary.get('required_total') or 3)
+        ready = guide_count >= 9 and required_ready >= required_total and bool(summary.get('has_default'))
+        return {
+            'code': 'proof_guides',
+            'title_key': 'stable_gate_proof_guides',
+            'status': 'ready' if ready else 'warning',
+            'score': 100 if ready else 74,
+            'value': guide_count,
+            'action_key': 'stable_action_proof_guides_ready' if ready else 'stable_action_proof_guides_review',
+        }
+
+
+    @staticmethod
+    def standard_admin_actions_summary() -> dict[str, Any]:
+        summary = StandardAdminService.summary()
+        status = str(summary.get('status') or 'warning')
+        return {
+            'code': 'standard_admin_actions',
+            'title_key': 'stable_gate_standard_admin_actions',
+            'status': status,
+            'score': 100 if status == 'ready' else 55,
+            'value': int(summary.get('decisions') or 0),
+            'action_key': 'stable_action_standard_admin_actions_ready' if status == 'ready' else 'stable_action_standard_admin_actions_review',
+        }
+
+    @staticmethod
+    def boostore_auto_orders_summary() -> dict[str, Any]:
+        summary = BoostoreProviderService.order_summary()
+        status = str(summary.get('status') or 'warning')
+        if status == 'ready' and not int(summary.get('auto_order_enabled') or 0):
+            status = 'warning'
+        return {
+            'code': 'boostore_auto_orders',
+            'title_key': 'stable_gate_boostore_auto_orders',
+            'status': status,
+            'score': 100 if status == 'ready' else 78,
+            'value': int(summary.get('total') or 0),
+            'action_key': 'stable_action_boostore_auto_orders_ready' if status == 'ready' else 'stable_action_boostore_auto_orders_review',
+        }
+
+    @staticmethod
+    def legal_docs_summary() -> dict[str, Any]:
+        summary = LegalDocsService.summary()
+        status = str(summary.get('status') or 'warning')
+        return {
+            'code': 'legal_docs',
+            'title_key': 'stable_gate_legal_docs',
+            'status': status,
+            'score': 100 if status == 'ready' else 55,
+            'value': int(summary.get('accepted') or 0),
+            'action_key': 'stable_action_legal_docs_ready' if status == 'ready' else 'stable_action_legal_docs_review',
+        }
+
+
+    @staticmethod
+    def miniapp_visual_assets_summary() -> dict[str, Any]:
+        project_root = Path(__file__).resolve().parents[2]
+        index = project_root / 'miniapp_example/index.html'
+        assets = project_root / 'miniapp_example/assets'
+        required = [
+            'hero-growth.svg', 'liker.svg', 'commenter.svg', 'standard.svg',
+            'pro.svg', 'obligations.svg', 'boostore.svg', 'rules.svg', 'wallet.svg',
+        ]
+        existing = sum(1 for name in required if (assets / name).is_file())
+        checks = {
+            'all_assets': existing == len(required),
+            'asset_links': False,
+            'telegram_sdk': False,
+            'telegram_ready': False,
+            'safe_area': False,
+            'accessibility': False,
+        }
+        try:
+            html = index.read_text(encoding='utf-8')
+            checks['asset_links'] = all(f'assets/{name}' in html for name in required)
+            checks['telegram_sdk'] = 'telegram-web-app.js' in html
+            checks['telegram_ready'] = 'tg.ready()' in html and 'tg.expand()' in html
+            checks['safe_area'] = 'safe-area-inset-bottom' in html and 'viewport-fit=cover' in html
+            checks['accessibility'] = 'aria-label=' in html and 'focus-visible' in html and 'prefers-reduced-motion' in html
+        except Exception:
+            pass
+        failed = [name for name, ok in checks.items() if not ok]
+        status = 'ready' if not failed else ('warning' if existing else 'blocker')
+        score = 100 if not failed else max(45, 100 - len(failed) * 11)
+        return {
+            'code': 'miniapp_visual_assets',
+            'title_key': 'stable_gate_miniapp_visual_assets',
+            'status': status,
+            'score': score,
+            'value': existing,
+            'warnings': len(failed),
+            'failed': ','.join(failed),
+            'action_key': 'stable_action_miniapp_visual_assets_ready' if status == 'ready' else 'stable_action_miniapp_visual_assets_review',
+        }
+
+
+    @staticmethod
+    def embedded_miniapp_runtime_summary() -> dict[str, Any]:
+        project_root = Path(__file__).resolve().parents[2]
+        webapp_path = project_root / 'app/webapp.py'
+        bot_path = project_root / 'app/bot.py'
+        index_path = project_root / 'miniapp_example/index.html'
+        try:
+            webapp_source = webapp_path.read_text(encoding='utf-8')
+            bot_source = bot_path.read_text(encoding='utf-8')
+            index_source = index_path.read_text(encoding='utf-8')
+        except Exception:
+            webapp_source = bot_source = index_source = ''
+        checks = {
+            'enabled': bool(settings.webapp_enabled),
+            'public_url': bool(settings.mini_app_url),
+            'http_server': 'ThreadingHTTPServer' in webapp_source and 'start_webapp_server' in webapp_source,
+            'health': "'/health'" in webapp_source and "'/healthz'" in webapp_source,
+            'telegram_auth': '_validate_telegram_init_data' in webapp_source and 'hmac.compare_digest' in webapp_source,
+            'config_api': "'/api/config'" in webapp_source,
+            'session_api': "'/api/telegram/session'" in webapp_source,
+            'menu_button': 'set_chat_menu_button' in bot_source and 'MenuButtonWebApp' in bot_source,
+            'graceful_stop': 'webapp_runtime.stop()' in bot_source,
+            'frontend_connected': "fetch('/api/config'" in index_source and "fetch('/api/telegram/session'" in index_source,
+            'open_event_api': "'/api/miniapp/open'" in webapp_source and "fetch('/api/miniapp/open'" in index_source and 'record_mini_app_open' in webapp_source,
+        }
+        failed = [name for name, ok in checks.items() if not ok]
+        status = 'ready' if not failed else ('warning' if len(failed) <= 2 else 'blocker')
+        score = max(40, 100 - len(failed) * 10)
+        return {
+            'code': 'embedded_miniapp_runtime',
+            'title_key': 'stable_gate_embedded_miniapp_runtime',
+            'status': status,
+            'score': score,
+            'value': sum(1 for ok in checks.values() if ok),
+            'warnings': len(failed),
+            'failed': ','.join(failed),
+            'action_key': 'stable_action_embedded_miniapp_runtime_ready' if status == 'ready' else 'stable_action_embedded_miniapp_runtime_review',
+        }
+
+    @staticmethod
+    def final_completion_audit_summary() -> dict[str, Any]:
+        summary = FinalAuditService.completion_summary()
+        status = 'ready' if int(summary['blockers']) == 0 else 'blocker'
+        if int(summary['warnings']) > 0 and status == 'ready':
+            status = 'warning'
+        return {
+            'status': status,
+            'score': int(summary['score']),
+            'title_key': 'stable_gate_final_completion_audit',
+            'value': int(summary['ready']),
+            'action_key': 'stable_action_final_completion_audit_ready' if status == 'ready' else 'stable_action_final_completion_audit_review',
+        }
+
+    @staticmethod
     def stable_release_summary() -> dict[str, Any]:
         """Read-only stable v3.0.0 release gate.
 
@@ -742,7 +1119,10 @@ class ReleaseReadinessService:
         data_integrity = ReleaseReadinessService.data_integrity_summary()
         config_warnings = ReleaseReadinessService.config_warning_summary()
         persistence = ReleaseReadinessService.persistence_summary()
+        snapshot_safety = ReleaseReadinessService.database_snapshot_safety_summary()
         runtime_safety = ReleaseReadinessService.runtime_safety_summary()
+        network_resilience = ReleaseReadinessService.network_resilience_summary()
+        update_handler_safety = ReleaseReadinessService.update_handler_safety_summary()
 
         rows: list[dict[str, Any]] = []
 
@@ -834,11 +1214,152 @@ class ReleaseReadinessService:
             'stable_action_persistence_safety_ok' if persistence['status'] == 'ready' else 'stable_action_persistence_safety_review',
         )
         add(
+            'database_snapshot_safety',
+            'stable_gate_database_snapshot_safety',
+            str(snapshot_safety['status']),
+            int(snapshot_safety['score']),
+            'stable_action_database_snapshot_safety_ok' if snapshot_safety['status'] == 'ready' else 'stable_action_database_snapshot_safety_review',
+        )
+        add(
             'runtime_safety',
             'stable_gate_runtime_safety',
             str(runtime_safety['status']),
             int(runtime_safety['score']),
             'stable_action_runtime_safety_ok' if runtime_safety['status'] == 'ready' else 'stable_action_runtime_safety_review',
+        )
+
+
+        add(
+            'network_resilience',
+            'stable_gate_network_resilience',
+            str(network_resilience['status']),
+            int(network_resilience['score']),
+            'stable_action_network_resilience_ok' if network_resilience['status'] == 'ready' else 'stable_action_network_resilience_review',
+        )
+        add(
+            'update_handler_safety',
+            'stable_gate_update_handler_safety',
+            str(update_handler_safety['status']),
+            int(update_handler_safety['score']),
+            'stable_action_update_handler_safety_ok' if update_handler_safety['status'] == 'ready' else 'stable_action_update_handler_safety_review',
+        )
+        boostore_api_diagnostics = ReleaseReadinessService.boostore_api_diagnostics_summary()
+        add(
+            'boostore_api_diagnostics',
+            str(boostore_api_diagnostics['title_key']),
+            str(boostore_api_diagnostics['status']),
+            int(boostore_api_diagnostics['value']),
+            str(boostore_api_diagnostics['action_key']),
+        )
+
+        engagement_presets = ReleaseReadinessService.engagement_presets_summary()
+        add(
+            'engagement_presets',
+            str(engagement_presets['title_key']),
+            str(engagement_presets['status']),
+            int(engagement_presets['value']),
+            str(engagement_presets['action_key']),
+        )
+
+        community_rules = ReleaseReadinessService.community_rules_summary()
+        add(
+            'community_rules',
+            str(community_rules['title_key']),
+            str(community_rules['status']),
+            int(community_rules['value']),
+            str(community_rules['action_key']),
+        )
+
+        engagement_modes = ReleaseReadinessService.engagement_modes_summary()
+        add(
+            'engagement_modes',
+            str(engagement_modes['title_key']),
+            str(engagement_modes['status']),
+            int(engagement_modes['value']),
+            str(engagement_modes['action_key']),
+        )
+
+
+        engagement_obligations = ReleaseReadinessService.engagement_obligations_summary()
+        add(
+            'engagement_obligations',
+            str(engagement_obligations['title_key']),
+            str(engagement_obligations['status']),
+            int(engagement_obligations['value']),
+            str(engagement_obligations['action_key']),
+        )
+
+        engagement_soft_enforcement = ReleaseReadinessService.engagement_soft_enforcement_summary()
+        add(
+            'engagement_soft_enforcement',
+            str(engagement_soft_enforcement['title_key']),
+            str(engagement_soft_enforcement['status']),
+            int(engagement_soft_enforcement['value']),
+            str(engagement_soft_enforcement['action_key']),
+        )
+
+        standard_admin_actions = ReleaseReadinessService.standard_admin_actions_summary()
+        add(
+            'standard_admin_actions',
+            str(standard_admin_actions['title_key']),
+            str(standard_admin_actions['status']),
+            int(standard_admin_actions['value']),
+            str(standard_admin_actions['action_key']),
+        )
+
+        boostore_auto_orders = ReleaseReadinessService.boostore_auto_orders_summary()
+        add(
+            'boostore_auto_orders',
+            str(boostore_auto_orders['title_key']),
+            str(boostore_auto_orders['status']),
+            int(boostore_auto_orders['value']),
+            str(boostore_auto_orders['action_key']),
+        )
+
+        legal_docs = ReleaseReadinessService.legal_docs_summary()
+        add(
+            'legal_docs',
+            str(legal_docs['title_key']),
+            str(legal_docs['status']),
+            int(legal_docs['value']),
+            str(legal_docs['action_key']),
+        )
+
+        proof_guides = ReleaseReadinessService.proof_guides_summary()
+        add(
+            'proof_guides',
+            str(proof_guides['title_key']),
+            str(proof_guides['status']),
+            int(proof_guides['value']),
+            str(proof_guides['action_key']),
+        )
+
+        miniapp_visual_assets = ReleaseReadinessService.miniapp_visual_assets_summary()
+        add(
+            'miniapp_visual_assets',
+            str(miniapp_visual_assets['title_key']),
+            str(miniapp_visual_assets['status']),
+            int(miniapp_visual_assets['value']),
+            str(miniapp_visual_assets['action_key']),
+        )
+
+
+        embedded_miniapp_runtime = ReleaseReadinessService.embedded_miniapp_runtime_summary()
+        add(
+            'embedded_miniapp_runtime',
+            str(embedded_miniapp_runtime['title_key']),
+            str(embedded_miniapp_runtime['status']),
+            int(embedded_miniapp_runtime['value']),
+            str(embedded_miniapp_runtime['action_key']),
+        )
+
+        final_completion_audit = ReleaseReadinessService.final_completion_audit_summary()
+        add(
+            'final_completion_audit',
+            str(final_completion_audit['title_key']),
+            str(final_completion_audit['status']),
+            int(final_completion_audit['value']),
+            str(final_completion_audit['action_key']),
         )
 
         row_blockers = sum(1 for row in rows if row['status'] == 'blocker')
@@ -877,5 +1398,21 @@ class ReleaseReadinessService:
             'stable_contract_patch_301_policy',
             'stable_contract_patch_302_policy',
             'stable_contract_patch_303_policy',
+            'stable_contract_patch_304_policy',
+            'stable_contract_patch_305_policy',
+            'stable_contract_major_312_policy',
+            'stable_contract_major_313_policy',
+            'stable_contract_major_314_policy',
+            'stable_contract_major_314_modes_policy',
+            'stable_contract_major_315_policy',
+            'stable_contract_major_316_policy',
+            'stable_contract_major_317_policy',
+            'stable_contract_major_320_policy',
+            'stable_contract_major_321_policy',
+            'stable_contract_major_322_policy',
+            'stable_contract_patch_323_policy',
+            'stable_contract_patch_324_policy',
+            'stable_contract_patch_325_policy',
+            'stable_contract_patch_326_policy',
         ]
 

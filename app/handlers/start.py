@@ -14,6 +14,7 @@ from app.router import (
     SCREEN_ADMIN_REQUIRED_CHAT_ADD,
     SCREEN_ADMIN_REQUIRED_CHATS,
     SCREEN_CAMPAIGN_PREVIEW,
+    SCREEN_COMMUNITY_RULES,
     SCREEN_TOPUP_CUSTOM,
     admin_balance_screen_key,
     admin_reject_screen_key,
@@ -28,6 +29,10 @@ from app.router import (
 from app.services.admin import AdminService
 from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.client_campaigns import ClientCampaignService, MODE_PRICE, MODE_QUANTITY, MODE_REWARD, MODE_TARGET
+from app.services.community_rules import CommunityRulesService
+from app.services.legal_docs import LegalDocsService
+from app.services.boostore_provider import BoostoreProviderService
+from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
 from app.services.payments import BASE_SPARKS_PER_STAR, SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, parse_payload
@@ -59,6 +64,8 @@ def _ensure_bottom_keyboard(bot: telebot.TeleBot, chat_id: int, user_id: int, *,
     if not force and now - last_sent < 600:
         return
     try:
+        if settings.smart_bottom_menu == 'hidden' and not force:
+            return
         bot.send_message(chat_id, UserService.t(user_id, 'bottom_nav_ready'), reply_markup=main_reply_keyboard(user_id))
         _BOTTOM_KEYBOARD_SENT_AT[user_id] = now
     except Exception:
@@ -280,6 +287,14 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             VipService.purchase_plan_with_stars(message.from_user.id, plan.plan_code)
             render_screen(bot, message, 'vip', notice_text=UserService.t(message.from_user.id, 'vip_stars_success'))
             return
+        if kind == 'engpro' and code == '30d':
+            EngagementModeService.activate_pro(message.from_user.id, days=30, source='stars_payment')
+            render_screen(bot, message, 'engagement_growth', notice_text=UserService.t(message.from_user.id, 'engagement_pro_activated_notice'))
+            return
+        if kind == 'boostore' and code.isdigit():
+            result = BoostoreProviderService.place_prepared_order(int(code))
+            render_screen(bot, message, 'marketplace', notice_key='boostore_order_placed' if result.ok else result.result_key)
+            return
 
 
     @bot.message_handler(func=lambda message: message.chat.type in {'group', 'supergroup'}, content_types=['text', 'photo', 'video', 'poll'])
@@ -317,6 +332,20 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         if not UserService.can_access_bot(message.from_user.id) and not UserService.is_admin(message.from_user.id):
             _try_delete_user_message(bot, message)
             render_entry(bot, message)
+            return
+
+        if (not CommunityRulesService.is_accepted(message.from_user.id)
+                and not UserService.is_admin(message.from_user.id)):
+            text_value = (message.text or '').strip().lower()
+            if text_value not in {'/start', '/menu', 'правила', '📜 правила'}:
+                _try_delete_user_message(bot, message)
+            render_screen(bot, message, SCREEN_COMMUNITY_RULES, notice_key='community_rules_required_notice')
+            return
+
+        if (not LegalDocsService.is_accepted(message.from_user.id)
+                and not UserService.is_admin(message.from_user.id)):
+            _try_delete_user_message(bot, message)
+            render_screen(bot, message, 'legal_docs', notice_key='legal_docs_required_notice')
             return
 
         session = InputSessionService.get_session(message.from_user.id)
@@ -457,6 +486,54 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             render_screen(bot, message, 'broadcast_schedule' if ok else 'broadcast_link', notice_key=result_key)
             return
 
+        if mode == 'boostore_order_link' and session and session['payload']:
+            _try_delete_user_message(bot, message)
+            link = (message.text or '').strip()
+            if not (link.startswith('http://') or link.startswith('https://') or link.startswith('t.me/') or link.startswith('@')):
+                render_screen(bot, message, 'marketplace', notice_key='boostore_order_link_invalid')
+                return
+            payload = {'external_service_id': str(session['payload']), 'link': link}
+            InputSessionService.set_session(message.from_user.id, 'boostore_order_quantity', __import__('json').dumps(payload, ensure_ascii=False))
+            render_screen(bot, message, 'marketplace', notice_key='boostore_order_quantity_prompt')
+            return
+
+        if mode == 'boostore_order_quantity' and session and session['payload']:
+            _try_delete_user_message(bot, message)
+            import json
+            try:
+                payload = json.loads(str(session['payload'] or '{}'))
+            except Exception:
+                payload = {}
+            raw = (message.text or '').strip().replace(' ', '')
+            if not raw.isdigit():
+                render_screen(bot, message, 'marketplace', notice_key='boostore_order_quantity_invalid')
+                return
+            result = BoostoreProviderService.prepare_order(
+                owner_user_id=message.from_user.id,
+                external_service_id=str(payload.get('external_service_id') or ''),
+                link=str(payload.get('link') or ''),
+                quantity=int(raw),
+            )
+            if not result.ok:
+                render_screen(bot, message, 'marketplace', notice_key=result.result_key)
+                return
+            order_id = int((result.data or {}).get('order_id') or 0) if isinstance(result.data, dict) else 0
+            price = int((result.data or {}).get('price_stars') or 1) if isinstance(result.data, dict) else 1
+            ok, notice_key = _send_direct_stars_invoice(
+                bot,
+                message.from_user.id,
+                title=UserService.t(message.from_user.id, 'boostore_invoice_title'),
+                description=UserService.t(message.from_user.id, 'boostore_invoice_desc', quantity=int(raw)),
+                payload=make_payload('boostore', str(order_id), message.from_user.id),
+                amount_stars=price,
+            )
+            if ok:
+                InputSessionService.clear_session(message.from_user.id)
+                render_screen(bot, message, 'marketplace', notice_key='payment_invoice_sent')
+            else:
+                render_screen(bot, message, 'marketplace', notice_key=notice_key or 'payment_invoice_failed')
+            return
+
         if mode == 'topup_custom_sparks':
             _try_delete_user_message(bot, message)
             raw = (message.text or '').strip().replace(' ', '')
@@ -513,11 +590,21 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         text_value = (message.text or '').strip()
         text_map = {
             'Меню': lambda: render_entry(bot, message),
+            '☰ Меню': lambda: render_entry(bot, message),
+            '🚀 Центр': lambda: render_screen(bot, message, 'smart_hub'),
+            '💰 Кошелёк': lambda: render_screen(bot, message, 'wallet'),
+            '🧩 Витрина': lambda: render_screen(bot, message, 'marketplace'),
+            '🔥 Продвижение': lambda: render_screen(bot, message, 'engagement_growth'),
+            '📊 Мои 0/10': lambda: render_screen(bot, message, 'engagement_obligations'),
+            '📜 Правила': lambda: render_screen(bot, message, SCREEN_COMMUNITY_RULES),
+            'Правила': lambda: render_screen(bot, message, SCREEN_COMMUNITY_RULES),
+            '⚙️ Админ': lambda: render_screen(bot, message, 'admin'),
             'Профиль': lambda: render_screen(bot, message, 'profile'),
             'Задания': lambda: render_screen(bot, message, 'tasks'),
             'Кошелёк👛': lambda: render_screen(bot, message, 'wallet'),
             'История': lambda: render_screen(bot, message, 'history'),
             'Создать задание': lambda: render_screen(bot, message, 'campaigns'),
+            'Витрина': lambda: render_screen(bot, message, 'marketplace'),
             'Аналитика': lambda: render_screen(bot, message, 'stats'),
             'VIP': lambda: render_screen(bot, message, 'vip'),
             'Купить Искры✨': lambda: render_screen(bot, message, 'topup_packages'),

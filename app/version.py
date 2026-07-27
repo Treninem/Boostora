@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.0.3'
-APP_STAGE = 'stable_patch_db_runtime_guard'
+APP_VERSION = 'Boostora v3.2.6'
+APP_STAGE = 'embedded_bothost_miniapp_runtime'

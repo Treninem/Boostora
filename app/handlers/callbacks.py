@@ -1,5 +1,6 @@
 import logging
 import telebot
+from app.config import settings
 from telebot.types import CallbackQuery
 from telebot import types
 
@@ -33,8 +34,14 @@ from app.services.ad_broadcasts import AdBroadcastService
 from app.services.campaigns import CampaignService
 from app.services.client_dashboard import boost_campaign
 from app.services.client_campaigns import ClientCampaignService
+from app.services.community_rules import CommunityRulesService
+from app.services.legal_docs import LegalDocsService
+from app.services.standard_admin import StandardAdminService
+from app.services.engagement_growth import EngagementGrowthService
+from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
+from app.services.boostore_provider import BoostoreProviderService
 from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, make_start_parameter
 from app.services.performer import PerformerService
 from app.services.redemptions import RedemptionService
@@ -147,6 +154,60 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 _answer_stale(bot, call)
                 return
     
+            if parsed.action == 'rules_accept':
+                CommunityRulesService.accept(call.from_user.id, source='bot_callback')
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'community_rules_accepted_notice'), show_alert=False)
+                render_entry(bot, call)
+                return
+
+            if parsed.action == 'legal_accept':
+                LegalDocsService.accept(call.from_user.id, source='bot_callback')
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'legal_docs_accepted_notice'), show_alert=False)
+                render_entry(bot, call)
+                return
+
+            if (not CommunityRulesService.is_accepted(call.from_user.id)
+                    and not UserService.is_admin(call.from_user.id)
+                    and parsed.action not in {'lang', 'role', 'go', 'refresh'}):
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'community_rules_required_alert'), show_alert=False)
+                render_screen(bot, call, 'community_rules', notice_key='community_rules_required_notice')
+                return
+
+            if (not LegalDocsService.is_accepted(call.from_user.id)
+                    and not UserService.is_admin(call.from_user.id)
+                    and parsed.action not in {'lang', 'role', 'go', 'refresh', 'legal_accept'}):
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'legal_docs_required_alert'), show_alert=False)
+                render_screen(bot, call, 'legal_docs', notice_key='legal_docs_required_notice')
+                return
+
+            if parsed.action == 'eng_mode':
+                if not _ensure_client_role(bot, call):
+                    return
+                if parsed.value == 'standard':
+                    EngagementModeService.set_standard(call.from_user.id, source='bot_callback')
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'engagement_mode_standard_saved'), show_alert=False)
+                    render_screen(bot, call, 'engagement_growth', notice_key='engagement_mode_standard_saved')
+                    return
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'stale_screen'), show_alert=False)
+                render_screen(bot, call, 'engagement_mode')
+                return
+
+            if parsed.action == 'eng_pro_pay':
+                if not _ensure_client_role(bot, call):
+                    return
+                amount = EngagementModeService.pro_price_stars()
+                ok_send, notice_key = _send_stars_invoice(
+                    bot,
+                    call,
+                    title=UserService.t(call.from_user.id, 'engagement_pro_invoice_title'),
+                    description=UserService.t(call.from_user.id, 'engagement_pro_invoice_desc', days=30),
+                    payload=make_payload('engpro', '30d', call.from_user.id),
+                    amount_stars=amount,
+                )
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, notice_key or 'payment_invoice_sent'), show_alert=not ok_send)
+                render_screen(bot, call, 'engagement_mode', notice_key=notice_key or 'payment_invoice_sent')
+                return
+
             if parsed.action == 'lang':
                 try:
                     UserService.set_language(call.from_user.id, parsed.value)
@@ -247,6 +308,26 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, call, task_screen_key(campaign_id), notice_key=result_key)
                 return
     
+            if parsed.action == 'proof_input_start':
+                submission_id = _safe_int(parsed.value)
+                if submission_id is None:
+                    bot.answer_callback_query(call.id)
+                    render_screen(bot, call, SECTION_TO_SCREEN['tasks'])
+                    return
+                submission = PerformerService.get_submission(submission_id)
+                if not submission or int(submission['performer_user_id']) != call.from_user.id:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'task_not_found'), show_alert=False)
+                    render_screen(bot, call, SECTION_TO_SCREEN['tasks'])
+                    return
+                if str(submission['status']) != 'taken':
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'proof_already_sent'), show_alert=False)
+                    render_screen(bot, call, submission_screen_key(submission_id), notice_key='proof_already_sent')
+                    return
+                InputSessionService.set_session(call.from_user.id, 'submit_proof', str(submission_id))
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'proof_manual_started'), show_alert=False)
+                render_screen(bot, call, proof_wait_screen_key(submission_id), notice_key='proof_manual_started')
+                return
+
             if parsed.action == 'submit_start':
                 submission_id = _safe_int(parsed.value)
                 if submission_id is None:
@@ -357,10 +438,47 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, call, SCREEN_CAMPAIGN_CREATE)
                 return
     
+            if parsed.action == 'egp':
+                if not _ensure_client_role(bot, call):
+                    return
+                preset = EngagementGrowthService.preset_by_code(parsed.value)
+                if preset is None:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'engagement_preset_not_found'), show_alert=True)
+                    render_screen(bot, call, 'engagement_growth', notice_key='engagement_preset_not_found')
+                    return
+                mode = EngagementModeService.current_mode(call.from_user.id)
+                if not mode:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'engagement_mode_required_alert'), show_alert=True)
+                    render_screen(bot, call, 'engagement_mode', notice_key='engagement_mode_required_notice')
+                    return
+                allowed, guard_key, _guard = EngagementModeService.can_launch_engagement(call.from_user.id)
+                if not allowed:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, guard_key), show_alert=True)
+                    render_screen(bot, call, 'engagement_obligations', notice_key=guard_key)
+                    return
+                ok, result_key = ClientCampaignService.start_preset(call.from_user.id, preset.task_type, preset.quantity, preset.code, engagement_mode=mode)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key, quantity=preset.quantity), show_alert=not ok)
+                if ok:
+                    render_screen(bot, call, campaign_input_screen_key('target'), notice_key=result_key)
+                    return
+                render_screen(bot, call, 'engagement_growth', notice_key=result_key)
+                return
+
             if parsed.action == 'ctype':
                 if not _ensure_client_role(bot, call):
                     return
-                ok, result_key = ClientCampaignService.start_draft(call.from_user.id, parsed.value)
+                mode = EngagementModeService.current_mode(call.from_user.id) if EngagementModeService.is_engagement_task(parsed.value) else None
+                if EngagementModeService.is_engagement_task(parsed.value) and not mode:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'engagement_mode_required_alert'), show_alert=True)
+                    render_screen(bot, call, 'engagement_mode', notice_key='engagement_mode_required_notice')
+                    return
+                if EngagementModeService.is_engagement_task(parsed.value):
+                    allowed, guard_key, _guard = EngagementModeService.can_launch_engagement(call.from_user.id)
+                    if not allowed:
+                        bot.answer_callback_query(call.id, UserService.t(call.from_user.id, guard_key), show_alert=True)
+                        render_screen(bot, call, 'engagement_obligations', notice_key=guard_key)
+                        return
+                ok, result_key = ClientCampaignService.start_draft(call.from_user.id, parsed.value, engagement_mode=mode)
                 bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
                 if ok:
                     render_screen(bot, call, campaign_input_screen_key('target'), notice_key=result_key)
@@ -572,6 +690,101 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 return
 
     
+
+            if parsed.action == 'std_extend':
+                if not _ensure_admin(bot, call):
+                    return
+                obligation_id = _safe_int(parsed.value)
+                ok, key = StandardAdminService.extend_obligation(call.from_user.id, obligation_id or 0, hours=24)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, key), show_alert=not ok)
+                render_screen(bot, call, 'admin_engagement_obligations', notice_key=key)
+                return
+
+            if parsed.action == 'std_forgive':
+                if not _ensure_admin(bot, call):
+                    return
+                obligation_id = _safe_int(parsed.value)
+                ok, key = StandardAdminService.forgive_obligation(call.from_user.id, obligation_id or 0)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, key), show_alert=not ok)
+                render_screen(bot, call, 'admin_engagement_obligations', notice_key=key)
+                return
+
+            if parsed.action == 'std_warn':
+                if not _ensure_admin(bot, call):
+                    return
+                obligation_id = _safe_int(parsed.value)
+                ok, key = StandardAdminService.warn_obligation(bot, call.from_user.id, obligation_id or 0, support_username=settings.support_username)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, key), show_alert=not ok)
+                render_screen(bot, call, 'admin_engagement_obligations', notice_key=key)
+                return
+
+            if parsed.action == 'std_pro':
+                if not _ensure_admin(bot, call):
+                    return
+                target_user_id = _safe_int(parsed.value)
+                ok, key = StandardAdminService.grant_manual_pro(call.from_user.id, target_user_id or 0, days=30)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, key), show_alert=not ok)
+                render_screen(bot, call, 'admin_engagement_obligations', notice_key=key)
+                return
+
+            if parsed.action == 'boostore_order_start':
+                if not _ensure_client_role(bot, call):
+                    return
+                service_id = str(parsed.value or '').strip()
+                service = BoostoreProviderService.list_services(enabled_only=True, limit=1000)
+                found = any(str(row['external_service_id']) == service_id for row in service)
+                if not found:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'boostore_service_not_enabled'), show_alert=True)
+                    render_screen(bot, call, 'marketplace', notice_key='boostore_service_not_enabled')
+                    return
+                InputSessionService.set_session(call.from_user.id, 'boostore_order_link', service_id)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'boostore_order_link_prompt'), show_alert=False)
+                render_screen(bot, call, 'marketplace', notice_key='boostore_order_link_prompt')
+                return
+
+            if parsed.action == 'boostore_check':
+                if not _ensure_owner(bot, call):
+                    return
+                diagnostics = BoostoreProviderService.live_diagnostics()
+                status_key = 'boostore_check_success' if diagnostics.get('ok') else 'boostore_check_warning'
+                notice = UserService.t(
+                    call.from_user.id,
+                    'boostore_check_report',
+                    state=UserService.t(call.from_user.id, f"boostore_state_{diagnostics.get('state')}"),
+                    score=int(diagnostics.get('score') or 0),
+                    key=diagnostics.get('masked_key') or '—',
+                    balance=diagnostics.get('balance_text') or '—',
+                    cached=int(diagnostics.get('cached_total') or 0),
+                    whitelist=int(diagnostics.get('whitelist_total') or 0),
+                    result=UserService.t(call.from_user.id, str(diagnostics.get('result_key') or 'boostore_api_error')),
+                    error=diagnostics.get('error') or '—',
+                )
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, status_key), show_alert=False)
+                render_screen(bot, call, 'owner_provider', notice_text=notice)
+                return
+
+            if parsed.action == 'boostore_sync':
+                if not _ensure_owner(bot, call):
+                    return
+                result = BoostoreProviderService.sync_services()
+                if result.ok:
+                    count = int((result.data or {}).get('count', 0)) if isinstance(result.data, dict) else 0
+                    text = UserService.t(call.from_user.id, 'boostore_sync_success', count=count)
+                    bot.answer_callback_query(call.id, text, show_alert=False)
+                    render_screen(bot, call, 'owner_provider', notice_text=text)
+                else:
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result.result_key), show_alert=True)
+                    render_screen(bot, call, 'owner_provider', notice_key=result.result_key)
+                return
+
+            if parsed.action == 'boostore_toggle':
+                if not _ensure_owner(bot, call):
+                    return
+                result = BoostoreProviderService.toggle_service(parsed.value)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result.result_key), show_alert=False)
+                render_screen(bot, call, 'owner_provider', notice_key=result.result_key)
+                return
+
             if parsed.action == 'admin_live_audit':
                 if not _ensure_admin(bot, call):
                     return
