@@ -18,18 +18,15 @@ GIFT_SPARKS_PER_STAR = 19
 class RedemptionService:
     @staticmethod
     def access_allowed(user_id: int) -> bool:
-        return WalletService.has_paid_stars_topup(user_id)
+        return False
 
     @staticmethod
     def list_gifts(limit: int = 20) -> list[dict]:
-        gifts = TelegramMonetizationService.get_available_gifts()
-        for item in gifts:
-            item['sparks_cost'] = int(item['star_count']) * GIFT_SPARKS_PER_STAR
-        return gifts[:limit]
+        return []
 
     @staticmethod
     def premium_offers() -> dict[int, dict]:
-        return PREMIUM_PLANS
+        return {}
 
     @staticmethod
     def cashout_offers() -> dict[int, dict]:
@@ -37,6 +34,7 @@ class RedemptionService:
 
     @staticmethod
     def purchase_premium(user_id: int, months: int) -> tuple[bool, str]:
+        return False, 'credits_non_redeemable'
         plan = PREMIUM_PLANS.get(months)
         if not plan:
             return False, 'redeem_offer_not_found'
@@ -69,6 +67,7 @@ class RedemptionService:
 
     @staticmethod
     def purchase_gift_by_index(user_id: int, offer_index: int) -> tuple[bool, str]:
+        return False, 'credits_non_redeemable'
         gifts = RedemptionService.list_gifts(limit=20)
         if offer_index < 0 or offer_index >= len(gifts):
             return False, 'redeem_offer_not_found'
@@ -103,6 +102,7 @@ class RedemptionService:
 
     @staticmethod
     def create_cashout_request(user_id: int, stars_amount: int) -> tuple[bool, str, int | None]:
+        return False, 'credits_non_redeemable', None
         offer = CASHOUT_PACKS.get(stars_amount)
         if not offer:
             return False, 'redeem_offer_not_found', None

@@ -93,11 +93,11 @@ class ReferralService:
         if reward_amount <= 0:
             return 0
         referrer_user_id = int(referral['referrer_user_id'])
-        WalletService.credit_internal_balance(
+        WalletService.credit_bonus_balance(
             referrer_user_id,
             reward_amount,
-            entry_type='referral_reward',
-            note=f'Referral reward from user {referred_user_id}',
+            entry_type='referral_bonus',
+            note=f'Referral bonus from user {referred_user_id}',
         )
         db.execute(
             '''

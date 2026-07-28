@@ -23,9 +23,14 @@ class LegalDocsService:
     def sections() -> tuple[LegalSection, ...]:
         return (
             LegalSection('legal_section_agreement_title', 'legal_section_agreement_body'),
-            LegalSection('legal_section_standard_title', 'legal_section_standard_body'),
-            LegalSection('legal_section_pro_title', 'legal_section_pro_body'),
+            LegalSection('legal_section_services_title', 'legal_section_services_body'),
+            LegalSection('legal_section_credits_title', 'legal_section_credits_body'),
+            LegalSection('legal_section_commission_title', 'legal_section_commission_body'),
             LegalSection('legal_section_refunds_title', 'legal_section_refunds_body'),
+            LegalSection('legal_section_network_title', 'legal_section_network_body'),
+            LegalSection('legal_section_moderation_title', 'legal_section_moderation_body'),
+            LegalSection('legal_section_third_party_title', 'legal_section_third_party_body'),
+            LegalSection('legal_section_changes_title', 'legal_section_changes_body'),
             LegalSection('legal_section_disclaimer_title', 'legal_section_disclaimer_body'),
         )
 

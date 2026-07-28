@@ -139,7 +139,18 @@ def main_menu_keyboard(user_id: int, role: str | None, version: int) -> InlineKe
 def community_rules_keyboard(user_id: int, version: int, *, accepted: bool = False) -> InlineKeyboardMarkup:
     markup = InlineKeyboardMarkup(row_width=1)
     if not accepted:
-        markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'community_rules_accept_button'), callback_data=pack_callback(version, 'rules_accept', 'current')))
+        markup.add(
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'platform_agreement_accept_button'),
+                callback_data=pack_callback(version, 'agreement_accept', 'current'),
+            ),
+            InlineKeyboardButton(
+                text=UserService.t(user_id, 'platform_agreement_decline_button'),
+                callback_data=pack_callback(version, 'agreement_decline', 'current'),
+            ),
+        )
+        markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'support_button'), url=f'https://t.me/{settings.support_username.lstrip("@")}'))
+        return markup
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'community_rules_reopen_button'), callback_data=pack_callback(version, 'go', 'community_rules')),
         InlineKeyboardButton(text=UserService.t(user_id, 'support_button'), url=f'https://t.me/{settings.support_username.lstrip("@")}'),
@@ -583,13 +594,6 @@ def vip_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
             InlineKeyboardButton(
                 text=f"{UserService.t(user_id, str(plan['title_key']))} · {plan['price']} {UserService.internal_currency_label(user_id)}",
                 callback_data=pack_callback(version, 'vip_buy', plan_code),
-            )
-        )
-    for _, offer in VIP_STARS_PLANS.items():
-        markup.add(
-            InlineKeyboardButton(
-                text=f"{offer.title} · {offer.stars} ⭐",
-                callback_data=pack_callback(version, 'vip_stars', offer.code),
             )
         )
     if InvoiceMessageService.get(user_id):
@@ -1265,7 +1269,7 @@ def engagement_mode_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'engagement_mode_standard_button'), callback_data=pack_callback(version, 'eng_mode', 'standard')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'engagement_mode_pro_button'), callback_data=pack_callback(version, 'eng_pro_pay', '30d')),
+        InlineKeyboardButton(text=f"{UserService.t(user_id, 'engagement_mode_pro_button')} · {EngagementModeService.pro_price_credits()} кредитов", callback_data=pack_callback(version, 'eng_pro_pay', '30d')),
     )
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'engagement_growth_button'), callback_data=pack_callback(version, 'go', 'engagement_growth')),

@@ -36,13 +36,14 @@ from app.services.client_dashboard import boost_campaign
 from app.services.client_campaigns import ClientCampaignService
 from app.services.community_rules import CommunityRulesService
 from app.services.legal_docs import LegalDocsService
+from app.services.platform_agreement import PlatformAgreementService
 from app.services.standard_admin import StandardAdminService
 from app.services.engagement_growth import EngagementGrowthService
 from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
 from app.services.boostore_provider import BoostoreProviderService
-from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, make_start_parameter
+from app.services.payments import SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_pack_invoice_code, make_payload, make_start_parameter
 from app.services.performer import PerformerService
 from app.services.redemptions import RedemptionService
 from app.services.rewards import RewardService
@@ -154,30 +155,22 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 _answer_stale(bot, call)
                 return
     
-            if parsed.action == 'rules_accept':
-                CommunityRulesService.accept(call.from_user.id, source='bot_callback')
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'community_rules_accepted_notice'), show_alert=False)
+            if parsed.action in {'agreement_accept', 'rules_accept', 'legal_accept'}:
+                PlatformAgreementService.accept(call.from_user.id, source='bot_callback')
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'platform_agreement_accepted_notice'), show_alert=False)
                 render_entry(bot, call)
                 return
 
-            if parsed.action == 'legal_accept':
-                LegalDocsService.accept(call.from_user.id, source='bot_callback')
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'legal_docs_accepted_notice'), show_alert=False)
-                render_entry(bot, call)
+            if parsed.action == 'agreement_decline':
+                PlatformAgreementService.decline(call.from_user.id, source='bot_callback')
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'platform_agreement_declined_notice'), show_alert=True)
+                render_screen(bot, call, 'community_rules', notice_key='platform_agreement_declined_notice')
                 return
 
-            if (not CommunityRulesService.is_accepted(call.from_user.id)
-                    and not UserService.is_admin(call.from_user.id)
-                    and parsed.action not in {'lang', 'role', 'go', 'refresh'}):
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'community_rules_required_alert'), show_alert=False)
-                render_screen(bot, call, 'community_rules', notice_key='community_rules_required_notice')
-                return
-
-            if (not LegalDocsService.is_accepted(call.from_user.id)
-                    and not UserService.is_admin(call.from_user.id)
-                    and parsed.action not in {'lang', 'role', 'go', 'refresh', 'legal_accept'}):
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'legal_docs_required_alert'), show_alert=False)
-                render_screen(bot, call, 'legal_docs', notice_key='legal_docs_required_notice')
+            if (not PlatformAgreementService.is_accepted(call.from_user.id)
+                    and parsed.action not in {'agreement_accept', 'agreement_decline'}):
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'platform_agreement_required_alert'), show_alert=False)
+                render_screen(bot, call, 'community_rules', notice_key='platform_agreement_required_notice')
                 return
 
             if parsed.action == 'eng_mode':
@@ -195,17 +188,13 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
             if parsed.action == 'eng_pro_pay':
                 if not _ensure_client_role(bot, call):
                     return
-                amount = EngagementModeService.pro_price_stars()
-                ok_send, notice_key = _send_stars_invoice(
-                    bot,
-                    call,
-                    title=UserService.t(call.from_user.id, 'engagement_pro_invoice_title'),
-                    description=UserService.t(call.from_user.id, 'engagement_pro_invoice_desc', days=30),
-                    payload=make_payload('engpro', '30d', call.from_user.id),
-                    amount_stars=amount,
+                ok, result_key = EngagementModeService.purchase_pro_with_credits(
+                    call.from_user.id, days=30, source='bot_credits'
                 )
-                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, notice_key or 'payment_invoice_sent'), show_alert=not ok_send)
-                render_screen(bot, call, 'engagement_mode', notice_key=notice_key or 'payment_invoice_sent')
+                bot.answer_callback_query(
+                    call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok
+                )
+                render_screen(bot, call, 'engagement_mode', notice_key=result_key)
                 return
 
             if parsed.action == 'lang':
@@ -378,7 +367,11 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 is_admin_mode = parsed.value == 'admin'
                 if is_admin_mode and not _ensure_admin(bot, call):
                     return
-                if (not is_admin_mode) and not _ensure_client_role(bot, call):
+                if not is_admin_mode:
+                    if not _ensure_client_role(bot, call):
+                        return
+                    bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'broadcast_use_network'), show_alert=False)
+                    render_screen(bot, call, 'campaigns', notice_key='broadcast_use_network')
                     return
                 AdBroadcastService.clear_draft(call.from_user.id)
                 ok, result_key = AdBroadcastService.start_draft(call.from_user.id, is_admin=is_admin_mode)
@@ -580,7 +573,7 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                     call,
                     title=pack.title,
                     description=pack.description,
-                    payload=make_payload('sparks', pack.code, call.from_user.id),
+                    payload=make_payload('sparks', make_pack_invoice_code(pack), call.from_user.id),
                     amount_stars=pack.stars,
                 )
                 bot.answer_callback_query(
@@ -592,25 +585,16 @@ def register_callback_handlers(bot: telebot.TeleBot) -> None:
                 return
 
             if parsed.action == 'vip_stars':
+                # Compatibility for old inline messages: VIP is no longer sold directly
+                # for Stars. The old button now purchases the same plan with credits.
                 plan = VIP_STARS_PLANS.get(parsed.value)
                 if not plan:
                     bot.answer_callback_query(call.id, UserService.t(call.from_user.id, 'vip_plan_not_found'), show_alert=False)
                     render_screen(bot, call, 'vip', notice_key='vip_plan_not_found')
                     return
-                ok, notice_key = _send_stars_invoice(
-                    bot,
-                    call,
-                    title=plan.title,
-                    description=plan.description,
-                    payload=make_payload('vip', plan.code, call.from_user.id),
-                    amount_stars=plan.stars,
-                )
-                bot.answer_callback_query(
-                    call.id,
-                    UserService.t(call.from_user.id, notice_key or 'payment_invoice_sent'),
-                    show_alert=not ok,
-                )
-                render_screen(bot, call, 'vip', notice_key=notice_key or 'payment_invoice_sent')
+                ok, result_key = VipService.purchase_plan(call.from_user.id, plan.plan_code)
+                bot.answer_callback_query(call.id, UserService.t(call.from_user.id, result_key), show_alert=not ok)
+                render_screen(bot, call, 'vip', notice_key=result_key)
                 return
 
             if parsed.action == 'cancel_invoice':

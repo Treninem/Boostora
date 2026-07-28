@@ -11,6 +11,11 @@ from app.services.community_rules import CommunityRulesService
 from app.services.engagement_growth import EngagementGrowthService
 from app.services.engagement_modes import EngagementModeService
 from app.services.legal_docs import LegalDocsService
+from app.services.platform_agreement import PlatformAgreementService
+from app.services.advertising_network import AdvertisingNetworkService
+from app.services.runtime_settings import RuntimeSettingsService
+from app.services.star_payments import StarPaymentService
+from app.services.wallets import WalletService
 from app.services.standard_admin import StandardAdminService
 
 
@@ -62,9 +67,10 @@ class FinalAuditService:
     """Read-only audit: checks that the user's requested Boostora upgrades exist.
 
     This is not a legal guarantee and it does not call external APIs. It is a
-    practical owner-side checklist covering the features requested during the
-    v3.1/v3.2 modernization: smart menu, Mini App, Boostore provider, Standard
-    0/10, PRO, rules, legal docs, admin debt tools and runtime safety.
+    practical owner-side checklist covering the cumulative modernization through
+    v3.5.0: smart menu, standalone Mini App, unified credits and bonuses,
+    mandatory agreement, advertising network, exact provider pricing, owner
+    financial controls, Standard/PRO and runtime safety.
     """
 
     @staticmethod
@@ -142,8 +148,8 @@ class FinalAuditService:
         add(
             'standalone_mini_app_operations',
             'final_audit_mini_app_cabinet',
-            _source_contains('app/services/miniapp_api.py', 'class MiniAppApiService', "op == 'catalog.get'", "op == 'wallet.get'", "op == 'campaigns.get'", "op == 'tasks.get'", "op == 'admin.get'", "op == 'owner.catalog_action'")
-            and _source_contains('app/handlers/start.py', "kind == 'wasparks'", "kind == 'waengpro'", "kind == 'waboostore'")
+            _source_contains('app/services/miniapp_api.py', 'class MiniAppApiService', "op == 'catalog.get'", "op == 'wallet.get'", "op == 'campaigns.get'", "op == 'tasks.get'", "op == 'network.get'", "op == 'documents.accept'", "op == 'owner.catalog_action'")
+            and _source_contains('miniapp_example/index.html', "api('engagement.pro_purchase'", "api('network.quote'", "api('catalog.quote_order'", "api('wallet.invoice'")
             and _source_contains('app/keyboards/reply.py', 'Открыть Boostora', 'WebAppInfo'),
             action_ok='final_audit_action_mini_app_ok',
             action_bad='final_audit_action_mini_app_fix',
@@ -162,6 +168,7 @@ class FinalAuditService:
             'final_audit_standard_pro_modes',
             _has_columns('engagement_memberships', 'mode', 'pro_expires_at', 'reciprocal_required_actions')
             and hasattr(EngagementModeService, 'activate_pro')
+            and hasattr(EngagementModeService, 'purchase_pro_with_credits')
             and hasattr(EngagementModeService, 'create_obligation_for_campaign'),
             action_ok='final_audit_action_standard_pro_ok',
             action_bad='final_audit_action_standard_pro_fix',
@@ -196,15 +203,88 @@ class FinalAuditService:
             action_bad='final_audit_action_rules_legal_fix',
         )
         add(
+            'unified_economy',
+            'final_audit_unified_economy',
+            _has_columns('wallets', 'available_balance', 'bonus_balance', 'hold_balance')
+            and _has_columns('star_payments', 'user_id', 'telegram_payment_charge_id', 'stars_amount', 'credits_granted', 'status')
+            and hasattr(WalletService, 'spend_with_bonus_cap')
+            and hasattr(WalletService, 'adjust_balance')
+            and hasattr(StarPaymentService, 'apply_credit_purchase')
+            and hasattr(StarPaymentService, 'refund_credit_purchase')
+            and RuntimeSettingsService.get_int('credits_per_star') > 0
+            and 0 <= RuntimeSettingsService.get_int('max_bonus_payment_percent') <= 50,
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
+        )
+        add(
+            'mandatory_platform_agreement',
+            'final_audit_platform_agreement',
+            _has_columns('platform_agreement_events', 'user_id', 'agreement_version', 'action', 'source')
+            and bool(PlatformAgreementService.version())
+            and _source_contains('app/services/miniapp_api.py', 'PlatformAgreementService.is_accepted', "op == 'documents.accept'", "op == 'documents.decline'")
+            and _source_contains('app/handlers/start.py', 'PlatformAgreementService.is_accepted')
+            and _source_contains('app/handlers/callbacks.py', 'PlatformAgreementService.is_accepted'),
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
+        )
+        add(
+            'advertising_network',
+            'final_audit_ad_network',
+            _has_columns('network_campaigns', 'owner_user_id', 'budget_credits', 'bonus_used', 'target_chat_id', 'status')
+            and _has_columns('network_placements', 'campaign_id', 'host_chat_id', 'tracking_token', 'invite_link', 'reciprocal_placement_id', 'refunded_credits')
+            and _has_columns('network_join_events', 'placement_id', 'user_id', 'retained_24h', 'retained_7d')
+            and _has_columns('network_contribution_ledger', 'user_id', 'units', 'entry_type')
+            and hasattr(AdvertisingNetworkService, 'quote_budget')
+            and hasattr(AdvertisingNetworkService, 'create_campaign')
+            and hasattr(AdvertisingNetworkService, 'run_due_placements')
+            and hasattr(AdvertisingNetworkService, 'handle_platform_deactivated')
+            and RuntimeSettingsService.get_int('network_min_members') >= 100,
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
+        )
+        add(
+            'owner_financial_controls',
+            'final_audit_owner_finance',
+            hasattr(WalletService, 'adjust_balance')
+            and hasattr(WalletService, 'list_transactions')
+            and _source_contains('app/services/miniapp_api.py', "op == 'owner.user_lookup'", "op == 'owner.operations'", "op == 'owner.adjust_balance'", "op == 'owner.star_payments'", "op == 'owner.refund_star_payment'")
+            and _source_contains('miniapp_example/index.html', 'showOwnerStarPayments', 'showOwnerRefund', 'owner.adjust_balance'),
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
+        )
+        add(
             'boostore_provider_auto_orders',
             'final_audit_boostore_provider_auto_orders',
-            _has_columns('provider_services', 'external_service_id', 'is_enabled', 'markup_percent')
-            and _has_columns('provider_orders', 'owner_user_id', 'provider_status', 'last_error', 'placed_at', 'paid_at', 'telegram_payment_charge_id')
+            _has_columns('provider_services', 'external_service_id', 'is_enabled', 'markup_percent', 'rate_value', 'raw_json')
+            and _has_columns('provider_orders', 'owner_user_id', 'provider_status', 'last_error', 'placed_at', 'paid_at', 'credit_cost', 'bonus_used', 'rate_value_snapshot', 'markup_percent_snapshot', 'expires_at')
             and hasattr(BoostoreProviderService, 'live_diagnostics')
-            and hasattr(BoostoreProviderService, 'prepare_order')
+            and hasattr(BoostoreProviderService, 'refresh_service_price')
+            and hasattr(BoostoreProviderService, 'quote_credit_order')
+            and hasattr(BoostoreProviderService, 'prepare_credit_order')
+            and hasattr(BoostoreProviderService, 'expire_stale_orders')
             and hasattr(BoostoreProviderService, 'place_prepared_order'),
             action_ok='final_audit_action_boostore_ok',
             action_bad='final_audit_action_boostore_fix',
+        )
+        add(
+            'provider_exact_price',
+            'final_audit_provider_exact_price',
+            _source_contains('app/services/boostore_provider.py', 'refresh_service_price', 'quote_credit_order', 'expected_credit_cost', 'boostore_price_changed', 'provider_credits_per_price_unit')
+            and _source_contains('app/services/miniapp_api.py', "op in {'catalog.quote_order', 'catalog.prepare_order'}", "op == 'catalog.quote_order'")
+            and _source_contains('miniapp_example/index.html', "api('catalog.quote_order'", 'expected_credit_cost')
+            and hasattr(BoostoreProviderService, 'set_markup'),
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
+        )
+        add(
+            'provider_order_timeout',
+            'final_audit_order_timeout',
+            RuntimeSettingsService.get_int('provider_order_timeout_minutes') >= 5
+            and hasattr(BoostoreProviderService, 'expire_stale_orders')
+            and _source_contains('app/bot.py', 'expire_stale_orders')
+            and _source_contains('miniapp_example/index.html', "expired:'Время подтверждения истекло'"),
+            action_ok='final_audit_action_v350_ready',
+            action_bad='final_audit_action_v350_fix',
         )
         add(
             'telegram_service_catalog',

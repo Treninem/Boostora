@@ -3,6 +3,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from app.services.activity import ActivityService
+from app.services.bot_chats import BotChatService
 from app.services.campaigns import CampaignService
 from app.services.economy import calculate_campaign_pricing, recommend_unit_prices, supported_task_types, task_meta
 from app.services.engagement_modes import EngagementModeService
@@ -143,6 +144,9 @@ class ClientCampaignService:
                 return False, status_key, MODE_TARGET
             if task_type in ADMIN_REQUIRED_TASK_TYPES and status_key == 'campaign_target_admin_recommended':
                 return False, 'campaign_target_admin_required', MODE_TARGET
+            # A verified channel/chat automatically becomes a candidate for the
+            # advertising network once it meets the audience/activity rules.
+            BotChatService.register_verified_platform(bot, info.chat_ref, user_id)
             if status_key:
                 result_key = status_key
 

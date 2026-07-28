@@ -35,14 +35,16 @@ from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROAD
 from app.services.client_campaigns import ClientCampaignService, MODE_PRICE, MODE_QUANTITY, MODE_REWARD, MODE_TARGET
 from app.services.community_rules import CommunityRulesService
 from app.services.legal_docs import LegalDocsService
+from app.services.platform_agreement import PlatformAgreementService
 from app.services.boostore_provider import BoostoreProviderService
 from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.invoice_messages import InvoiceMessageService
-from app.services.payments import BASE_SPARKS_PER_STAR, SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_payload, parse_payload
+from app.services.payments import current_credits_per_star, SPARKS_PACKS, VIP_STARS_PLANS, calculate_custom_stars_for_sparks, make_custom_invoice_code, parse_custom_invoice_code, make_payload, parse_payload
 from app.services.performer import PerformerService
 from app.services.referrals import ReferralService
 from app.services.subscriptions import SubscriptionService
+from app.services.star_payments import StarPaymentService
 from app.services.users import UserService
 from app.services.vip import VipService
 from app.services.wallets import WalletService
@@ -200,7 +202,9 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         if existing_user is None and referrer_exists and referrer_id is not None:
             ReferralService.try_bind_referral(referrer_id, message.from_user.id)
         InputSessionService.clear_session(message.from_user.id)
-        _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id, force=True)
+        accepted = PlatformAgreementService.is_accepted(message.from_user.id)
+        if accepted:
+            _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id, force=True)
         requested_screen = _webapp_start_screen(start_arg)
         if requested_screen:
             gate_screen = resolve_next_screen(
@@ -211,7 +215,7 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             )
             render_screen(bot, message, requested_screen if gate_screen == SCREEN_MAIN_MENU else gate_screen)
             return
-        render_entry(bot, message, force_language=True)
+        render_entry(bot, message, force_language=accepted and existing_user is None)
 
 
     @bot.message_handler(commands=['version'])
@@ -230,7 +234,8 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
     def handle_menu(message: Message) -> None:
         UserService.ensure_user(message.from_user)
         InputSessionService.clear_session(message.from_user.id)
-        _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
+        if PlatformAgreementService.is_accepted(message.from_user.id):
+            _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
         render_entry(bot, message)
 
     @bot.message_handler(commands=['cancel'])
@@ -239,13 +244,17 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         InputSessionService.clear_session(message.from_user.id)
         _delete_pending_invoice(bot, message.from_user.id)
         _try_delete_user_message(bot, message)
-        _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
+        if PlatformAgreementService.is_accepted(message.from_user.id):
+            _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id)
         render_entry(bot, message)
 
     @bot.message_handler(commands=['admin'])
     def handle_admin(message: Message) -> None:
         UserService.ensure_user(message.from_user)
         InputSessionService.clear_session(message.from_user.id)
+        if not PlatformAgreementService.is_accepted(message.from_user.id):
+            render_screen(bot, message, SCREEN_COMMUNITY_RULES, notice_key='platform_agreement_required_notice')
+            return
         if not UserService.is_admin(message.from_user.id):
             render_entry(bot, message)
             return
@@ -253,6 +262,10 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
     @bot.pre_checkout_query_handler(func=lambda query: True)
     def handle_pre_checkout(query: PreCheckoutQuery) -> None:
+        UserService.ensure_user(query.from_user)
+        if not PlatformAgreementService.is_accepted(query.from_user.id):
+            bot.answer_pre_checkout_query(query.id, ok=False, error_message='Сначала примите правила и условия Boostora.')
+            return
         parsed = parse_payload(query.invoice_payload)
         if parsed is None:
             bot.answer_pre_checkout_query(query.id, ok=False, error_message='Неверный платёжный payload')
@@ -264,20 +277,28 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         expected_amount = None
         if kind in {'sparks', 'wasparks'} and code in SPARKS_PACKS:
             expected_amount = int(SPARKS_PACKS[code].stars)
-        elif kind in {'sparks_custom', 'wasparks_custom'} and code.isdigit():
-            expected_amount = int(calculate_custom_stars_for_sparks(int(code)))
+        elif kind in {'sparks_custom', 'wasparks_custom'}:
+            custom_snapshot = parse_custom_invoice_code(code)
+            if custom_snapshot:
+                _credits, expected_amount = custom_snapshot
         elif kind in {'engpro', 'waengpro'} and code == '30d':
             expected_amount = int(EngagementModeService.pro_price_stars())
         elif kind in {'boostore', 'waboostore'} and code.isdigit():
+            BoostoreProviderService.expire_stale_orders()
             row = db.fetch_one(
-                'SELECT owner_user_id, charge_value, provider_status, paid_at FROM provider_orders WHERE id = ?',
+                '''SELECT owner_user_id, charge_value, provider_status, paid_at, expires_at,
+                          CASE WHEN expires_at IS NOT NULL AND datetime(expires_at)<=CURRENT_TIMESTAMP THEN 1 ELSE 0 END AS is_expired
+                   FROM provider_orders WHERE id = ?''',
                 (int(code),),
             )
             if not row or int(row['owner_user_id'] or 0) != query.from_user.id:
                 bot.answer_pre_checkout_query(query.id, ok=False, error_message='Заказ не найден')
                 return
+            if int(row['is_expired'] or 0) or str(row['provider_status'] or '') == 'expired':
+                bot.answer_pre_checkout_query(query.id, ok=False, error_message='Время оплаты истекло. Создайте новый расчёт.')
+                return
             if str(row['paid_at'] or '') or str(row['provider_status'] or '') not in {'draft', 'invoice_failed', 'failed'}:
-                bot.answer_pre_checkout_query(query.id, ok=False, error_message='Этот заказ уже оплачен')
+                bot.answer_pre_checkout_query(query.id, ok=False, error_message='Этот заказ уже оплачен или закрыт')
                 return
             expected_amount = int(round(float(row['charge_value'] or 0)))
         if str(getattr(query, 'currency', '') or '') != 'XTR':
@@ -292,6 +313,9 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
     @bot.message_handler(content_types=['web_app_data'])
     def handle_web_app_data(message: Message) -> None:
         UserService.ensure_user(message.from_user)
+        if not PlatformAgreementService.is_accepted(message.from_user.id):
+            render_screen(bot, message, SCREEN_COMMUNITY_RULES, notice_key='platform_agreement_required_notice')
+            return
         ActivityService.record_web_app_data(message)
         render_screen(bot, message, 'tasks', notice_key='task_auto_verified')
 
@@ -309,20 +333,26 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             return
         if kind == 'wasparks' and code in SPARKS_PACKS:
             pack = SPARKS_PACKS[code]
-            WalletService.credit_internal_balance(
-                message.from_user.id,
-                pack.sparks,
-                entry_type='stars_topup',
-                note=f'Mini App Stars top up: {code}',
+            StarPaymentService.apply_credit_purchase(
+                user_id=message.from_user.id,
+                invoice_payload=payment.invoice_payload,
+                payment_kind='miniapp_pack',
+                stars_amount=int(getattr(payment, 'total_amount', 0) or pack.stars),
+                credits_granted=pack.sparks,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
             )
             return
-        if kind == 'wasparks_custom' and code.isdigit():
-            sparks_amount = int(code)
-            WalletService.credit_internal_balance(
-                message.from_user.id,
-                sparks_amount,
-                entry_type='stars_topup',
-                note=f'Mini App custom Stars top up: {sparks_amount}',
+        if kind == 'wasparks_custom' and parse_custom_invoice_code(code):
+            sparks_amount, _invoice_stars = parse_custom_invoice_code(code) or (0, 0)
+            StarPaymentService.apply_credit_purchase(
+                user_id=message.from_user.id,
+                invoice_payload=payment.invoice_payload,
+                payment_kind='miniapp_custom',
+                stars_amount=int(getattr(payment, 'total_amount', 0) or _invoice_stars),
+                credits_granted=sparks_amount,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
             )
             return
         if kind == 'waengpro' and code == '30d':
@@ -341,23 +371,31 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
         if kind == 'sparks' and code in SPARKS_PACKS:
             pack = SPARKS_PACKS[code]
-            WalletService.credit_internal_balance(
-                message.from_user.id,
-                pack.sparks,
-                entry_type='stars_topup',
-                note=f'Stars top up: {code}',
+            result = StarPaymentService.apply_credit_purchase(
+                user_id=message.from_user.id,
+                invoice_payload=payment.invoice_payload,
+                payment_kind='bot_pack',
+                stars_amount=int(getattr(payment, 'total_amount', 0) or pack.stars),
+                credits_granted=pack.sparks,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
             )
-            render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=pack.sparks, internal_name=UserService.internal_currency_label(message.from_user.id)))
+            if result.ok:
+                render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=pack.sparks, internal_name=UserService.internal_currency_label(message.from_user.id)))
             return
-        if kind == 'sparks_custom' and code.isdigit():
-            sparks_amount = int(code)
-            WalletService.credit_internal_balance(
-                message.from_user.id,
-                sparks_amount,
-                entry_type='stars_topup',
-                note=f'Stars custom top up: {sparks_amount}',
+        if kind == 'sparks_custom' and parse_custom_invoice_code(code):
+            sparks_amount, _invoice_stars = parse_custom_invoice_code(code) or (0, 0)
+            result = StarPaymentService.apply_credit_purchase(
+                user_id=message.from_user.id,
+                invoice_payload=payment.invoice_payload,
+                payment_kind='bot_custom',
+                stars_amount=int(getattr(payment, 'total_amount', 0) or _invoice_stars),
+                credits_granted=sparks_amount,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
             )
-            render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=sparks_amount, internal_name=UserService.internal_currency_label(message.from_user.id)))
+            if result.ok:
+                render_screen(bot, message, 'wallet', notice_text=UserService.t(message.from_user.id, 'stars_topup_success', amount=sparks_amount, internal_name=UserService.internal_currency_label(message.from_user.id)))
             return
         if kind == 'broadcast' and code.isdigit():
             order_id = int(code)
@@ -406,10 +444,29 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
     @bot.chat_member_handler(func=lambda update: True)
     def handle_chat_member(update) -> None:
         ActivityService.record_chat_member(update)
+        try:
+            from app.services.advertising_network import AdvertisingNetworkService
+            AdvertisingNetworkService.track_join(update)
+        except Exception:
+            pass
 
     @bot.my_chat_member_handler(func=lambda update: True)
     def handle_my_chat_member(update) -> None:
         BotChatService.record_my_chat_member(update)
+        try:
+            status = str(getattr(getattr(update, 'new_chat_member', None), 'status', '') or '')
+            if status in {'member', 'administrator', 'creator'}:
+                count = bot.get_chat_member_count(int(update.chat.id))
+                BotChatService.update_member_count(int(update.chat.id), int(count))
+                row = db.fetch_one('SELECT can_post, can_invite_users FROM bot_chats WHERE chat_id=?', (int(update.chat.id),))
+                if row and (not int(row['can_post'] or 0) or not int(row['can_invite_users'] or 0)):
+                    from app.services.advertising_network import AdvertisingNetworkService
+                    AdvertisingNetworkService.handle_platform_deactivated(bot, int(update.chat.id))
+            else:
+                from app.services.advertising_network import AdvertisingNetworkService
+                AdvertisingNetworkService.handle_platform_deactivated(bot, int(update.chat.id))
+        except Exception:
+            pass
 
     @bot.message_reaction_handler(func=lambda update: True)
     def handle_message_reaction(update) -> None:
@@ -430,18 +487,11 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             render_entry(bot, message)
             return
 
-        if (not CommunityRulesService.is_accepted(message.from_user.id)
-                and not UserService.is_admin(message.from_user.id)):
+        if not PlatformAgreementService.is_accepted(message.from_user.id):
             text_value = (message.text or '').strip().lower()
-            if text_value not in {'/start', '/menu', 'правила', '📜 правила'}:
+            if text_value not in {'/start', 'правила', '📜 правила'}:
                 _try_delete_user_message(bot, message)
-            render_screen(bot, message, SCREEN_COMMUNITY_RULES, notice_key='community_rules_required_notice')
-            return
-
-        if (not LegalDocsService.is_accepted(message.from_user.id)
-                and not UserService.is_admin(message.from_user.id)):
-            _try_delete_user_message(bot, message)
-            render_screen(bot, message, 'legal_docs', notice_key='legal_docs_required_notice')
+            render_screen(bot, message, SCREEN_COMMUNITY_RULES, notice_key='platform_agreement_required_notice')
             return
 
         session = InputSessionService.get_session(message.from_user.id)
@@ -604,31 +654,28 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             if not raw.isdigit():
                 render_screen(bot, message, 'marketplace', notice_key='boostore_order_quantity_invalid')
                 return
-            result = BoostoreProviderService.prepare_order(
-                owner_user_id=message.from_user.id,
+            quote = BoostoreProviderService.quote_credit_order(
                 external_service_id=str(payload.get('external_service_id') or ''),
                 link=str(payload.get('link') or ''),
                 quantity=int(raw),
             )
-            if not result.ok:
-                public_key = 'boostore_quantity_out_of_range' if result.result_key == 'boostore_quantity_out_of_range' else 'boostore_temporarily_unavailable'
+            if not quote.ok:
+                public_key = quote.result_key if quote.result_key in {'boostore_quantity_out_of_range', 'boostore_order_link_invalid'} else 'boostore_temporarily_unavailable'
                 render_screen(bot, message, 'marketplace', notice_key=public_key)
                 return
-            order_id = int((result.data or {}).get('order_id') or 0) if isinstance(result.data, dict) else 0
-            price = int((result.data or {}).get('price_stars') or 1) if isinstance(result.data, dict) else 1
-            ok, notice_key = _send_direct_stars_invoice(
-                bot,
-                message.from_user.id,
-                title=UserService.t(message.from_user.id, 'boostore_invoice_title'),
-                description=UserService.t(message.from_user.id, 'boostore_invoice_desc', quantity=int(raw)),
-                payload=make_payload('boostore', str(order_id), message.from_user.id),
-                amount_stars=price,
+            credit_cost = int((quote.data or {}).get('credit_cost') or 0) if isinstance(quote.data, dict) else 0
+            result = BoostoreProviderService.prepare_credit_order(
+                owner_user_id=message.from_user.id,
+                external_service_id=str(payload.get('external_service_id') or ''),
+                link=str(payload.get('link') or ''),
+                quantity=int(raw),
+                expected_credit_cost=credit_cost,
             )
-            if ok:
-                InputSessionService.clear_session(message.from_user.id)
-                render_screen(bot, message, 'marketplace', notice_key='payment_invoice_sent')
-            else:
-                render_screen(bot, message, 'marketplace', notice_key=notice_key or 'payment_invoice_failed')
+            if not result.ok:
+                render_screen(bot, message, 'marketplace', notice_key=result.result_key)
+                return
+            InputSessionService.clear_session(message.from_user.id)
+            render_screen(bot, message, 'marketplace', notice_key='boostore_order_paid')
             return
 
         if mode == 'topup_custom_sparks':
@@ -638,11 +685,11 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
                 render_screen(bot, message, SCREEN_TOPUP_CUSTOM, notice_key='topup_custom_invalid')
                 return
             sparks_amount = int(raw)
-            if sparks_amount < BASE_SPARKS_PER_STAR or sparks_amount > 100000:
+            if sparks_amount < current_credits_per_star() or sparks_amount > 100000:
                 render_screen(bot, message, SCREEN_TOPUP_CUSTOM, notice_key='topup_custom_invalid')
                 return
             stars_amount = calculate_custom_stars_for_sparks(sparks_amount)
-            payload = make_payload('sparks_custom', str(sparks_amount), message.from_user.id)
+            payload = make_payload('sparks_custom', make_custom_invoice_code(sparks_amount, stars_amount), message.from_user.id)
             ok, notice_key = _send_direct_stars_invoice(
                 bot,
                 message.from_user.id,

@@ -6,6 +6,8 @@ from typing import Any
 
 from app import db
 from app.config import settings
+from app.services.runtime_settings import RuntimeSettingsService
+from app.services.wallets import WalletService
 
 STANDARD_MODE = 'standard'
 PRO_MODE = 'pro'
@@ -31,6 +33,29 @@ class EngagementModeService:
     @staticmethod
     def pro_price_stars() -> int:
         return max(1, int(settings.engagement_pro_monthly_stars))
+
+    @staticmethod
+    def pro_price_credits() -> int:
+        return max(1, RuntimeSettingsService.get_int('engagement_pro_monthly_credits'))
+
+    @staticmethod
+    def purchase_pro_with_credits(user_id: int, *, days: int = 30, source: str = 'credits') -> tuple[bool, str]:
+        price = EngagementModeService.pro_price_credits()
+        spent = WalletService.spend_internal_balance(
+            int(user_id), price, entry_type='engagement_pro_purchase',
+            note=f'Boostora PRO {max(1, int(days))} days',
+        )
+        if not spent:
+            return False, 'insufficient_internal_balance'
+        try:
+            EngagementModeService.activate_pro(int(user_id), days=max(1, int(days)), source=source)
+        except Exception:
+            WalletService.credit_internal_balance(
+                int(user_id), price, entry_type='engagement_pro_purchase_refund',
+                note='PRO activation failed',
+            )
+            raise
+        return True, 'engagement_pro_activated_notice'
 
     @staticmethod
     def due_hours() -> int:
@@ -519,6 +544,7 @@ class EngagementModeService:
             'pro_expires_at': str(row['pro_expires_at'] or '') if row else '',
             'required_actions': EngagementModeService.required_actions(),
             'pro_price_stars': EngagementModeService.pro_price_stars(),
+            'pro_price_credits': EngagementModeService.pro_price_credits(),
             'open_obligations': len(obligations),
             'open_required_total': sum(int(item['required_actions'] or 0) for item in obligations),
             'open_remaining_total': EngagementModeService.obligation_dashboard(user_id)['total_remaining'],
@@ -546,6 +572,7 @@ class EngagementModeService:
                 'reminders_enabled': int(soft.get('reminders_enabled') or 0),
                 'required_actions': EngagementModeService.required_actions(),
                 'pro_price_stars': EngagementModeService.pro_price_stars(),
+                'pro_price_credits': EngagementModeService.pro_price_credits(),
             }
         except Exception:
             return {
@@ -556,4 +583,5 @@ class EngagementModeService:
                 'open_obligations': 0,
                 'required_actions': EngagementModeService.required_actions(),
                 'pro_price_stars': EngagementModeService.pro_price_stars(),
+                'pro_price_credits': EngagementModeService.pro_price_credits(),
             }

@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.4.0'
-APP_STAGE = 'standalone_role_safe_miniapp'
+APP_VERSION = 'Boostora v3.5.0'
+APP_STAGE = 'unified_credits_agreement_and_ad_network'

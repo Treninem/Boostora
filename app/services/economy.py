@@ -2,7 +2,7 @@ import math
 
 SIGNUP_BONUS_SPARKS = 300
 INTERNAL_CURRENCY_CODE = "BST"
-INTERNAL_CURRENCY_NAME_RU = "Искры✨"
+INTERNAL_CURRENCY_NAME_RU = "Кредиты"
 
 # Экономика:
 # - заказчик может ставить цену сам, но не ниже базовой рекомендуемой цены
@@ -64,10 +64,24 @@ def task_meta(task_type: str) -> dict[str, int | str]:
     return TASK_CATALOG[task_type]
 
 
+def _task_platform_fee_percent() -> int:
+    # SQLite owner setting keeps the commission adjustable without a deploy.
+    # Lazy import avoids a module cycle during configuration bootstrap.
+    try:
+        from app.services.runtime_settings import RuntimeSettingsService
+        return max(5, min(50, int(RuntimeSettingsService.get_int('task_platform_fee_percent'))))
+    except Exception:
+        return 20
+
+
 def _discounted_floor(base_floor: int, quantity: int, reward_floor: int) -> tuple[int, int]:
     discount_percent = get_discount_percent(quantity)
     discounted_floor = math.floor(base_floor * (100 - discount_percent) / 100)
-    discounted_floor = max(reward_floor + MIN_SERVICE_FEE, discounted_floor)
+    fee_percent = _task_platform_fee_percent()
+    # The floor always covers the performer reward and the configured platform
+    # commission. This prevents task issuance from creating unbacked credits.
+    percent_floor = math.ceil(reward_floor / max(0.01, 1.0 - fee_percent / 100.0))
+    discounted_floor = max(reward_floor + MIN_SERVICE_FEE, percent_floor, discounted_floor)
     return discounted_floor, discount_percent
 
 
@@ -163,11 +177,14 @@ def calculate_campaign_pricing(task_type: str, quantity: int, selected_unit_pric
         unit_price = int(selected_unit_price)
 
     extra_price = max(unit_price - floor_price, 0)
-    performer_bonus = math.floor(extra_price * CUSTOM_PRICE_PERFORMER_SHARE)
+    fee_percent = _task_platform_fee_percent()
+    performer_extra_share = min(CUSTOM_PRICE_PERFORMER_SHARE, (100 - fee_percent) / 100.0)
+    performer_bonus = math.floor(extra_price * performer_extra_share)
     reward_unit = base_reward + performer_bonus
-    service_fee_unit = max(unit_price - reward_unit, MIN_SERVICE_FEE)
-    if reward_unit + service_fee_unit > unit_price:
-        service_fee_unit = max(unit_price - reward_unit, 0)
+    minimum_fee = max(MIN_SERVICE_FEE, math.ceil(unit_price * fee_percent / 100.0))
+    service_fee_unit = max(unit_price - reward_unit, minimum_fee)
+    service_fee_unit = min(unit_price, service_fee_unit)
+    reward_unit = max(0, unit_price - service_fee_unit)
     reward_budget_total = reward_unit * quantity
     total_charge = unit_price * quantity
     service_fee_total = total_charge - reward_budget_total
@@ -190,6 +207,7 @@ def calculate_campaign_pricing(task_type: str, quantity: int, selected_unit_pric
         "reward_budget_total": reward_budget_total,
         "service_fee_total": service_fee_total,
         "service_fee_unit": service_fee_unit,
+        "platform_fee_percent": fee_percent,
         "budget_total": total_charge,
         "speed_index": speed_index,
         "price_position_percent": price_position,

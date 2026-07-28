@@ -343,3 +343,21 @@ class AdBroadcastService:
             sent, _failed = AdBroadcastService.dispatch_order(bot, int(row['id']), support_username=support_username)
             total_sent += sent
         return total_sent
+
+# v3.5.0 compatibility cleanup: old unpaid Star invoices are closed instead of
+# remaining in an endless "awaiting payment" state. New user advertising is
+# created through the credit-funded advertising network in Mini App.
+def _expire_unpaid_broadcasts(timeout_minutes: int = 20) -> int:
+    safe = max(5, min(1440, int(timeout_minutes)))
+    def _run(connection):
+        cursor = connection.execute(
+            '''UPDATE ad_broadcasts SET status='expired', updated_at=CURRENT_TIMESTAMP
+               WHERE status='awaiting_payment'
+                 AND datetime(created_at)<=datetime('now', ?)''',
+            (f'-{safe} minutes',),
+        )
+        return max(0, int(cursor.rowcount or 0))
+    return db.run_in_transaction(_run)
+
+
+AdBroadcastService.expire_unpaid_orders = staticmethod(_expire_unpaid_broadcasts)

@@ -167,11 +167,20 @@ class WalletService:
         return db.run_in_transaction(_run)
 
     @staticmethod
-    def spend_campaign_balance(user_id: int, amount: int, *, entry_type: str, note: str | None = None, related_campaign_id: int | None = None) -> bool:
+    def spend_with_bonus_cap(
+        user_id: int,
+        amount: int,
+        *,
+        entry_type: str,
+        note: str | None = None,
+        related_campaign_id: int | None = None,
+        max_bonus_percent: int = 50,
+    ) -> dict[str, int | bool]:
         if amount <= 0:
             raise ValueError('Amount must be positive')
+        safe_percent = max(0, min(50, int(max_bonus_percent)))
 
-        def _run(connection: sqlite3.Connection) -> bool:
+        def _run(connection: sqlite3.Connection) -> dict[str, int | bool]:
             connection.execute(
                 """
                 INSERT INTO wallets (user_id)
@@ -183,10 +192,17 @@ class WalletService:
             wallet = connection.execute('SELECT * FROM wallets WHERE user_id = ?', (user_id,)).fetchone()
             internal_balance = int(wallet['internal_balance']) if wallet else 0
             bonus_balance = int(wallet['bonus_balance']) if wallet and 'bonus_balance' in wallet.keys() else 0
-            if internal_balance + bonus_balance < amount:
-                return False
-            from_bonus = min(bonus_balance, amount)
+            max_bonus = amount * safe_percent // 100
+            from_bonus = min(bonus_balance, max_bonus)
             from_internal = amount - from_bonus
+            if internal_balance < from_internal:
+                return {
+                    'ok': False,
+                    'amount': amount,
+                    'bonus_used': 0,
+                    'credits_used': 0,
+                    'missing': max(0, from_internal - internal_balance),
+                }
             connection.execute(
                 """
                 UPDATE wallets
@@ -204,7 +220,7 @@ class WalletService:
                         user_id, wallet_user_id, amount, currency_code, direction, entry_type, status, related_campaign_id, note
                     ) VALUES (?, ?, ?, 'BST', 'debit', ?, 'completed', ?, ?)
                     """,
-                    (user_id, user_id, from_bonus, f'{entry_type}_bonus', related_campaign_id, (note or 'Campaign funding') + ' [bonus]'),
+                    (user_id, user_id, from_bonus, f'{entry_type}_bonus', related_campaign_id, (note or 'Service payment') + ' [bonus]'),
                 )
             if from_internal > 0:
                 connection.execute(
@@ -213,11 +229,151 @@ class WalletService:
                         user_id, wallet_user_id, amount, currency_code, direction, entry_type, status, related_campaign_id, note
                     ) VALUES (?, ?, ?, 'BST', 'debit', ?, 'completed', ?, ?)
                     """,
-                    (user_id, user_id, from_internal, entry_type, related_campaign_id, (note or 'Campaign funding') + ' [earned]'),
+                    (user_id, user_id, from_internal, entry_type, related_campaign_id, (note or 'Service payment') + ' [credits]'),
                 )
-            return True
+            return {
+                'ok': True,
+                'amount': amount,
+                'bonus_used': from_bonus,
+                'credits_used': from_internal,
+                'missing': 0,
+            }
 
         return db.run_in_transaction(_run)
+
+    @staticmethod
+    def spend_campaign_balance(user_id: int, amount: int, *, entry_type: str, note: str | None = None, related_campaign_id: int | None = None) -> bool:
+        from app.services.runtime_settings import RuntimeSettingsService
+
+        result = WalletService.spend_with_bonus_cap(
+            user_id,
+            amount,
+            entry_type=entry_type,
+            note=note,
+            related_campaign_id=related_campaign_id,
+            max_bonus_percent=RuntimeSettingsService.get_int('max_bonus_payment_percent'),
+        )
+        return bool(result['ok'])
+
+    @staticmethod
+    def refund_split(
+        user_id: int,
+        *,
+        credits: int = 0,
+        bonus: int = 0,
+        entry_type: str = 'service_refund',
+        note: str | None = None,
+        related_campaign_id: int | None = None,
+    ) -> None:
+        safe_credits = max(0, int(credits))
+        safe_bonus = max(0, int(bonus))
+        if safe_credits <= 0 and safe_bonus <= 0:
+            return
+
+        def _run(connection: sqlite3.Connection) -> None:
+            connection.execute(
+                """
+                INSERT INTO wallets (user_id)
+                VALUES (?)
+                ON CONFLICT(user_id) DO NOTHING
+                """,
+                (user_id,),
+            )
+            connection.execute(
+                """
+                UPDATE wallets
+                SET internal_balance = internal_balance + ?,
+                    bonus_balance = bonus_balance + ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (safe_credits, safe_bonus, user_id),
+            )
+            if safe_credits:
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        user_id, wallet_user_id, amount, currency_code, direction, entry_type, status, related_campaign_id, note
+                    ) VALUES (?, ?, ?, 'BST', 'credit', ?, 'completed', ?, ?)
+                    """,
+                    (user_id, user_id, safe_credits, entry_type, related_campaign_id, (note or 'Refund') + ' [credits]'),
+                )
+            if safe_bonus:
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        user_id, wallet_user_id, amount, currency_code, direction, entry_type, status, related_campaign_id, note
+                    ) VALUES (?, ?, ?, 'BST', 'credit', ?, 'completed', ?, ?)
+                    """,
+                    (user_id, user_id, safe_bonus, f'{entry_type}_bonus', related_campaign_id, (note or 'Refund') + ' [bonus]'),
+                )
+
+        db.run_in_transaction(_run)
+
+    @staticmethod
+    def adjust_balance(
+        user_id: int,
+        *,
+        balance_type: str,
+        amount: int,
+        reason: str,
+        admin_user_id: int,
+    ) -> dict[str, int | bool]:
+        if balance_type not in {'credits', 'bonus'}:
+            raise ValueError('Unsupported balance type')
+        delta = int(amount)
+        if delta == 0:
+            raise ValueError('Amount must not be zero')
+        if not str(reason or '').strip():
+            raise ValueError('Reason is required')
+
+        column = 'internal_balance' if balance_type == 'credits' else 'bonus_balance'
+        entry_type = f'owner_adjust_{balance_type}'
+        direction = 'credit' if delta > 0 else 'debit'
+        absolute = abs(delta)
+
+        def _run(connection: sqlite3.Connection) -> dict[str, int | bool]:
+            connection.execute(
+                """
+                INSERT INTO wallets (user_id)
+                VALUES (?)
+                ON CONFLICT(user_id) DO NOTHING
+                """,
+                (user_id,),
+            )
+            wallet = connection.execute('SELECT * FROM wallets WHERE user_id = ?', (user_id,)).fetchone()
+            current = int(wallet[column]) if wallet else 0
+            if delta < 0 and current < absolute:
+                return {'ok': False, 'balance': current, 'changed': 0}
+            connection.execute(
+                f"UPDATE wallets SET {column} = {column} + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (delta, user_id),
+            )
+            connection.execute(
+                """
+                INSERT INTO transactions (
+                    user_id, wallet_user_id, amount, currency_code, direction, entry_type, status, note
+                ) VALUES (?, ?, ?, 'BST', ?, ?, 'completed', ?)
+                """,
+                (user_id, user_id, absolute, direction, entry_type, f'admin={admin_user_id}; {reason.strip()}'),
+            )
+            return {'ok': True, 'balance': current + delta, 'changed': delta}
+
+        return db.run_in_transaction(_run)
+
+    @staticmethod
+    def list_transactions(user_id: int, *, limit: int = 20, offset: int = 0):
+        safe_limit = max(1, min(150, int(limit)))
+        safe_offset = max(0, int(offset))
+        return db.fetch_all(
+            """
+            SELECT * FROM transactions
+            WHERE user_id = ? OR wallet_user_id = ?
+            ORDER BY id DESC
+            LIMIT ? OFFSET ?
+            """,
+            (user_id, user_id, safe_limit, safe_offset),
+        )
 
     @staticmethod
     def has_received_demo_internal_topup(user_id: int) -> bool:

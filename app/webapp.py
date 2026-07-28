@@ -19,6 +19,7 @@ from app import db
 from app.config import settings
 from app.version import APP_VERSION
 from app.services.activity import ActivityService
+from app.services.advertising_network import AdvertisingNetworkService
 from app.services.engagement_modes import EngagementModeService
 from app.services.smart_hub import SmartHubService
 from app.services.users import UserService
@@ -31,7 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_ROOT = (PROJECT_ROOT / 'miniapp_example').resolve()
 MAX_JSON_BODY_BYTES = 64 * 1024
 
-# Compatibility deep links for older Mini App clients. The current v3.4.0 client
+# Compatibility deep links for older Mini App clients. The current v3.5.0 client
 # performs primary operations through /api/miniapp/query and server-side role gates.
 ACTION_START_PARAMS: dict[str, tuple[str, str]] = {
     'main': ('main_menu', 'user'),
@@ -250,7 +251,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
 
 
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.4.0'
+    server_version = 'BoostoraWeb/3.5.0'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):
@@ -283,6 +284,26 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
 
     def _send_error_json(self, status: HTTPStatus, code: str, *, head_only: bool = False) -> None:
         self._send_json(status, {'ok': False, 'error': code}, head_only=head_only)
+
+    def _send_redirect(self, location: str) -> None:
+        self.send_response(HTTPStatus.FOUND)
+        self.send_header('Location', str(location))
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Referrer-Policy', 'no-referrer')
+        self.send_header('X-Content-Type-Options', 'nosniff')
+        self.end_headers()
+
+    def _handle_tracking_redirect(self, token: str) -> None:
+        target = AdvertisingNetworkService.resolve_tracking_click(token)
+        if not target:
+            self._send_bytes(
+                HTTPStatus.GONE,
+                'Срок рекламной ссылки истёк или размещение завершено.'.encode('utf-8'),
+                content_type='text/plain; charset=utf-8',
+                cache_control='no-store',
+            )
+            return
+        self._send_redirect(target)
 
     def _static_file_for_path(self, request_path: str) -> Path | None:
         clean_path = unquote(urlsplit(request_path).path)
@@ -461,6 +482,9 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             return
         if path == '/api/config':
             self._handle_config()
+            return
+        if path.startswith('/r/'):
+            self._handle_tracking_redirect(path[len('/r/'):])
             return
         self._serve_static()
 

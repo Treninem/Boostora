@@ -45,6 +45,13 @@ class Settings:
     boostore_request_timeout_seconds: int
     boostore_auto_sync: bool
     boostore_auto_order_enabled: bool
+    provider_order_timeout_minutes: int
+    credits_per_star: int
+    provider_credits_per_price_unit: int
+    max_bonus_payment_percent: int
+    network_min_members: int
+    network_max_platforms_per_user: int
+    network_base_placement_credits: int
     legal_docs_required: bool
     legal_docs_version: str
     community_rules_required: bool
@@ -226,10 +233,17 @@ settings = Settings(
     boostore_request_timeout_seconds=_parse_int_env('BOOSTORE_REQUEST_TIMEOUT_SECONDS', 20, minimum=3, maximum=120),
     boostore_auto_sync=_parse_bool(os.getenv('BOOSTORE_AUTO_SYNC', '0'), default=False),
     boostore_auto_order_enabled=_parse_bool(os.getenv('BOOSTORE_AUTO_ORDER_ENABLED', '0'), default=False),
+    provider_order_timeout_minutes=_parse_int_env('PROVIDER_ORDER_TIMEOUT_MINUTES', 20, minimum=5, maximum=1440),
+    credits_per_star=_parse_int_env('CREDITS_PER_STAR', 10, minimum=1, maximum=10000),
+    provider_credits_per_price_unit=_parse_int_env('PROVIDER_CREDITS_PER_PRICE_UNIT', 10, minimum=1, maximum=100000),
+    max_bonus_payment_percent=_parse_int_env('MAX_BONUS_PAYMENT_PERCENT', 50, minimum=0, maximum=50),
+    network_min_members=_parse_int_env('NETWORK_MIN_MEMBERS', 100, minimum=10, maximum=1000000),
+    network_max_platforms_per_user=_parse_int_env('NETWORK_MAX_PLATFORMS_PER_USER', 10, minimum=1, maximum=100),
+    network_base_placement_credits=_parse_int_env('NETWORK_BASE_PLACEMENT_CREDITS', 60, minimum=1, maximum=100000),
     legal_docs_required=_parse_bool(os.getenv('LEGAL_DOCS_REQUIRED', '1'), default=True),
-    legal_docs_version=os.getenv('LEGAL_DOCS_VERSION', '2026-07-25-v1').strip() or '2026-07-25-v1',
+    legal_docs_version=os.getenv('LEGAL_DOCS_VERSION', '2026-07-28-v2').strip() or '2026-07-28-v2',
     community_rules_required=_parse_bool(os.getenv('COMMUNITY_RULES_REQUIRED', '1'), default=True),
-    community_rules_version=os.getenv('COMMUNITY_RULES_VERSION', '2026-07-25-v1').strip() or '2026-07-25-v1',
+    community_rules_version=os.getenv('COMMUNITY_RULES_VERSION', '2026-07-28-v2').strip() or '2026-07-28-v2',
     engagement_standard_required_actions=_parse_int_env('ENGAGEMENT_STANDARD_REQUIRED_ACTIONS', 10, minimum=1, maximum=100),
     engagement_pro_monthly_stars=_parse_int_env('ENGAGEMENT_PRO_MONTHLY_STARS', 199, minimum=1, maximum=100000),
     engagement_obligation_due_hours=_parse_int_env('ENGAGEMENT_OBLIGATION_DUE_HOURS', 24, minimum=1, maximum=720),

@@ -18,6 +18,8 @@ from app.services.promo import PromoService
 from app.services.ad_broadcasts import AdBroadcastService
 from app.services.engagement_modes import EngagementModeService
 from app.services.boostore_provider import BoostoreProviderService
+from app.services.advertising_network import AdvertisingNetworkService
+from app.services.bot_chats import BotChatService
 from app.version import APP_VERSION
 from app.webapp import WebAppRuntime, start_webapp_server
 
@@ -189,6 +191,9 @@ def _run_background_cycle(bot: telebot.TeleBot) -> None:
     jobs: list[tuple[str, Any]] = [
         ('promotions', lambda: PromoService.run_due_promotions(bot)),
         ('ad_broadcasts', lambda: AdBroadcastService.run_due_orders(bot, support_username=settings.support_username)),
+        ('ad_broadcast_expiry', lambda: AdBroadcastService.expire_unpaid_orders()),
+        ('advertising_network', lambda: AdvertisingNetworkService.run_due_placements(bot)),
+        ('network_metrics', lambda: BotChatService.refresh_network_metrics(bot, limit=100)),
         ('engagement_reminders', lambda: EngagementModeService.run_due_reminders(
             bot,
             admin_ids=settings.admin_ids,
@@ -197,6 +202,7 @@ def _run_background_cycle(bot: telebot.TeleBot) -> None:
         ('database_backup', create_periodic_backup),
     ]
     if settings.boostore_enabled:
+        jobs.append(('boostore_expire_unpaid', BoostoreProviderService.expire_stale_orders))
         jobs.append(('boostore_status_sync', lambda: BoostoreProviderService.sync_order_statuses(limit=20)))
 
     for name, callback in jobs:

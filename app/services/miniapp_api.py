@@ -14,6 +14,8 @@ from app import db
 from app.config import settings
 from app.services.admin import AdminService
 from app.services.boostore_provider import BoostoreProviderService
+from app.services.bot_chats import BotChatService
+from app.services.advertising_network import AdvertisingNetworkService
 from app.services.campaigns import CampaignService
 from app.services.client_campaigns import ClientCampaignService
 from app.services.community_rules import CommunityRulesService
@@ -21,17 +23,22 @@ from app.services.engagement_modes import EngagementModeService
 from app.services.economy import TASK_CATALOG, calculate_campaign_pricing
 from app.services.final_audit import FinalAuditService
 from app.services.legal_docs import LegalDocsService
+from app.services.platform_agreement import PlatformAgreementService
 from app.services.owner_analytics import OwnerAnalyticsService
 from app.services.payments import (
-    BASE_SPARKS_PER_STAR,
+    current_credits_per_star,
     SPARKS_PACKS,
     calculate_custom_stars_for_sparks,
+    make_custom_invoice_code,
+    make_pack_invoice_code,
     make_payload,
 )
 from app.services.performer import PerformerService
 from app.services.referrals import ReferralService
 from app.services.release_readiness import ReleaseReadinessService
+from app.services.runtime_settings import RuntimeSettingsService
 from app.services.subscriptions import SubscriptionService
+from app.services.star_payments import StarPaymentService
 from app.services.transactions import TransactionService
 from app.services.users import UserService
 from app.services.wallets import WalletService
@@ -119,9 +126,11 @@ def ensure_web_user(user: dict[str, Any]) -> int:
 
 
 def _accepted_state(user_id: int) -> dict[str, bool]:
+    accepted = PlatformAgreementService.is_accepted(user_id)
     return {
         'rules': CommunityRulesService.is_accepted(user_id),
         'legal': LegalDocsService.is_accepted(user_id),
+        'agreement': accepted,
     }
 
 
@@ -154,12 +163,8 @@ def _gate(user_id: int, *, role: str | None = None, docs: bool = True, subscript
         return ApiResult(403, {'ok': False, 'error': 'blocked'})
     if role and UserService.get_role(user_id) != role:
         return ApiResult(403, {'ok': False, 'error': 'role_required', 'role': role})
-    if docs:
-        accepted = _accepted_state(user_id)
-        if not accepted['rules']:
-            return ApiResult(409, {'ok': False, 'error': 'rules_required'})
-        if not accepted['legal']:
-            return ApiResult(409, {'ok': False, 'error': 'legal_required'})
+    if docs and not PlatformAgreementService.is_accepted(user_id):
+        return ApiResult(409, {'ok': False, 'error': 'agreement_required'})
     if subscription and not UserService.is_admin(user_id):
         try:
             subscribed, unknown = _subscription_state(user_id)
@@ -227,6 +232,8 @@ def _documents(user_id: int) -> dict[str, Any]:
     ]
     accepted = _accepted_state(user_id)
     return {
+        'accepted': accepted['agreement'],
+        'version': PlatformAgreementService.version(),
         'rules': {'accepted': accepted['rules'], 'version': CommunityRulesService.CURRENT_VERSION, 'sections': rules},
         'legal': {'accepted': accepted['legal'], 'version': LegalDocsService.CURRENT_VERSION, 'sections': legal},
     }
@@ -247,7 +254,7 @@ def _catalog_service(row: Any, *, include_internal: bool = False) -> dict[str, A
         'refill': bool(row['refill_enabled']),
         'cancel': bool(row['cancel_enabled']),
         'enabled': bool(row['is_enabled']),
-        'example_price_stars': int(BoostoreProviderService.public_price_stars(row, quantity_for_price)),
+        'example_price_credits': int(BoostoreProviderService.public_price_credits(row, quantity_for_price)),
     }
     if include_internal:
         payload['rate'] = float(row['rate_value'] or 0)
@@ -271,8 +278,8 @@ def _provider_orders(user_id: int, limit: int = 50) -> list[dict[str, Any]]:
     )
     return _rows(rows, (
         'id', 'external_order_id', 'external_service_id', 'service_name', 'link', 'quantity',
-        'charge_value', 'currency', 'provider_status', 'created_at', 'updated_at', 'placed_at',
-        'paid_at', 'last_error',
+        'charge_value', 'credit_cost', 'bonus_used', 'currency', 'provider_status', 'created_at', 'updated_at', 'placed_at',
+        'paid_at', 'expires_at', 'last_error',
     ))
 
 
@@ -291,8 +298,8 @@ def _all_provider_orders(limit: int = 100) -> list[dict[str, Any]]:
     )
     return _rows(rows, (
         'id', 'owner_user_id', 'username', 'first_name', 'last_name', 'external_order_id',
-        'external_service_id', 'service_name', 'link', 'quantity', 'charge_value', 'currency',
-        'provider_status', 'created_at', 'updated_at', 'placed_at', 'paid_at', 'last_error',
+        'external_service_id', 'service_name', 'link', 'quantity', 'charge_value', 'credit_cost', 'bonus_used', 'currency',
+        'provider_status', 'created_at', 'updated_at', 'placed_at', 'paid_at', 'expires_at', 'last_error',
     ))
 
 
@@ -316,7 +323,7 @@ def _wallet_payload(user_id: int) -> dict[str, Any]:
             'related_campaign_id', 'related_submission_id',
         )),
         'packs': packs,
-        'base_sparks_per_star': BASE_SPARKS_PER_STAR,
+        'base_sparks_per_star': current_credits_per_star(),
     }
 
 
@@ -448,22 +455,19 @@ class MiniAppApiService:
         if op == 'documents.accept':
             if not UserService.can_access_bot(user_id):
                 return ApiResult(403, {'ok': False, 'error': 'blocked'})
-            kind = str(payload.get('kind') or '')
-            if kind in {'rules', 'all'}:
-                CommunityRulesService.accept(user_id, source='miniapp')
-            if kind in {'legal', 'all'}:
-                LegalDocsService.accept(user_id, source='miniapp')
-            if kind not in {'rules', 'legal', 'all'}:
-                return ApiResult(400, {'ok': False, 'error': 'invalid_document_kind'})
+            PlatformAgreementService.accept(user_id, source='miniapp')
             return ApiResult(200, {'ok': True, **_documents(user_id)})
+        if op == 'documents.decline':
+            PlatformAgreementService.decline(user_id, source='miniapp')
+            return ApiResult(200, {'ok': True, 'accepted': False, 'result': 'agreement_declined'})
 
         if op == 'profile.get':
-            basic_gate = _gate(user_id, docs=False, subscription=False)
+            basic_gate = _gate(user_id, docs=True, subscription=False)
             if basic_gate:
                 return basic_gate
             return ApiResult(200, {'ok': True, **_profile_payload(user_id)})
         if op == 'profile.update':
-            basic_gate = _gate(user_id, docs=False, subscription=False)
+            basic_gate = _gate(user_id, docs=True, subscription=False)
             if basic_gate:
                 return basic_gate
             role = payload.get('role')
@@ -504,18 +508,18 @@ class MiniAppApiService:
                     pack = SPARKS_PACKS.get(code)
                     if not pack:
                         return ApiResult(400, {'ok': False, 'error': 'pack_not_found'})
-                    invoice_payload = make_payload('wasparks', code, user_id)
+                    invoice_payload = make_payload('wasparks', make_pack_invoice_code(pack), user_id)
                     title = pack.title
                     description = pack.description
                     stars = int(pack.stars)
                 elif kind == 'custom':
                     sparks = int(payload.get('sparks') or 0)
-                    if sparks < BASE_SPARKS_PER_STAR or sparks > 100000:
+                    if sparks < current_credits_per_star() or sparks > 100000:
                         return ApiResult(400, {'ok': False, 'error': 'invalid_amount'})
                     stars = calculate_custom_stars_for_sparks(sparks)
-                    invoice_payload = make_payload('wasparks_custom', str(sparks), user_id)
-                    title = f'{sparks} Искр'
-                    description = f'Пополнение баланса Boostora на {sparks} Искр'
+                    invoice_payload = make_payload('wasparks_custom', make_custom_invoice_code(sparks, stars), user_id)
+                    title = f'{sparks} кредитов'
+                    description = f'Пополнение баланса Boostora на {sparks} кредитов'
                 else:
                     return ApiResult(400, {'ok': False, 'error': 'invalid_invoice_kind'})
                 url = _telegram_invoice_link(title=title, description=description, payload=invoice_payload, stars=stars)
@@ -534,21 +538,22 @@ class MiniAppApiService:
         if op == 'engagement.standard':
             EngagementModeService.set_standard(user_id, source='miniapp')
             return ApiResult(200, {'ok': True, 'summary': EngagementModeService.mode_summary(user_id)})
-        if op == 'engagement.pro_invoice':
-            if not settings.enable_xtr_payments:
-                return ApiResult(503, {'ok': False, 'error': 'payments_disabled'})
-            stars = EngagementModeService.pro_price_stars()
-            try:
-                url = _telegram_invoice_link(
-                    title='Boostora PRO',
-                    description='PRO на 30 дней без ответных обязательств',
-                    payload=make_payload('waengpro', '30d', user_id),
-                    stars=stars,
-                )
-            except Exception:
-                LOGGER.exception('Could not create Mini App PRO invoice for user_id=%s', user_id)
-                return ApiResult(502, {'ok': False, 'error': 'invoice_failed'})
-            return ApiResult(200, {'ok': True, 'invoice_url': url, 'stars': stars})
+        if op in {'engagement.pro_purchase', 'engagement.pro_invoice'}:
+            ok, result_key = EngagementModeService.purchase_pro_with_credits(
+                user_id, days=30, source='miniapp_credits'
+            )
+            if not ok:
+                return ApiResult(409, {
+                    'ok': False,
+                    'error': result_key,
+                    'credit_cost': EngagementModeService.pro_price_credits(),
+                })
+            return ApiResult(200, {
+                'ok': True,
+                'result': result_key,
+                'credit_cost': EngagementModeService.pro_price_credits(),
+                'summary': EngagementModeService.mode_summary(user_id),
+            })
 
         if op == 'referrals.get':
             return ApiResult(200, {'ok': True, **_profile_payload(user_id)['referrals']})
@@ -581,7 +586,7 @@ class MiniAppApiService:
                 'total': total,
                 'pages': max(1, (total + page_size - 1) // page_size),
             })
-        if op == 'catalog.prepare_order':
+        if op in {'catalog.quote_order', 'catalog.prepare_order'}:
             if UserService.get_role(user_id) != 'client':
                 return ApiResult(403, {'ok': False, 'error': 'client_role_required'})
             provider_state = BoostoreProviderService.config_state()
@@ -593,35 +598,83 @@ class MiniAppApiService:
                 quantity = int(payload.get('quantity') or 0)
             except Exception:
                 quantity = 0
-            result = BoostoreProviderService.prepare_order(
-                owner_user_id=user_id,
-                external_service_id=external_service_id,
-                link=link,
-                quantity=quantity,
-            )
+            if op == 'catalog.quote_order':
+                result = BoostoreProviderService.quote_credit_order(
+                    external_service_id=external_service_id,
+                    link=link,
+                    quantity=quantity,
+                )
+            else:
+                expected = payload.get('expected_credit_cost')
+                result = BoostoreProviderService.prepare_credit_order(
+                    owner_user_id=user_id,
+                    external_service_id=external_service_id,
+                    link=link,
+                    quantity=quantity,
+                    expected_credit_cost=None if expected in {None, ''} else int(expected),
+                )
             if not result.ok:
-                return ApiResult(400, {'ok': False, 'error': result.result_key})
-            data = result.data if isinstance(result.data, dict) else {}
-            order_id = int(data.get('order_id') or 0)
-            stars = int(data.get('price_stars') or 1)
-            try:
-                url = _telegram_invoice_link(
-                    title='Услуга Telegram',
-                    description=f'Заказ на {quantity} единиц',
-                    payload=make_payload('waboostore', str(order_id), user_id),
-                    stars=stars,
-                )
-            except Exception:
-                LOGGER.exception('Could not create Mini App Boostore invoice order_id=%s', order_id)
-                db.execute(
-                    "UPDATE provider_orders SET provider_status = 'invoice_failed', last_error = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                    ('invoice_link_failed', order_id),
-                )
-                return ApiResult(502, {'ok': False, 'error': 'invoice_failed'})
-            return ApiResult(200, {'ok': True, 'invoice_url': url, 'stars': stars, 'order_id': order_id})
+                body = {'ok': False, 'error': result.result_key}
+                if isinstance(result.data, dict):
+                    body.update(result.data)
+                return ApiResult(409 if result.result_key == 'boostore_price_changed' else 400, body)
+            return ApiResult(200, {'ok': True, 'result': result.result_key, **(result.data if isinstance(result.data, dict) else {})})
 
         if op == 'orders.get':
+            BoostoreProviderService.expire_stale_orders()
             return ApiResult(200, {'ok': True, 'orders': _provider_orders(user_id)})
+
+        if op == 'network.get':
+            return ApiResult(200, {'ok': True, **AdvertisingNetworkService.user_summary(user_id)})
+        if op == 'network.platform_update':
+            try:
+                chat_id = int(payload.get('chat_id') or 0)
+                daily_limit = int(payload.get('daily_limit') or 1)
+            except Exception:
+                return ApiResult(400, {'ok': False, 'error': 'network_platform_input_invalid'})
+            ok = BotChatService.update_network_settings(
+                user_id,
+                chat_id,
+                daily_limit=daily_limit,
+                window_start=str(payload.get('window_start') or '09:00'),
+                window_end=str(payload.get('window_end') or '22:00'),
+                min_interval_hours=int(payload.get('min_interval_hours') or 6),
+                timezone_offset_minutes=int(payload.get('timezone_offset_minutes') or 0),
+                topic_code=str(payload.get('topic_code') or 'general'),
+                language_code=str(payload.get('language_code') or 'ru'),
+            )
+            return ApiResult(200 if ok else 404, {'ok': ok, 'result': 'network_platform_saved' if ok else 'network_platform_not_found'})
+        if op == 'network.quote':
+            try:
+                result = AdvertisingNetworkService.quote_budget(
+                    user_id,
+                    budget_credits=int(payload.get('budget_credits') or 0),
+                    target_url=str(payload.get('target_url') or ''),
+                    target_chat_id=None if payload.get('target_chat_id') in {None, ''} else int(payload.get('target_chat_id')),
+                    topic_code=str(payload.get('topic_code') or 'general'),
+                    language_code=str(payload.get('language_code') or 'ru'),
+                )
+            except Exception:
+                LOGGER.exception('Network quote failed user_id=%s', user_id)
+                return ApiResult(400, {'ok': False, 'error': 'network_quote_invalid'})
+            return ApiResult(200 if result.ok else 400, {'ok': result.ok, 'result': result.result_key, **(result.data if isinstance(result.data, dict) else {})})
+        if op == 'network.create':
+            try:
+                result = AdvertisingNetworkService.create_campaign(
+                    user_id,
+                    budget_credits=int(payload.get('budget_credits') or 0),
+                    target_url=str(payload.get('target_url') or ''),
+                    target_chat_id=None if payload.get('target_chat_id') in {None, ''} else int(payload.get('target_chat_id')),
+                    ad_text=str(payload.get('ad_text') or ''),
+                    topic_code=str(payload.get('topic_code') or 'general'),
+                    language_code=str(payload.get('language_code') or 'ru'),
+                    title=str(payload.get('title') or ''),
+                    expected_spend=None if payload.get('expected_spend') in {None, ''} else int(payload.get('expected_spend')),
+                )
+            except Exception:
+                LOGGER.exception('Network campaign creation failed user_id=%s', user_id)
+                return ApiResult(500, {'ok': False, 'error': 'network_create_failed'})
+            return ApiResult(200 if result.ok else 400, {'ok': result.ok, 'result': result.result_key, **(result.data if isinstance(result.data, dict) else {})})
 
         if op == 'campaigns.get':
             role_gate = _gate(user_id, role='client')
@@ -782,12 +835,134 @@ class MiniAppApiService:
                     category=str(payload.get('category') or '') or None,
                     subcategory=str(payload.get('subcategory') or '') or None,
                 )
+            elif action == 'set_markup':
+                result = BoostoreProviderService.set_markup(
+                    str(payload.get('service_id') or ''),
+                    int(payload.get('markup_percent') or 0),
+                )
             else:
                 return ApiResult(400, {'ok': False, 'error': 'unknown_owner_action'})
             return ApiResult(200 if result.ok else 400, {'ok': result.ok, 'result': result.result_key, 'data': result.data})
+        if op == 'owner.runtime_settings':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            return ApiResult(200, {'ok': True, 'settings': RuntimeSettingsService.list_public_owner_settings()})
+        if op == 'owner.runtime_setting_update':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                value = RuntimeSettingsService.set_int(
+                    str(payload.get('key') or ''),
+                    payload.get('value'),
+                    admin_user_id=user_id,
+                )
+            except ValueError as exc:
+                return ApiResult(400, {'ok': False, 'error': str(exc)})
+            return ApiResult(200, {'ok': True, 'result': 'runtime_setting_saved', 'value': value})
+        if op == 'owner.user_lookup':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            query = str(payload.get('query') or '').strip()
+            target = None
+            if query.lstrip('-').isdigit():
+                target = db.fetch_one(
+                    '''SELECT u.*, COALESCE(w.internal_balance,0) AS internal_balance,
+                              COALESCE(w.bonus_balance,0) AS bonus_balance,
+                              COALESCE(w.hold_balance,0) AS hold_balance
+                       FROM users u LEFT JOIN wallets w ON w.user_id=u.user_id
+                       WHERE u.user_id=?''',
+                    (int(query),),
+                )
+            elif query:
+                target = db.fetch_one(
+                    '''SELECT u.*, COALESCE(w.internal_balance,0) AS internal_balance,
+                              COALESCE(w.bonus_balance,0) AS bonus_balance,
+                              COALESCE(w.hold_balance,0) AS hold_balance
+                       FROM users u LEFT JOIN wallets w ON w.user_id=u.user_id
+                       WHERE lower(COALESCE(u.username,''))=lower(?)''',
+                    (query.lstrip('@'),),
+                )
+            if not target:
+                return ApiResult(404, {'ok': False, 'error': 'owner_user_not_found'})
+            target_id = int(target['user_id'])
+            return ApiResult(200, {
+                'ok': True,
+                'user': _row(target),
+                'platforms': _rows(BotChatService.list_user_network_chats(target_id)),
+                'transactions': _rows(WalletService.list_transactions(target_id, limit=10)),
+                'star_payments': _rows(StarPaymentService.list_user_payments(target_id, limit=10)),
+            })
+        if op == 'owner.operations':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                target_id = int(payload.get('user_id') or 0)
+                requested_limit = int(payload.get('limit') or 20)
+            except Exception:
+                return ApiResult(400, {'ok': False, 'error': 'owner_operation_input_invalid'})
+            allowed = {1, 5, 10, 20, 50, 100, 150}
+            limit = requested_limit if requested_limit in allowed else 20
+            return ApiResult(200, {'ok': True, 'operations': _rows(WalletService.list_transactions(target_id, limit=limit)), 'limit': limit})
+        if op == 'owner.recent_operations':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                requested_limit = int(payload.get('limit') or 20)
+            except Exception:
+                requested_limit = 20
+            allowed = {1, 5, 10, 20, 50, 100, 150}
+            limit = requested_limit if requested_limit in allowed else 20
+            rows = db.fetch_all(
+                '''SELECT t.*, u.username, u.first_name
+                   FROM transactions t LEFT JOIN users u ON u.user_id=t.user_id
+                   ORDER BY t.id DESC LIMIT ?''',
+                (limit,),
+            )
+            return ApiResult(200, {'ok': True, 'operations': _rows(rows), 'limit': limit})
+        if op == 'owner.adjust_balance':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                target_id = int(payload.get('user_id') or 0)
+                amount = int(payload.get('amount') or 0)
+                result = WalletService.adjust_balance(
+                    target_id,
+                    balance_type=str(payload.get('balance_type') or ''),
+                    amount=amount,
+                    reason=str(payload.get('reason') or ''),
+                    admin_user_id=user_id,
+                )
+            except ValueError as exc:
+                return ApiResult(400, {'ok': False, 'error': str(exc)})
+            return ApiResult(200 if result.get('ok') else 400, {'ok': bool(result.get('ok')), 'result': 'owner_balance_adjusted' if result.get('ok') else 'owner_balance_too_low', **result})
+        if op == 'owner.star_payments':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                target_id = int(payload.get('user_id') or 0)
+                limit = int(payload.get('limit') or 20)
+            except Exception:
+                return ApiResult(400, {'ok': False, 'error': 'owner_operation_input_invalid'})
+            return ApiResult(200, {'ok': True, 'payments': _rows(StarPaymentService.list_user_payments(target_id, limit=limit))})
+        if op == 'owner.refund_star_payment':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            try:
+                result = StarPaymentService.refund_credit_purchase(
+                    payment_id=int(payload.get('payment_id') or 0),
+                    admin_user_id=user_id,
+                    reason=str(payload.get('reason') or ''),
+                    bonus_to_remove=int(payload.get('bonus_to_remove') or 0),
+                )
+            except Exception:
+                LOGGER.exception('Owner Star refund failed owner=%s', user_id)
+                return ApiResult(500, {'ok': False, 'error': 'star_refund_failed'})
+            return ApiResult(200 if result.ok else 400, {'ok': result.ok, 'result': result.result_key, **(result.data or {})})
+
         if op == 'owner.orders':
             if not UserService.is_owner(user_id):
                 return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            BoostoreProviderService.expire_stale_orders()
             return ApiResult(200, {'ok': True, 'orders': _all_provider_orders(limit=int(payload.get('limit') or 100))})
         if op == 'owner.place_order':
             if not UserService.is_owner(user_id):

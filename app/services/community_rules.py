@@ -24,14 +24,14 @@ class CommunityRulesService:
         return [
             CommunityRuleSection('entry', 'community_rules_entry_title', 'community_rules_entry_body'),
             CommunityRuleSection('content', 'community_rules_content_title', 'community_rules_content_body'),
-            CommunityRuleSection('no_groups', 'community_rules_no_groups_title', 'community_rules_no_groups_body'),
+            CommunityRuleSection('prohibited', 'community_rules_prohibited_title', 'community_rules_prohibited_body'),
+            CommunityRuleSection('chat_conduct', 'community_rules_chat_conduct_title', 'community_rules_chat_conduct_body'),
             CommunityRuleSection('self_promo', 'community_rules_self_promo_title', 'community_rules_self_promo_body'),
-            CommunityRuleSection('respect', 'community_rules_respect_title', 'community_rules_respect_body'),
-            CommunityRuleSection('activity', 'community_rules_activity_title', 'community_rules_activity_body'),
-            CommunityRuleSection('support', 'community_rules_support_title', 'community_rules_support_body'),
-            CommunityRuleSection('feedback', 'community_rules_feedback_title', 'community_rules_feedback_body'),
-            CommunityRuleSection('exit', 'community_rules_exit_title', 'community_rules_exit_body'),
+            CommunityRuleSection('network', 'community_rules_network_title', 'community_rules_network_body'),
+            CommunityRuleSection('platforms', 'community_rules_platforms_title', 'community_rules_platforms_body'),
             CommunityRuleSection('finance', 'community_rules_finance_title', 'community_rules_finance_body'),
+            CommunityRuleSection('sanctions', 'community_rules_sanctions_title', 'community_rules_sanctions_body'),
+            CommunityRuleSection('support', 'community_rules_support_title', 'community_rules_support_body'),
         ]
 
     @staticmethod

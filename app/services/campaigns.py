@@ -2,6 +2,7 @@ import json
 import sqlite3
 
 from app import db
+from app.services.runtime_settings import RuntimeSettingsService
 from app.services.wallets import WalletService
 
 
@@ -104,11 +105,12 @@ class CampaignService:
         wallet = connection.execute('SELECT * FROM wallets WHERE user_id = ?', (owner_user_id,)).fetchone()
         internal_balance = int(wallet['internal_balance']) if wallet else 0
         bonus_balance = int(wallet['bonus_balance']) if wallet and 'bonus_balance' in wallet.keys() else 0
-        if internal_balance + bonus_balance < amount:
-            return False, 'campaign_balance_low'
-
-        from_bonus = min(bonus_balance, amount)
+        bonus_percent = max(0, min(50, RuntimeSettingsService.get_int('max_bonus_payment_percent')))
+        max_bonus = amount * bonus_percent // 100
+        from_bonus = min(bonus_balance, max_bonus)
         from_internal = amount - from_bonus
+        if internal_balance < from_internal:
+            return False, 'campaign_balance_low'
         connection.execute(
             '''
             UPDATE wallets

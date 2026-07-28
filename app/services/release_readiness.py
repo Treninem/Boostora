@@ -891,7 +891,7 @@ class ReleaseReadinessService:
     @staticmethod
     def engagement_modes_summary() -> dict[str, Any]:
         summary = EngagementModeService.summary()
-        ready = bool(summary.get('table_ready')) and int(summary.get('required_actions') or 0) > 0 and int(summary.get('pro_price_stars') or 0) > 0
+        ready = bool(summary.get('table_ready')) and int(summary.get('required_actions') or 0) > 0 and int(summary.get('pro_price_credits') or 0) > 0
         return {
             'code': 'engagement_modes',
             'title_key': 'stable_gate_engagement_modes',
@@ -1422,5 +1422,6 @@ class ReleaseReadinessService:
             'stable_contract_major_330_policy',
             'stable_contract_patch_331_policy',
             'stable_contract_major_340_policy',
+            'stable_contract_major_350_policy',
         ]
 

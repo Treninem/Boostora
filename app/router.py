@@ -79,6 +79,7 @@ from app.services.owner_analytics import OwnerAnalyticsService
 from app.services.boostore_provider import BoostoreProviderService
 from app.services.standard_admin import StandardAdminService
 from app.services.legal_docs import LegalDocsService
+from app.services.platform_agreement import PlatformAgreementService
 from app.services.smart_hub import SmartHubService
 from app.services.release_readiness import ReleaseReadinessService
 from app.services.redemptions import RedemptionService
@@ -475,13 +476,19 @@ def _build_community_rules_text(user_id: int) -> str:
     for section in CommunityRulesService.sections():
         rows.append(UserService.t(user_id, 'community_rules_section_row',
             title=UserService.t(user_id, section.title_key),
-            body=UserService.t(user_id, section.body_key)))
-    accepted = CommunityRulesService.is_accepted(user_id)
-    return UserService.t(user_id, 'community_rules_screen',
-        brand=settings.brand_name,
-        version=CommunityRulesService.CURRENT_VERSION,
+            body=UserService.t(user_id, section.body_key),
+        ))
+    for section in LegalDocsService.sections():
+        rows.append(UserService.t(user_id, 'community_rules_section_row',
+            title=UserService.t(user_id, section.title_key),
+            body=UserService.t(user_id, section.body_key),
+        ))
+    accepted = PlatformAgreementService.is_accepted(user_id)
+    return UserService.t(user_id, 'platform_agreement_screen',
+        version=PlatformAgreementService.version(),
+        sections='\n\n'.join(rows),
         state=UserService.t(user_id, 'community_rules_state_accepted' if accepted else 'community_rules_state_required'),
-        sections='\n\n'.join(rows))
+    )
 
 
 def _build_legal_docs_text(user_id: int) -> str:
@@ -613,7 +620,7 @@ def _build_engagement_mode_text(user_id: int) -> str:
         'engagement_mode_screen',
         mode=UserService.t(user_id, mode_key),
         required=int(summary['required_actions']),
-        pro_price=int(summary['pro_price_stars']),
+        pro_price=int(summary['pro_price_credits']),
         open_obligations=int(summary['open_obligations']),
         open_required=int(summary['open_required_total']),
         outgoing_30d=int(summary['outgoing_30d']),
@@ -717,7 +724,7 @@ def _build_engagement_growth_text(user_id: int) -> str:
         'engagement_growth_mode_block',
         mode=UserService.t(user_id, f"engagement_mode_state_{mode['mode']}"),
         required=int(mode['required_actions']),
-        pro_price=int(mode['pro_price_stars']),
+        pro_price=int(mode['pro_price_credits']),
         open_obligations=int(mode['open_obligations']),
         open_required=int(mode['open_required_total']),
         outgoing_30d=int(mode['outgoing_30d']),
@@ -1904,11 +1911,11 @@ def _build_admin_input_text(user_id: int, kind: str, target_id: int) -> str:
 def resolve_next_screen(bot: telebot.TeleBot, user_id: int, chat_id: int, chat_username: str | None = None) -> str:
     if not UserService.can_access_bot(user_id):
         return SCREEN_BLOCKED
+    if not PlatformAgreementService.is_accepted(user_id):
+        return SCREEN_COMMUNITY_RULES
     role = UserService.get_role(user_id)
     if not role:
         return SCREEN_ROLE
-    if not CommunityRulesService.is_accepted(user_id) and not UserService.is_admin(user_id):
-        return SCREEN_COMMUNITY_RULES
     if SubscriptionService.should_enforce_required_chat(chat_id, chat_username=chat_username):
         check = SubscriptionService.get_subscription_check_result(bot, user_id)
         if not check.is_subscribed and not check.is_unknown:
@@ -1989,7 +1996,7 @@ def render_screen(
             chat_id=chat_id,
             screen_key=SCREEN_COMMUNITY_RULES,
             text=text,
-            reply_markup_builder=lambda version: community_rules_keyboard(user_id, version, accepted=CommunityRulesService.is_accepted(user_id)),
+            reply_markup_builder=lambda version: community_rules_keyboard(user_id, version, accepted=PlatformAgreementService.is_accepted(user_id)),
         )
         return
 
@@ -2006,12 +2013,9 @@ def render_screen(
         )
         return
 
-    protected_open_screens = {SCREEN_LANGUAGE, SCREEN_ROLE, SCREEN_REQUIRED_SUBSCRIPTION, SCREEN_BLOCKED, SCREEN_COMMUNITY_RULES, SCREEN_LEGAL_DOCS}
-    if screen_key not in protected_open_screens and not CommunityRulesService.is_accepted(user_id) and not UserService.is_admin(user_id):
-        render_screen(bot, target, SCREEN_COMMUNITY_RULES, notice_key='community_rules_required_notice')
-        return
-    if screen_key not in protected_open_screens and not LegalDocsService.is_accepted(user_id) and not UserService.is_admin(user_id):
-        render_screen(bot, target, SCREEN_LEGAL_DOCS, notice_key='legal_docs_required_notice')
+    protected_open_screens = {SCREEN_BLOCKED, SCREEN_COMMUNITY_RULES}
+    if screen_key not in protected_open_screens and not PlatformAgreementService.is_accepted(user_id):
+        render_screen(bot, target, SCREEN_COMMUNITY_RULES, notice_key='platform_agreement_required_notice')
         return
 
     if (
@@ -2785,7 +2789,7 @@ def render_entry(bot: telebot.TeleBot, target: Target, *, force_language: bool =
     chat_id = _chat_id(target)
     chat_username = _chat_username(target)
     UserService.ensure_user(target.from_user)
-    if force_language:
+    if force_language and PlatformAgreementService.is_accepted(user_id):
         render_screen(bot, target, SCREEN_LANGUAGE)
         return
     next_screen = resolve_next_screen(bot, user_id, chat_id, chat_username=chat_username)

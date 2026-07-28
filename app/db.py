@@ -271,7 +271,10 @@ CREATE TABLE IF NOT EXISTS ad_broadcasts (
     next_run_at TEXT,
     last_run_at TEXT,
     stars_price INTEGER NOT NULL DEFAULT 0,
+    credit_price INTEGER NOT NULL DEFAULT 0,
+    bonus_used INTEGER NOT NULL DEFAULT 0,
     pay_required INTEGER NOT NULL DEFAULT 1,
+    expires_at TEXT,
     is_admin INTEGER NOT NULL DEFAULT 0,
     status TEXT NOT NULL DEFAULT 'draft',
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -287,6 +290,24 @@ CREATE TABLE IF NOT EXISTS bot_chats (
     username TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     can_post INTEGER NOT NULL DEFAULT 1,
+    can_invite_users INTEGER NOT NULL DEFAULT 0,
+    owner_user_id INTEGER,
+    network_enabled INTEGER NOT NULL DEFAULT 1,
+    network_status TEXT NOT NULL DEFAULT 'pending',
+    member_count INTEGER NOT NULL DEFAULT 0,
+    daily_limit INTEGER NOT NULL DEFAULT 1,
+    window_start TEXT NOT NULL DEFAULT '09:00',
+    window_end TEXT NOT NULL DEFAULT '22:00',
+    min_interval_hours INTEGER NOT NULL DEFAULT 6,
+    timezone_offset_minutes INTEGER NOT NULL DEFAULT 0,
+    topic_code TEXT NOT NULL DEFAULT 'general',
+    language_code TEXT NOT NULL DEFAULT 'ru',
+    quality_score INTEGER NOT NULL DEFAULT 50,
+    observed_active_users INTEGER NOT NULL DEFAULT 0,
+    observed_activity_events INTEGER NOT NULL DEFAULT 0,
+    last_activity_at TEXT,
+    verified_at TEXT,
+    disabled_reason TEXT,
     last_seen_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -348,6 +369,13 @@ CREATE TABLE IF NOT EXISTS provider_orders (
     telegram_payment_charge_id TEXT,
     provider_payment_charge_id TEXT,
     last_error TEXT,
+    credit_cost INTEGER NOT NULL DEFAULT 0,
+    bonus_used INTEGER NOT NULL DEFAULT 0,
+    rate_value_snapshot REAL NOT NULL DEFAULT 0,
+    markup_percent_snapshot INTEGER NOT NULL DEFAULT 0,
+    price_checked_at TEXT,
+    expires_at TEXT,
+    refunded_credits INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
@@ -422,6 +450,147 @@ CREATE TABLE IF NOT EXISTS legal_doc_acceptances (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS platform_agreement_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    agreement_version TEXT NOT NULL,
+    action TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'bot',
+    details TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS network_campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_user_id INTEGER NOT NULL,
+    title TEXT,
+    ad_text TEXT NOT NULL,
+    target_url TEXT NOT NULL,
+    target_chat_id INTEGER,
+    topic_code TEXT NOT NULL DEFAULT 'general',
+    language_code TEXT NOT NULL DEFAULT 'ru',
+    budget_credits INTEGER NOT NULL,
+    bonus_used INTEGER NOT NULL DEFAULT 0,
+    paid_credits INTEGER NOT NULL DEFAULT 0,
+    predicted_reach_min INTEGER NOT NULL DEFAULT 0,
+    predicted_reach_max INTEGER NOT NULL DEFAULT 0,
+    predicted_subscribers_min INTEGER NOT NULL DEFAULT 0,
+    predicted_subscribers_max INTEGER NOT NULL DEFAULT 0,
+    contribution_units_required REAL NOT NULL DEFAULT 0,
+    contribution_units_completed REAL NOT NULL DEFAULT 0,
+    refunded_credits INTEGER NOT NULL DEFAULT 0,
+    refunded_bonus INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'awaiting_contribution',
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS network_placements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER NOT NULL,
+    host_chat_id INTEGER NOT NULL,
+    host_owner_user_id INTEGER,
+    placement_cost_credits INTEGER NOT NULL DEFAULT 0,
+    network_units REAL NOT NULL DEFAULT 1,
+    score REAL NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'locked',
+    scheduled_at TEXT,
+    published_at TEXT,
+    expires_at TEXT,
+    message_id INTEGER,
+    tracking_token TEXT,
+    invite_link TEXT,
+    clicks INTEGER NOT NULL DEFAULT 0,
+    joins INTEGER NOT NULL DEFAULT 0,
+    retained_24h INTEGER NOT NULL DEFAULT 0,
+    retained_7d INTEGER NOT NULL DEFAULT 0,
+    reciprocal_placement_id INTEGER,
+    contribution_reserved REAL NOT NULL DEFAULT 0,
+    completed_at TEXT,
+    revoked_at TEXT,
+    refunded_credits INTEGER NOT NULL DEFAULT 0,
+    refunded_bonus INTEGER NOT NULL DEFAULT 0,
+    refunded_at TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (campaign_id) REFERENCES network_campaigns(id) ON DELETE CASCADE,
+    FOREIGN KEY (host_chat_id) REFERENCES bot_chats(chat_id) ON DELETE CASCADE,
+    FOREIGN KEY (host_owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS network_bonus_ledger (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    placement_id INTEGER,
+    amount INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'earned',
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (placement_id) REFERENCES network_placements(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS network_join_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    placement_id INTEGER NOT NULL,
+    campaign_id INTEGER NOT NULL,
+    target_chat_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    retained_24h INTEGER NOT NULL DEFAULT 0,
+    retained_7d INTEGER NOT NULL DEFAULT 0,
+    checked_24h_at TEXT,
+    checked_7d_at TEXT,
+    left_at TEXT,
+    UNIQUE(placement_id, user_id),
+    FOREIGN KEY (placement_id) REFERENCES network_placements(id) ON DELETE CASCADE,
+    FOREIGN KEY (campaign_id) REFERENCES network_campaigns(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS runtime_settings (
+    setting_key TEXT PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    updated_by_user_id INTEGER,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS star_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    invoice_payload TEXT NOT NULL,
+    payment_kind TEXT NOT NULL,
+    stars_amount INTEGER NOT NULL,
+    credits_granted INTEGER NOT NULL DEFAULT 0,
+    telegram_payment_charge_id TEXT NOT NULL UNIQUE,
+    provider_payment_charge_id TEXT,
+    status TEXT NOT NULL DEFAULT 'paid',
+    refunded_at TEXT,
+    refunded_by_user_id INTEGER,
+    refund_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (refunded_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS network_contribution_ledger (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    placement_id INTEGER,
+    campaign_id INTEGER,
+    units REAL NOT NULL,
+    entry_type TEXT NOT NULL,
+    reason TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (placement_id) REFERENCES network_placements(id) ON DELETE SET NULL,
+    FOREIGN KEY (campaign_id) REFERENCES network_campaigns(id) ON DELETE SET NULL
+);
+
 '''
 
 INDEXES = '''
@@ -458,6 +627,18 @@ CREATE INDEX IF NOT EXISTS idx_engagement_obligations_campaign ON engagement_obl
 CREATE INDEX IF NOT EXISTS idx_engagement_obligations_due ON engagement_obligations(status, due_at, reminder_sent_at, warning_sent_at);
 CREATE INDEX IF NOT EXISTS idx_engagement_admin_decisions_target ON engagement_admin_decisions(target_user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_legal_doc_acceptances_user ON legal_doc_acceptances(user_id, accepted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_platform_agreement_events_user ON platform_agreement_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_network_campaigns_owner_status ON network_campaigns(owner_user_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_network_placements_campaign_status ON network_placements(campaign_id, status, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_network_placements_host_status ON network_placements(host_chat_id, status, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_network_bonus_user ON network_bonus_ledger(user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_network_placements_tracking_token ON network_placements(tracking_token) WHERE tracking_token IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_network_join_due ON network_join_events(checked_24h_at, checked_7d_at, joined_at);
+CREATE INDEX IF NOT EXISTS idx_network_join_user ON network_join_events(user_id, joined_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bot_chats_network ON bot_chats(network_enabled, network_status, member_count, quality_score);
+CREATE INDEX IF NOT EXISTS idx_network_contribution_user ON network_contribution_ledger(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_star_payments_user ON star_payments(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_star_payments_status ON star_payments(status, created_at DESC);
 
 '''
 
@@ -525,6 +706,50 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
         _ensure_column(connection, 'provider_orders', 'paid_at', 'TEXT')
         _ensure_column(connection, 'provider_orders', 'telegram_payment_charge_id', 'TEXT')
         _ensure_column(connection, 'provider_orders', 'provider_payment_charge_id', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'credit_cost', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'provider_orders', 'bonus_used', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'provider_orders', 'rate_value_snapshot', 'REAL NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'provider_orders', 'markup_percent_snapshot', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'provider_orders', 'price_checked_at', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'expires_at', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'refunded_credits', 'INTEGER NOT NULL DEFAULT 0')
+    if _get_table_columns(connection, 'bot_chats'):
+        _ensure_column(connection, 'bot_chats', 'can_invite_users', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'bot_chats', 'owner_user_id', 'INTEGER')
+        _ensure_column(connection, 'bot_chats', 'network_enabled', 'INTEGER NOT NULL DEFAULT 1')
+        _ensure_column(connection, 'bot_chats', 'network_status', "TEXT NOT NULL DEFAULT 'pending'")
+        _ensure_column(connection, 'bot_chats', 'member_count', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'bot_chats', 'daily_limit', 'INTEGER NOT NULL DEFAULT 1')
+        _ensure_column(connection, 'bot_chats', 'window_start', "TEXT NOT NULL DEFAULT '09:00'")
+        _ensure_column(connection, 'bot_chats', 'window_end', "TEXT NOT NULL DEFAULT '22:00'")
+        _ensure_column(connection, 'bot_chats', 'min_interval_hours', 'INTEGER NOT NULL DEFAULT 6')
+        _ensure_column(connection, 'bot_chats', 'timezone_offset_minutes', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'bot_chats', 'topic_code', "TEXT NOT NULL DEFAULT 'general'")
+        _ensure_column(connection, 'bot_chats', 'language_code', "TEXT NOT NULL DEFAULT 'ru'")
+        _ensure_column(connection, 'bot_chats', 'quality_score', 'INTEGER NOT NULL DEFAULT 50')
+        _ensure_column(connection, 'bot_chats', 'observed_active_users', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'bot_chats', 'observed_activity_events', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'bot_chats', 'last_activity_at', 'TEXT')
+        _ensure_column(connection, 'bot_chats', 'verified_at', 'TEXT')
+        _ensure_column(connection, 'bot_chats', 'disabled_reason', 'TEXT')
+    if _get_table_columns(connection, 'network_placements'):
+        _ensure_column(connection, 'network_placements', 'tracking_token', 'TEXT')
+        _ensure_column(connection, 'network_placements', 'invite_link', 'TEXT')
+        _ensure_column(connection, 'network_placements', 'reciprocal_placement_id', 'INTEGER')
+        _ensure_column(connection, 'network_placements', 'contribution_reserved', 'REAL NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'network_placements', 'completed_at', 'TEXT')
+        _ensure_column(connection, 'network_placements', 'revoked_at', 'TEXT')
+        _ensure_column(connection, 'network_placements', 'refunded_credits', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'network_placements', 'refunded_bonus', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'network_placements', 'refunded_at', 'TEXT')
+    if _get_table_columns(connection, 'network_campaigns'):
+        _ensure_column(connection, 'network_campaigns', 'target_chat_id', 'INTEGER')
+        _ensure_column(connection, 'network_campaigns', 'refunded_credits', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'network_campaigns', 'refunded_bonus', 'INTEGER NOT NULL DEFAULT 0')
+    if _get_table_columns(connection, 'ad_broadcasts'):
+        _ensure_column(connection, 'ad_broadcasts', 'credit_price', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'ad_broadcasts', 'bonus_used', 'INTEGER NOT NULL DEFAULT 0')
+        _ensure_column(connection, 'ad_broadcasts', 'expires_at', 'TEXT')
     if _get_table_columns(connection, 'engagement_obligations'):
         _ensure_column(connection, 'engagement_obligations', 'reminder_sent_at', 'TEXT')
         _ensure_column(connection, 'engagement_obligations', 'warning_sent_at', 'TEXT')

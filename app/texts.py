@@ -3300,3 +3300,201 @@ TEXTS['tr'].update({
 # Boostora v3.3.1 — Telegram-only order target validation.
 TEXTS['ru'].update({'boostore_order_link_invalid': 'Отправь ссылку Telegram вида https://t.me/... или @username.'})
 TEXTS['en'].update({'boostore_order_link_invalid': 'Send a Telegram link such as https://t.me/... or @username.'})
+
+# Boostora v3.5.0 — unified agreement, credits and advertising network.
+TEXTS['ru'].update({
+    'platform_agreement_screen': '<b>Правила и условия Boostora</b>\n\nПеред использованием бота и Mini App ознакомься с условиями. Продолжая работу после нажатия «Согласен и продолжить», ты подтверждаешь принятие действующей редакции целиком.\n\n{sections}\n\nВерсия: <code>{version}</code>\nСтатус: <b>{state}</b>',
+    'platform_agreement_accept_button': '✅ Согласен и продолжить',
+    'platform_agreement_decline_button': '❌ Не согласен',
+    'platform_agreement_accepted_notice': 'Условия приняты. Доступ к Boostora открыт.',
+    'platform_agreement_declined_notice': 'Без принятия условий бот и Mini App недоступны. При следующем /start соглашение будет предложено снова.',
+    'platform_agreement_required_notice': 'Сначала прими правила и условия Boostora.',
+    'platform_agreement_required_alert': 'Без принятия условий действие недоступно.',
+
+    'community_rules_entry_title': '1. Принятие правил',
+    'community_rules_entry_body': 'Условия обязательны для всех участников. Отказ означает прекращение доступа к функциям платформы. Новая редакция может потребовать повторного согласия.',
+    'community_rules_content_title': '2. Разрешённые материалы',
+    'community_rules_content_body': 'Размещай только законные, достоверные и безопасные материалы, на которые у тебя есть необходимые права. Реклама должна соответствовать содержанию канала или чата.',
+    'community_rules_prohibited_title': '3. Запрещённый контент',
+    'community_rules_prohibited_body': 'Запрещены порнография и сексуальная эксплуатация, пропаганда насилия или терроризма, угрозы, травля, наркотики, оружие, казино и нелегальные азартные игры, мошенничество, экстремизм, разжигание ненависти, вредоносные программы, незаконные товары и иные опасные или запрещённые материалы.',
+    'community_rules_chat_conduct_title': '4. Поведение в чатах',
+    'community_rules_chat_conduct_body': 'Запрещены флуд, навязчивый спам, массовые одинаковые сообщения, оскорбления, давление на участников и обход ограничений. Общайся уважительно и не мешай работе сообщества.',
+    'community_rules_self_promo_title': '5. Ссылки, приглашения и взаимная активность',
+    'community_rules_self_promo_body': 'Самореклама, приглашения в каналы и чаты, взаимные подписки, лайки, реакции, просмотры и комментарии разрешены только через предусмотренные разделы Boostora или с явного разрешения администрации конкретного чата. Публикация таких предложений в обычной переписке считается спамом.',
+    'community_rules_network_title': '6. Сеть рекламных размещений',
+    'community_rules_network_body': 'Подключая канал или чат, участник разрешает Boostora публиковать согласованные рекламные материалы в выбранные часы и с установленным дневным лимитом, но не менее одного доступного размещения в сутки. Уже принятые обязательства сохраняются до выполнения.',
+    'community_rules_platforms_title': '7. Требования к площадкам',
+    'community_rules_platforms_body': 'Площадка должна иметь не менее установленного минимума участников, быть активной, соответствовать заявленной тематике и сохранять боту необходимые права. Накрутка, ложные сведения, преждевременное удаление рекламы или удаление бота считаются нарушением.',
+    'community_rules_finance_title': '8. Кредиты и бонусы',
+    'community_rules_finance_body': 'Кредиты используются только внутри Boostora и не являются деньгами, электронными денежными средствами или ценной бумагой. Их нельзя вывести, передать или автоматически обменять обратно на Telegram Stars. Бонусы нельзя купить или вывести; ими оплачивается только разрешённая часть заказа.',
+    'community_rules_sanctions_title': '9. Последствия нарушений',
+    'community_rules_sanctions_body': 'Платформа вправе предупредить участника, остановить кампанию, отменить неправомерные бонусы, списать компенсацию, ограничить отдельные функции, удалить площадку из сети или заблокировать аккаунт. При мошенничестве и тяжёлых нарушениях блокировка возможна без компенсации неиспользованных преимуществ, в пределах применимого законодательства.',
+    'community_rules_support_title': '10. Обращения',
+    'community_rules_support_body': 'Вопросы, ошибки и спорные ситуации рассматриваются службой поддержки. Для проверки могут потребоваться номер операции, ссылка, скриншот или иные разумно необходимые сведения.',
+
+    'legal_section_agreement_title': '11. Предмет соглашения',
+    'legal_section_agreement_body': 'Boostora предоставляет технический доступ к заданиям, внутренним кредитам, рекламе, аналитике и услугам третьих сторон. Платформа не обещает конкретное число подписчиков, продаж, просмотров или иной коммерческий результат, если это прямо не указано отдельно.',
+    'legal_section_services_title': '12. Исполнение услуг',
+    'legal_section_services_body': 'Сроки и прогнозы являются ориентировочными. Результат зависит от Telegram, подключённых площадок, пользователей и внешних поставщиков. Недоступная часть заказа может быть возвращена только на внутренний кредитный баланс.',
+    'legal_section_credits_title': '13. Покупка кредитов',
+    'legal_section_credits_body': 'Telegram Stars используются для покупки пакета кредитов. После подтверждённого платежа кредиты зачисляются на внутренний баланс и предназначены только для сервисов Boostora. Неиспользованный остаток сохраняется без автоматического возврата Stars.',
+    'legal_section_commission_title': '14. Комиссии и курс',
+    'legal_section_commission_body': 'Boostora вправе удерживать комиссию и резерв из операций. Курс Stars к кредитам, цены, наценки, комиссии и правила начислений могут изменяться для будущих операций без индивидуального уведомления. Уже подтверждённая операция учитывается по зафиксированным при её создании условиям.',
+    'legal_section_refunds_title': '15. Возвраты',
+    'legal_section_refunds_body': 'Автоматический обмен кредитов обратно на Stars не предусмотрен. Возврат первоначального платежа возможен только в исключительном случае после обращения и отдельного решения администрации. При одобренном возврате соответствующие кредиты и связанные бонусы списываются; потраченный баланс может стать основанием для отказа или задолженности.',
+    'legal_section_network_title': '16. Рекламные обязательства',
+    'legal_section_network_body': 'Пользователь отвечает за законность рекламируемого материала и право распоряжаться подключённой площадкой. Отключение бота, снятие прав или удаление публикации до окончания срока приостанавливает собственное продвижение и не освобождает от уже принятого обязательства.',
+    'legal_section_moderation_title': '17. Модерация и блокировка',
+    'legal_section_moderation_body': 'Администрация вправе проверять, отклонять, приостанавливать и удалять материалы, ограничивать операции и блокировать участника при нарушении правил, угрозе платформе, жалобах, подозрении на мошенничество или требовании закона. Внутренние методы проверки и риск-оценки не раскрываются.',
+    'legal_section_third_party_title': '18. Telegram и внешние сервисы',
+    'legal_section_third_party_body': 'Telegram, владельцы площадок и внешние поставщики действуют независимо от Boostora. Пользователь также обязан соблюдать их правила. Платформа не отвечает за их сбои, ограничения, изменение функций, удаление контента или блокировку аккаунта, кроме ответственности, которую нельзя исключить законом.',
+    'legal_section_changes_title': '19. Изменение условий',
+    'legal_section_changes_body': 'Администрация может обновлять правила, функциональность, комиссии, лимиты и экономические параметры. Существенная новая редакция показывается для повторного принятия. Продолжение использования после принятия означает согласие с ней.',
+    'legal_section_disclaimer_title': '20. Ограничение ответственности',
+    'legal_section_disclaimer_body': 'В максимально допустимой законом степени Boostora не возмещает косвенные убытки, упущенную выгоду, потерю аудитории и последствия действий пользователей или третьих сторон. Пользователь самостоятельно оценивает риски публикаций, рекламы, заданий и расходов. Эти условия не ограничивают обязательные права потребителя, которые нельзя отменить соглашением.',
+
+    'campaign_target_bot_not_in_chat': 'Добавь Boostora администратором указанного канала или чата, выдай необходимые права и повтори проверку.',
+    'campaign_target_bot_missing_rights': 'Бот добавлен, но ему не хватает прав. Разреши публикацию сообщений и повтори проверку.',
+    'boostore_order_quote_ready': 'Актуальная стоимость рассчитана.',
+    'boostore_price_changed': 'Цена поставщика изменилась. Проверь новую стоимость и подтверди заказ ещё раз.',
+    'boostore_order_paid': 'Кредиты списаны. Заказ принят в обработку.',
+    'boostore_order_expired': 'Время оплаты истекло. Создай заказ заново по актуальной цене.',
+    'insufficient_internal_balance': 'Недостаточно кредитов. Пополни баланс или заработай кредиты на заданиях.',
+    'network_platform_required': 'Для участия добавь Boostora администратором хотя бы в один канал или чат от {minimum_members} участников.',
+    'network_no_matching_platforms': 'Сейчас нет подходящих площадок для этой тематики и языка. Попробуй позже или измени параметры.',
+    'network_budget_too_low': 'Минимальный бюджет — {minimum} кредитов.',
+    'network_quote_ready': 'Прогноз рекламной кампании рассчитан.',
+    'network_campaign_created': 'Кампания создана. Размещения будут открываться по мере выполнения сетевых обязательств.',
+    'network_platform_saved': 'Расписание площадки сохранено.',
+    'network_platform_not_found': 'Площадка не найдена среди подключённых тобой каналов и чатов.',
+})
+
+TEXTS['en'].update({
+    'platform_agreement_screen': '<b>Boostora Rules and Terms</b>\n\nReview the terms before using the bot and Mini App. By pressing “Accept and continue” you accept the current version in full.\n\n{sections}\n\nVersion: <code>{version}</code>\nStatus: <b>{state}</b>',
+    'platform_agreement_accept_button': '✅ Accept and continue',
+    'platform_agreement_decline_button': '❌ Decline',
+    'platform_agreement_accepted_notice': 'Terms accepted. Boostora access is open.',
+    'platform_agreement_declined_notice': 'The bot and Mini App are unavailable without acceptance. The agreement will be shown again on the next /start.',
+    'platform_agreement_required_notice': 'Accept the Boostora rules and terms first.',
+    'platform_agreement_required_alert': 'This action is unavailable until the terms are accepted.',
+    'campaign_target_bot_not_in_chat': 'Add Boostora as an administrator of the selected channel or chat, grant the required permissions, and check again.',
+    'campaign_target_bot_missing_rights': 'The bot is present but lacks permissions. Allow it to post messages and check again.',
+    'boostore_price_changed': 'The provider price changed. Review the new credit amount and confirm again.',
+    'boostore_order_paid': 'Credits were charged. The order is being processed.',
+    'boostore_order_expired': 'The payment window expired. Create a new order using the current price.',
+    'insufficient_internal_balance': 'Not enough credits. Top up or earn credits by completing tasks.',
+})
+
+# v3.5.0 public terminology migration: one non-withdrawable credit balance.
+for _key, _value in list(TEXTS['ru'].items()):
+    if isinstance(_value, str):
+        TEXTS['ru'][_key] = (_value
+            .replace('Искры✨', 'кредиты')
+            .replace('Искрами✨', 'кредитами')
+            .replace('Искрами', 'кредитами')
+            .replace('Искры', 'кредиты')
+            .replace('Искр', 'кредитов'))
+for _key, _value in list(TEXTS['en'].items()):
+    if isinstance(_value, str):
+        TEXTS['en'][_key] = _value.replace('Sparks✨', 'Credits').replace('Sparks', 'Credits')
+TEXTS['ru'].update({
+    'internal_currency_name': 'кредиты',
+    'menu_rewards': 'Кредиты и бонусы',
+    'wallet_topup_button': 'Купить кредиты за ⭐',
+    'credits_non_redeemable': 'Кредиты нельзя вывести, передать или обменять на Stars, Premium и подарки. Они используются только внутри Boostora.',
+    'redeem_catalog_unavailable': 'Обмен кредитов на Stars, Premium, подарки или деньги не предусмотрен.',
+    'rewards_screen': '<b>Кредиты и бонусы</b>\n\nОсновной баланс: <b>{balance}</b> {internal_name}\nБонусный баланс: <b>{bonus}</b> {internal_name}\n\nКредиты покупаются за Telegram Stars или зарабатываются при выполнении заданий. Кредиты и бонусы нельзя вывести или обменять обратно. Бонусами можно оплатить не более 50% разрешённого заказа.\n\nПакеты пополнения доступны ниже.',
+})
+TEXTS['en'].update({
+    'internal_currency_name': 'credits',
+    'menu_rewards': 'Credits and bonuses',
+    'wallet_topup_button': 'Buy credits with ⭐',
+    'credits_non_redeemable': 'Credits cannot be withdrawn, transferred, or exchanged for Stars, Premium, or gifts. They can only be used inside Boostora.',
+})
+
+# Compact agreement wording for Telegram's message limit; the same sections are shown in Mini App.
+TEXTS['ru'].update({
+    'community_rules_entry_body': 'Условия обязательны для всех. При отказе функции недоступны; новая редакция может потребовать повторного согласия.',
+    'community_rules_content_body': 'Публикуй только законные и достоверные материалы, на которые у тебя есть права. Реклама должна соответствовать содержанию площадки.',
+    'community_rules_prohibited_body': 'Запрещены порнография, эксплуатация, насилие, терроризм, угрозы, травля, наркотики, оружие, казино, мошенничество, экстремизм, вредоносные программы и незаконные товары.',
+    'community_rules_chat_conduct_body': 'Запрещены флуд, навязчивый спам, массовые повторы, оскорбления, давление на участников и обход ограничений.',
+    'community_rules_self_promo_body': 'Ссылки, приглашения, самореклама и взаимные подписки, лайки, реакции или просмотры разрешены только в специальных разделах либо с разрешения администрации чата.',
+    'community_rules_network_body': 'Подключая площадку, ты разрешаешь согласованные публикации в выбранные часы и с дневным лимитом не ниже одного. Принятые обязательства нужно завершить.',
+    'community_rules_platforms_body': 'Площадка должна пройти требования по размеру, активности, тематике и правам бота. Накрутка, ложные данные, удаление рекламы или бота считаются нарушением.',
+    'community_rules_finance_body': 'Кредиты и бонусы работают только внутри Boostora. Их нельзя вывести, передать или автоматически обменять обратно на Stars, деньги, Premium или подарки.',
+    'community_rules_sanctions_body': 'За нарушение возможны предупреждение, остановка кампаний, отмена бонусов, компенсационное списание, удаление площадки и блокировка без компенсации неправомерных преимуществ.',
+    'community_rules_support_body': 'Споры рассматривает поддержка. Для проверки могут потребоваться номер операции, ссылка, скриншот и другие относящиеся к делу сведения.',
+    'legal_section_agreement_body': 'Boostora даёт технический доступ к заданиям, кредитам, рекламе, аналитике и внешним услугам. Конкретный коммерческий результат не гарантируется.',
+    'legal_section_services_body': 'Сроки и прогнозы ориентировочны и зависят от Telegram, площадок, пользователей и поставщиков. Неиспользованная часть возвращается только в кредитах.',
+    'legal_section_credits_body': 'Stars покупают пакет кредитов. После подтверждения они зачисляются на внутренний баланс; неиспользованный остаток сохраняется без автоматического возврата Stars.',
+    'legal_section_commission_body': 'Платформа удерживает комиссию и резерв. Курс, цены, наценки и комиссии для будущих операций могут меняться без отдельного уведомления.',
+    'legal_section_refunds_body': 'Автоматических возвратов нет. Исключение рассматривает администрация; при одобрении связанные кредиты и бонусы списываются. Потраченный баланс может исключить возврат.',
+    'legal_section_network_body': 'Ты отвечаешь за материал и права на площадку. Снятие прав, удаление бота или раннее удаление поста приостанавливает продвижение и не отменяет обязательство.',
+    'legal_section_moderation_body': 'Администрация вправе отклонять материалы, ограничивать операции и блокировать аккаунт при нарушении, жалобах, угрозе сервису, мошенничестве или требовании закона.',
+    'legal_section_third_party_body': 'Telegram, площадки и поставщики независимы от Boostora. Их сбои, ограничения и блокировки находятся вне контроля платформы.',
+    'legal_section_changes_body': 'Правила, функции, комиссии, лимиты и экономика могут обновляться. Существенная новая редакция показывается для повторного принятия.',
+    'legal_section_disclaimer_body': 'В допустимой законом степени платформа не возмещает косвенные убытки, упущенную выгоду или потерю аудитории. Обязательные права потребителя сохраняются.',
+})
+
+# v3.5.0 direct broadcast migration.
+TEXTS['ru'].update({
+    'broadcast_use_network': 'Пользовательские размещения теперь создаются в разделе «Сеть рекламных размещений» и оплачиваются кредитами. Прямую рассылку во все площадки может запускать только владелец.',
+})
+TEXTS['en'].update({
+    'broadcast_use_network': 'User advertising is now created in the Advertising Network and paid with credits. Only the owner can send a direct broadcast to every platform.',
+})
+
+# v3.5.0 — Stars purchase credits only; PRO and VIP use the internal credit balance.
+TEXTS['ru'].update({
+    'engagement_mode_pro_button': 'PRO · без ответных действий',
+    'engagement_pro_invoice_desc': 'PRO на {days} дней оплачивается кредитами Boostora.',
+    'engagement_pro_activated_notice': 'PRO активирован на 30 дней. Ответные действия в этом режиме не требуются.',
+    'insufficient_internal_balance': 'Недостаточно кредитов. Пополни баланс за Stars или заработай кредиты на заданиях.',
+})
+TEXTS['en'].update({
+    'engagement_mode_pro_button': 'PRO · no reciprocal actions',
+    'engagement_pro_invoice_desc': 'PRO for {days} days is paid with Boostora credits.',
+    'engagement_pro_activated_notice': 'PRO is active for 30 days. Reciprocal actions are not required in this mode.',
+    'insufficient_internal_balance': 'Not enough credits. Top up with Stars or earn credits by completing tasks.',
+})
+
+
+# Boostora v3.5.0 — final unified-economy and release wording.
+TEXTS['ru'].update({
+    'engagement_mode_screen': '<b>🔥 Выбери режим продвижения</b>\n\n<b>Текущий режим:</b> {mode}\nPRO активен до: <b>{pro_until}</b>\n\n<b>✅ Стандарт</b>\nБесплатный режим на взаимной основе. За полученную активность выполняются ответные задания. Норма: <b>{required}</b> действий за цикл.\n\n<b>⭐ PRO</b>\nРежим без обязательных ответных заданий. Стоимость: <b>{pro_price}</b> кредитов за 30 дней. Кредиты можно купить за Stars или заработать внутри Boostora.\n\n<b>Твой статус</b>\nОткрытых обязательств: <b>{open_obligations}</b> · осталось действий: <b>{open_required}</b>\nВыполнено ответных действий за 30 дней: <b>{outgoing_30d}</b>\n\nВыбери режим ниже.',
+    'engagement_growth_mode_block': '<b>Режим продвижения</b>\nСейчас: <b>{mode}</b>\n✅ Стандарт: бесплатно, но нужно выполнять <b>{required}</b> ответных действий.\n⭐ PRO: <b>{pro_price}</b> кредитов / 30 дней, без обязательных ответных заданий.\nОткрытых обязательств: <b>{open_obligations}</b> · осталось действий: <b>{open_remaining}</b> · сделано за 30 дней: <b>{outgoing_30d}</b>',
+    'engagement_pro_invoice_title': 'Boostora PRO за кредиты',
+    'engagement_pro_invoice_desc': 'PRO-режим на {days} дней оплачивается внутренними кредитами Boostora.',
+    'stable_contract_major_350_policy': 'v3.5.0: Stars используются только для покупки кредитов; пользовательские услуги и реклама оплачиваются кредитами; бонусы покрывают не более установленной части заказа; обязательное соглашение, сеть рекламных размещений, точная цена выбранной услуги поставщика и журнал операций проверяются сервером.',
+    'final_audit_unified_economy': 'Единые кредиты, бонусы и покупки за Stars',
+    'final_audit_platform_agreement': 'Обязательное соглашение и правила доступа',
+    'final_audit_ad_network': 'Сеть рекламных размещений и взаимные обязательства',
+    'final_audit_provider_exact_price': 'Выбор услуги пользователем и актуальная цена поставщика',
+    'final_audit_owner_finance': 'Закрытый журнал и корректировки владельца',
+    'final_audit_order_timeout': 'Ограничение ожидания неоплаченных заказов',
+    'final_audit_action_v350_ready': 'готово и защищено серверными проверками.',
+    'final_audit_action_v350_fix': 'проверь миграцию, обработчики и Mini App для этого блока.',
+})
+TEXTS['en'].update({
+    'engagement_mode_screen': '<b>🔥 Choose a growth mode</b>\n\n<b>Current mode:</b> {mode}\nPRO active until: <b>{pro_until}</b>\n\n✅ Standard: free reciprocal mode with <b>{required}</b> outgoing actions per cycle.\n⭐ PRO: <b>{pro_price}</b> credits / 30 days, without required reciprocal tasks. Credits can be purchased with Stars or earned inside Boostora.\n\nOpen obligations: <b>{open_obligations}</b> · remaining actions: <b>{open_required}</b>\nOutgoing actions in 30 days: <b>{outgoing_30d}</b>',
+    'engagement_growth_mode_block': '<b>Growth mode</b>\nCurrent: <b>{mode}</b>\n✅ Standard: free, requires <b>{required}</b> reciprocal actions.\n⭐ PRO: <b>{pro_price}</b> credits / 30 days, no required reciprocal tasks.\nOpen obligations: <b>{open_obligations}</b> · remaining: <b>{open_remaining}</b> · done in 30 days: <b>{outgoing_30d}</b>',
+    'stable_contract_major_350_policy': 'v3.5.0: Stars are used only to buy credits; user services and advertising are paid with credits; bonuses cover no more than the configured share; the agreement gate, advertising network, exact selected-provider price and operation ledger are server-enforced.',
+    'final_audit_unified_economy': 'Unified credits, bonuses and Stars purchases',
+    'final_audit_platform_agreement': 'Mandatory agreement and access rules',
+    'final_audit_ad_network': 'Advertising network and reciprocal obligations',
+    'final_audit_provider_exact_price': 'User-selected service and current provider price',
+    'final_audit_owner_finance': 'Owner-only ledger and balance adjustments',
+    'final_audit_order_timeout': 'Unpaid order waiting limit',
+    'final_audit_action_v350_ready': 'ready and protected by server-side checks.',
+    'final_audit_action_v350_fix': 'review migrations, handlers and Mini App for this block.',
+})
+
+# Boostora v3.5.0 — final release-center title.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.5.0</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические потоки</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nЕдиные кредиты и бонусы, обязательное соглашение, сеть рекламных размещений, выбор точной услуги поставщика и закрытый журнал операций.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.5.0 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nUnified credits and bonuses, mandatory agreement, advertising network, exact provider-service choice and owner-only operation ledger.',
+})

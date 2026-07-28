@@ -11,6 +11,7 @@ import requests
 
 from app import db
 from app.config import settings
+from app.services.runtime_settings import RuntimeSettingsService
 
 PROVIDER_CODE = 'boostore'
 PUBLIC_PLATFORM = 'telegram'
@@ -298,7 +299,7 @@ class BoostoreProviderService:
                         _as_int(item.get('max')),
                         1 if _as_bool(item.get('refill')) else 0,
                         1 if _as_bool(item.get('cancel')) else 0,
-                        int(settings.boostore_default_markup_percent),
+                        RuntimeSettingsService.get_int('provider_default_markup_percent'),
                         json.dumps(item, ensure_ascii=False, sort_keys=True),
                     ),
                 )
@@ -883,3 +884,238 @@ BoostoreProviderService.place_prepared_order = staticmethod(_boostore_place_prep
 BoostoreProviderService.mark_order_paid = staticmethod(_boostore_mark_order_paid)
 BoostoreProviderService.sync_order_statuses = staticmethod(_boostore_order_status_sync)
 BoostoreProviderService.order_summary = staticmethod(_boostore_order_summary)
+
+# Boostora v3.5.0 — exact provider price, user-selected services and credit payments.
+def _boostore_refresh_service_price(external_service_id: str) -> ProviderResult:
+    external_id = str(external_service_id or '').strip()
+    if not external_id:
+        return ProviderResult(False, 'boostore_service_not_enabled')
+    result = BoostoreProviderService._request('services')
+    if not result.ok:
+        return result
+    rows = result.data if isinstance(result.data, list) else []
+    found = None
+    for item in rows:
+        if isinstance(item, dict) and str(item.get('service') or '').strip() == external_id:
+            found = item
+            break
+    if not found:
+        db.execute(
+            "UPDATE provider_services SET is_enabled = 0, updated_at = CURRENT_TIMESTAMP WHERE provider_code = ? AND external_service_id = ?",
+            (PROVIDER_CODE, external_id),
+        )
+        return ProviderResult(False, 'boostore_service_not_enabled')
+    current = db.fetch_one(
+        'SELECT is_enabled, markup_percent FROM provider_services WHERE provider_code = ? AND external_service_id = ?',
+        (PROVIDER_CODE, external_id),
+    )
+    if not current or not bool(int(current['is_enabled'] or 0)):
+        return ProviderResult(False, 'boostore_service_not_enabled')
+    db.execute(
+        '''
+        UPDATE provider_services
+        SET name = ?, category = ?, service_type = ?, rate_text = ?, rate_value = ?,
+            min_quantity = ?, max_quantity = ?, refill_enabled = ?, cancel_enabled = ?,
+            raw_json = ?, last_synced_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE provider_code = ? AND external_service_id = ?
+        ''',
+        (
+            str(found.get('name') or ''),
+            str(found.get('category') or ''),
+            str(found.get('type') or ''),
+            str(found.get('rate') or ''),
+            _as_float(found.get('rate')),
+            _as_int(found.get('min')),
+            _as_int(found.get('max')),
+            1 if _as_bool(found.get('refill')) else 0,
+            1 if _as_bool(found.get('cancel')) else 0,
+            json.dumps(found, ensure_ascii=False, sort_keys=True),
+            PROVIDER_CODE,
+            external_id,
+        ),
+    )
+    service = BoostoreProviderService.get_public_service(external_id)
+    if not service:
+        return ProviderResult(False, 'boostore_service_not_enabled')
+    return ProviderResult(True, 'boostore_price_refreshed', data=service)
+
+
+def _boostore_public_price_credits(service_row, quantity: int) -> int:
+    rate = max(0.0, float(service_row['rate_value'] or 0))
+    markup = max(0, int(service_row['markup_percent'] or RuntimeSettingsService.get_int('provider_default_markup_percent')))
+    provider_cost = rate * max(int(quantity), 1) / 1000.0
+    public_cost = provider_cost * (1.0 + markup / 100.0)
+    return max(1, int(round(public_cost * RuntimeSettingsService.get_int('provider_credits_per_price_unit'))))
+
+
+def _boostore_quote_credit_order(*, external_service_id: str, link: str, quantity: int) -> ProviderResult:
+    refreshed = _boostore_refresh_service_price(external_service_id)
+    if not refreshed.ok:
+        return refreshed
+    service = refreshed.data
+    normalized_link = BoostoreProviderService.normalize_telegram_link(link)
+    if not normalized_link:
+        return ProviderResult(False, 'boostore_order_link_invalid')
+    safe_quantity = int(quantity)
+    min_q = int(service['min_quantity'] or 0)
+    max_q = int(service['max_quantity'] or 0)
+    if safe_quantity < min_q or (max_q and safe_quantity > max_q):
+        return ProviderResult(False, 'boostore_quantity_out_of_range')
+    credits = _boostore_public_price_credits(service, safe_quantity)
+    return ProviderResult(
+        True,
+        'boostore_order_quote_ready',
+        data={
+            'service_id': str(external_service_id),
+            'service_name': str(service['name'] or ''),
+            'link': normalized_link,
+            'quantity': safe_quantity,
+            'credit_cost': credits,
+            'rate_value': float(service['rate_value'] or 0),
+            'markup_percent': int(service['markup_percent'] or RuntimeSettingsService.get_int('provider_default_markup_percent')),
+            'price_checked_at': 'now',
+        },
+    )
+
+
+def _boostore_prepare_credit_order(
+    *,
+    owner_user_id: int,
+    external_service_id: str,
+    link: str,
+    quantity: int,
+    expected_credit_cost: int | None = None,
+    campaign_id: int | None = None,
+) -> ProviderResult:
+    quote = _boostore_quote_credit_order(
+        external_service_id=external_service_id,
+        link=link,
+        quantity=quantity,
+    )
+    if not quote.ok:
+        return quote
+    data = quote.data if isinstance(quote.data, dict) else {}
+    credit_cost = int(data.get('credit_cost') or 0)
+    if expected_credit_cost is not None and int(expected_credit_cost) != credit_cost:
+        return ProviderResult(
+            False,
+            'boostore_price_changed',
+            data={**data, 'expected_credit_cost': int(expected_credit_cost)},
+        )
+
+    from app.services.wallets import WalletService
+    spend = WalletService.spend_with_bonus_cap(
+        int(owner_user_id),
+        credit_cost,
+        entry_type='provider_service_purchase',
+        note=f'Boostore service {external_service_id}; quantity={int(quantity)}',
+        related_campaign_id=campaign_id,
+        max_bonus_percent=RuntimeSettingsService.get_int('max_bonus_payment_percent'),
+    )
+    if not bool(spend.get('ok')):
+        return ProviderResult(False, 'insufficient_internal_balance', data={'credit_cost': credit_cost, 'missing': int(spend.get('missing') or 0)})
+
+    status = 'paid' if bool(settings.boostore_auto_order_enabled) else 'paid_pending'
+    try:
+        order_id = db.execute(
+            '''
+            INSERT INTO provider_orders (
+                provider_code, owner_user_id, campaign_id, external_service_id, link, quantity,
+                charge_text, charge_value, currency, provider_status, last_payload_json,
+                paid_at, credit_cost, bonus_used, rate_value_snapshot, markup_percent_snapshot,
+                price_checked_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BST', ?, '{}', CURRENT_TIMESTAMP, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''',
+            (
+                PROVIDER_CODE,
+                int(owner_user_id),
+                campaign_id,
+                str(external_service_id),
+                str(data.get('link') or '')[:255],
+                int(quantity),
+                str(credit_cost),
+                float(credit_cost),
+                status,
+                credit_cost,
+                int(spend.get('bonus_used') or 0),
+                float(data.get('rate_value') or 0),
+                int(data.get('markup_percent') or 0),
+            ),
+        )
+    except Exception:
+        WalletService.refund_split(
+            int(owner_user_id),
+            credits=int(spend.get('credits_used') or 0),
+            bonus=int(spend.get('bonus_used') or 0),
+            entry_type='provider_order_create_refund',
+            note='Provider order record could not be created',
+            related_campaign_id=campaign_id,
+        )
+        raise
+
+    placement = None
+    if bool(settings.boostore_auto_order_enabled):
+        placement = _boostore_place_prepared_order(int(order_id))
+    return ProviderResult(
+        True,
+        'boostore_order_placed' if placement and placement.ok else 'boostore_order_paid',
+        data={
+            'order_id': int(order_id),
+            'credit_cost': credit_cost,
+            'bonus_used': int(spend.get('bonus_used') or 0),
+            'credits_used': int(spend.get('credits_used') or 0),
+            'status': 'placed' if placement and placement.ok else status,
+            'provider_result': placement.result_key if placement else None,
+        },
+    )
+
+
+def _boostore_expire_stale_orders() -> int:
+    timeout = max(5, RuntimeSettingsService.get_int('provider_order_timeout_minutes'))
+    modifier = f'-{timeout} minutes'
+    def _run(connection):
+        cursor = connection.execute(
+            '''
+            UPDATE provider_orders
+            SET provider_status = 'expired', last_error = 'payment_window_expired', updated_at = CURRENT_TIMESTAMP
+            WHERE provider_code = ?
+              AND provider_status IN ('draft', 'invoice_failed')
+              AND paid_at IS NULL
+              AND (
+                    (expires_at IS NOT NULL AND datetime(expires_at) <= CURRENT_TIMESTAMP)
+                    OR (expires_at IS NULL AND datetime(created_at) <= datetime('now', ?))
+                  )
+            ''',
+            (PROVIDER_CODE, modifier),
+        )
+        return max(0, int(cursor.rowcount or 0))
+    return db.run_in_transaction(_run)
+
+
+BoostoreProviderService.refresh_service_price = staticmethod(_boostore_refresh_service_price)
+BoostoreProviderService.public_price_credits = staticmethod(_boostore_public_price_credits)
+BoostoreProviderService.quote_credit_order = staticmethod(_boostore_quote_credit_order)
+BoostoreProviderService.prepare_credit_order = staticmethod(_boostore_prepare_credit_order)
+BoostoreProviderService.expire_stale_orders = staticmethod(_boostore_expire_stale_orders)
+
+
+def _boostore_set_markup(external_service_id: str, markup_percent: int) -> ProviderResult:
+    try:
+        safe_markup = max(0, min(1000, int(markup_percent)))
+    except (TypeError, ValueError):
+        return ProviderResult(False, 'boostore_markup_invalid')
+    row = db.fetch_one(
+        'SELECT id FROM provider_services WHERE provider_code = ? AND external_service_id = ?',
+        (PROVIDER_CODE, str(external_service_id)),
+    )
+    if not row:
+        return ProviderResult(False, 'boostore_service_not_found')
+    db.execute(
+        '''UPDATE provider_services SET markup_percent = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE provider_code = ? AND external_service_id = ?''',
+        (safe_markup, PROVIDER_CODE, str(external_service_id)),
+    )
+    return ProviderResult(True, 'boostore_markup_saved', data={'service_id': str(external_service_id), 'markup_percent': safe_markup})
+
+
+BoostoreProviderService.set_markup = staticmethod(_boostore_set_markup)
