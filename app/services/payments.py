@@ -62,8 +62,8 @@ def get_sparks_pack(code: str) -> SparksPack | None:
         code=value,
         stars=stars,
         sparks=credits,
-        title=f'{credits} {INTERNAL_CURRENCY_NAME_RU}',
-        description=f'Пополнение на {credits} {INTERNAL_CURRENCY_NAME_RU} за {stars} ⭐',
+        title=f'{credits} Искр',
+        description=f'Пополнение на {credits} Искр за {stars} ⭐',
     )
 
 

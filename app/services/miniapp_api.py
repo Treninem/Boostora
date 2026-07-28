@@ -518,8 +518,8 @@ class MiniAppApiService:
                         return ApiResult(400, {'ok': False, 'error': 'invalid_amount'})
                     stars = calculate_custom_stars_for_sparks(sparks)
                     invoice_payload = make_payload('wasparks_custom', make_custom_invoice_code(sparks, stars), user_id)
-                    title = f'{sparks} кредитов'
-                    description = f'Пополнение баланса Boostora на {sparks} кредитов'
+                    title = f'{sparks} Искр'
+                    description = f'Пополнение баланса Boostora на {sparks} Искр'
                 else:
                     return ApiResult(400, {'ok': False, 'error': 'invalid_invoice_kind'})
                 url = _telegram_invoice_link(title=title, description=description, payload=invoice_payload, stars=stars)

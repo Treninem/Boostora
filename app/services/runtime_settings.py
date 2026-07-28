@@ -26,16 +26,16 @@ class RuntimeSettingsService:
     """
 
     SPECS: dict[str, RuntimeSettingSpec] = {
-        'credits_per_star': RuntimeSettingSpec('credits_per_star', 'Кредитов за 1 Star', int(settings.credits_per_star), 1, 10000, 'economy'),
-        'engagement_pro_monthly_credits': RuntimeSettingSpec('engagement_pro_monthly_credits', 'PRO на 30 дней, кредитов', int(settings.engagement_pro_monthly_stars) * int(settings.credits_per_star), 1, 10000000, 'economy'),
+        'credits_per_star': RuntimeSettingSpec('credits_per_star', 'Искр за 1 Star', int(settings.credits_per_star), 1, 10000, 'economy'),
+        'engagement_pro_monthly_credits': RuntimeSettingSpec('engagement_pro_monthly_credits', 'PRO на 30 дней, Искр', int(settings.engagement_pro_monthly_stars) * int(settings.credits_per_star), 1, 10000000, 'economy'),
         'task_platform_fee_percent': RuntimeSettingSpec('task_platform_fee_percent', 'Минимальная комиссия заданий, %', 20, 5, 50, 'economy'),
-        'provider_credits_per_price_unit': RuntimeSettingSpec('provider_credits_per_price_unit', 'Кредитов за единицу цены поставщика', int(settings.provider_credits_per_price_unit), 1, 100000, 'provider'),
+        'provider_credits_per_price_unit': RuntimeSettingSpec('provider_credits_per_price_unit', 'Искр за единицу цены поставщика', int(settings.provider_credits_per_price_unit), 1, 100000, 'provider'),
         'provider_default_markup_percent': RuntimeSettingSpec('provider_default_markup_percent', 'Наценка новых услуг поставщика, %', int(settings.boostore_default_markup_percent), 0, 1000, 'provider'),
         'provider_order_timeout_minutes': RuntimeSettingSpec('provider_order_timeout_minutes', 'Срок ожидания оплаты, минут', int(settings.provider_order_timeout_minutes), 5, 1440, 'provider'),
         'max_bonus_payment_percent': RuntimeSettingSpec('max_bonus_payment_percent', 'Максимум оплаты бонусами, %', min(50, int(settings.max_bonus_payment_percent)), 0, 50, 'economy'),
         'network_min_members': RuntimeSettingSpec('network_min_members', 'Минимум участников площадки', int(settings.network_min_members), 10, 1000000, 'network'),
         'network_max_platforms_per_user': RuntimeSettingSpec('network_max_platforms_per_user', 'Максимум площадок пользователя', int(settings.network_max_platforms_per_user), 1, 100, 'network'),
-        'network_base_placement_credits': RuntimeSettingSpec('network_base_placement_credits', 'Базовая стоимость размещения, кредитов', int(settings.network_base_placement_credits), 1, 100000, 'network'),
+        'network_base_placement_credits': RuntimeSettingSpec('network_base_placement_credits', 'Базовая стоимость размещения, Искр', int(settings.network_base_placement_credits), 1, 100000, 'network'),
         'network_placement_hours': RuntimeSettingSpec('network_placement_hours', 'Минимальный срок публикации, часов', 24, 1, 720, 'network'),
         'network_bonus_percent': RuntimeSettingSpec('network_bonus_percent', 'Бонус владельцу площадки, %', 12, 0, 50, 'network'),
         'network_best_share_percent': RuntimeSettingSpec('network_best_share_percent', 'Доля лучших площадок, %', 65, 0, 100, 'network'),

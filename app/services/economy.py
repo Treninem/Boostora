@@ -2,7 +2,7 @@ import math
 
 SIGNUP_BONUS_SPARKS = 300
 INTERNAL_CURRENCY_CODE = "BST"
-INTERNAL_CURRENCY_NAME_RU = "Кредиты"
+INTERNAL_CURRENCY_NAME_RU = "Искры"
 
 # Экономика:
 # - заказчик может ставить цену сам, но не ниже базовой рекомендуемой цены

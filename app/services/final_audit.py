@@ -9,6 +9,7 @@ from app.config import settings
 from app.services.boostore_provider import BoostoreProviderService
 from app.services.community_rules import CommunityRulesService
 from app.services.engagement_growth import EngagementGrowthService
+from app.services.economy import INTERNAL_CURRENCY_NAME_RU
 from app.services.engagement_modes import EngagementModeService
 from app.services.legal_docs import LegalDocsService
 from app.services.platform_agreement import PlatformAgreementService
@@ -17,6 +18,7 @@ from app.services.runtime_settings import RuntimeSettingsService
 from app.services.star_payments import StarPaymentService
 from app.services.wallets import WalletService
 from app.services.standard_admin import StandardAdminService
+from app.version import APP_STAGE, APP_VERSION
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -68,8 +70,8 @@ class FinalAuditService:
 
     This is not a legal guarantee and it does not call external APIs. It is a
     practical owner-side checklist covering the cumulative modernization through
-    v3.5.0: smart menu, standalone Mini App, unified credits and bonuses,
-    mandatory agreement, advertising network, exact provider pricing, owner
+    v3.5.1: smart menu, standalone Mini App, unified Sparks and bonuses,
+    mandatory agreement, advertising network, optional provider pricing, owner
     financial controls, Standard/PRO and runtime safety.
     """
 
@@ -109,7 +111,7 @@ class FinalAuditService:
             'mini_app_cabinet',
             'final_audit_mini_app_cabinet',
             (PROJECT_ROOT / 'miniapp_example/index.html').exists()
-            and _source_contains('miniapp_example/index.html', 'Самостоятельный кабинет', 'Standard', 'PRO', 'assets/hero-growth.webp', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()', "api('catalog.get'", "api('wallet.get'", "api('campaigns.get'", "api('tasks.get'"),
+            and _source_contains('miniapp_example/index.html', 'Основные разделы', 'Заработать Искры', 'Сеть рекламных размещений', 'Standard', 'PRO', 'assets/hero-growth.webp', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()', "api('catalog.get'", "api('wallet.get'", "api('campaigns.get'", "api('tasks.get'"),
             action_ok='final_audit_action_mini_app_ok',
             action_bad='final_audit_action_mini_app_fix',
         )
@@ -133,6 +135,18 @@ class FinalAuditService:
             ) if (PROJECT_ROOT / 'miniapp_example/assets').exists() else 0,
             action_ok='final_audit_action_mini_app_visual_ok',
             action_bad='final_audit_action_mini_app_visual_fix',
+        )
+        add(
+            'sparks_core_priority',
+            'final_audit_sparks_core_priority',
+            APP_VERSION == 'Boostora v3.5.1'
+            and APP_STAGE == 'sparks_primary_core_provider_secondary'
+            and INTERNAL_CURRENCY_NAME_RU == 'Искры'
+            and _source_contains('miniapp_example/index.html', 'Основные разделы', 'Заработать Искры', 'Сеть рекламных размещений', 'Дополнительные возможности', 'Дополнительные услуги')
+            and _source_contains('app/texts.py', "'marketplace_button': '🧰 Дополнительные услуги'", "'wallet_topup_button': 'Купить Искры за ⭐'")
+            and _source_contains('app/keyboards/inline.py', 'def smart_hub_keyboard', "'community_rules_button'", "'marketplace_button'"),
+            action_ok='final_audit_action_sparks_priority_ok',
+            action_bad='final_audit_action_sparks_priority_fix',
         )
         add(
             'embedded_mini_app_runtime',

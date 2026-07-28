@@ -1216,9 +1216,6 @@ def smart_hub_keyboard(user_id: int, version: int, role: str | None = None) -> I
             InlineKeyboardButton(text=UserService.t(user_id, 'menu_profile'), callback_data=pack_callback(version, 'go', 'profile')),
         )
     markup.add(
-        InlineKeyboardButton(text=UserService.t(user_id, 'marketplace_button'), callback_data=pack_callback(version, 'go', 'marketplace')),
-    )
-    markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'client_dashboard_button'), callback_data=pack_callback(version, 'go', 'stats')),
         InlineKeyboardButton(text=UserService.t(user_id, 'menu_referrals'), callback_data=pack_callback(version, 'go', 'referrals')),
     )
@@ -1228,6 +1225,9 @@ def smart_hub_keyboard(user_id: int, version: int, role: str | None = None) -> I
         InlineKeyboardButton(text=UserService.t(user_id, 'community_rules_button'), callback_data=pack_callback(version, 'go', 'community_rules')),
         InlineKeyboardButton(text=UserService.t(user_id, 'refresh_screen'), callback_data=pack_callback(version, 'go', 'smart_hub')),
     )
+    # External provider catalogue is deliberately last: it complements, but does
+    # not replace, Boostora's own campaigns, tasks and advertising network.
+    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'marketplace_button'), callback_data=pack_callback(version, 'go', 'marketplace')))
     return markup
 
 
@@ -1253,15 +1253,13 @@ def engagement_growth_keyboard(user_id: int, version: int) -> InlineKeyboardMark
         ]
         if preset_buttons:
             markup.row(*preset_buttons)
-    markup.add(
-        InlineKeyboardButton(text=UserService.t(user_id, 'campaign_create_button'), callback_data=pack_callback(version, 'camp_new', 'start')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'marketplace_button'), callback_data=pack_callback(version, 'go', 'marketplace')),
-    )
+    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'campaign_create_button'), callback_data=pack_callback(version, 'camp_new', 'start')))
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'smart_hub_button'), callback_data=pack_callback(version, 'go', 'smart_hub')),
         InlineKeyboardButton(text=UserService.t(user_id, 'community_rules_button'), callback_data=pack_callback(version, 'go', 'community_rules')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'back_to_menu'), callback_data=pack_callback(version, 'go', 'main_menu')),
     )
+    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'marketplace_button'), callback_data=pack_callback(version, 'go', 'marketplace')))
+    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'back_to_menu'), callback_data=pack_callback(version, 'go', 'main_menu')))
     return markup
 
 
@@ -1269,7 +1267,7 @@ def engagement_mode_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup
     markup = InlineKeyboardMarkup(row_width=1)
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'engagement_mode_standard_button'), callback_data=pack_callback(version, 'eng_mode', 'standard')),
-        InlineKeyboardButton(text=f"{UserService.t(user_id, 'engagement_mode_pro_button')} · {EngagementModeService.pro_price_credits()} кредитов", callback_data=pack_callback(version, 'eng_pro_pay', '30d')),
+        InlineKeyboardButton(text=f"{UserService.t(user_id, 'engagement_mode_pro_button')} · {EngagementModeService.pro_price_credits()} Искр", callback_data=pack_callback(version, 'eng_pro_pay', '30d')),
     )
     markup.add(
         InlineKeyboardButton(text=UserService.t(user_id, 'engagement_growth_button'), callback_data=pack_callback(version, 'go', 'engagement_growth')),

@@ -3498,3 +3498,64 @@ TEXTS['en'].update({
     'owner_release_screen': '<b>Boostora v3.5.0 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
     'version_text': '<b>{version}</b>\nUnified credits and bonuses, mandatory agreement, advertising network, exact provider-service choice and owner-only operation ledger.',
 })
+
+
+# Boostora v3.5.1 — Boostora core first, provider catalogue secondary, Sparks naming restored.
+TEXTS['ru'].update({
+    'marketplace_button': '🧰 Дополнительные услуги',
+    'marketplace_catalog_root': '<b>🧰 Дополнительные услуги</b>\n\nЭто отдельный дополнительный каталог. Основные возможности Boostora — задания, собственные кампании, заработок Искр и сеть рекламных размещений.\n\nВыбери раздел. Доступно: <b>{services}</b> · разделов: <b>{folders}</b>',
+    'marketplace_catalog_category': '<b>🧰 Дополнительные услуги · {category}</b>\n\nВыбери подраздел. Доступно: <b>{services}</b> · подразделов: <b>{folders}</b>',
+    'marketplace_catalog_services': '<b>🧰 {category} → {subcategory}</b>\n\nСтраница <b>{page}/{pages}</b>\n\n{items}\n\nКаждую позицию выбираешь самостоятельно. Перед подтверждением показывается актуальная стоимость в Искрах.',
+    'smart_hub_screen': '<b>🚀 Центр {brand}</b>\n\nРоль: <b>{role}</b>\nБаланс Искр: <b>{internal}</b> · бонусы: <b>{bonus}</b> · удержано: <b>{hold}</b>\n\n<b>Главное</b>\nЗадания и заработок, собственные кампании, внутренняя реклама и сеть рекламных размещений доступны в Mini App.\n\n<b>Исполнитель</b>\nДоступно заданий: <b>{available_tasks}</b>\nАктивные: <b>{active_tasks}/{task_limit}</b> · на проверке: <b>{manual_review}</b>\n\n<b>Заказчик</b>\nКампаний: <b>{client_campaigns}</b> · активных: <b>{client_active}</b> · черновиков: <b>{client_drafts}</b>\n\n<b>Дополнительно</b>\nОтдельный каталог Telegram-услуг: <b>{provider_enabled}</b> позиций.\n\n<b>Что сделать дальше</b>\n{tips}',
+    'wallet_topup_button': 'Купить Искры за ⭐',
+    'insufficient_internal_balance': 'Недостаточно Искр. Пополни баланс за Stars или заработай Искры на заданиях.',
+    'boostore_order_paid': 'Искры списаны. Дополнительная услуга принята в работу.',
+    'boostore_order_prepared': 'Заказ дополнительной услуги подготовлен.',
+    'boostore_order_placed': 'Дополнительная услуга запущена.',
+    'boostore_order_not_found': 'Заказ дополнительной услуги не найден.',
+    'boostore_service_not_enabled': 'Эта дополнительная услуга временно недоступна.',
+    'boostore_invoice_title': 'Дополнительная услуга',
+    'boostore_invoice_desc': 'Выбранная дополнительная Telegram-услуга. Итоговая стоимость рассчитана в Искрах.',
+    'stable_contract_major_351_policy': 'v3.5.1: собственные кампании, задания, заработок и сеть размещений являются основными возможностями; каталог поставщика второстепенный; пользовательская валюта называется Искры.',
+    'final_audit_sparks_core_priority': 'Основные функции впереди, дополнительные услуги отдельно, валюта — Искры',
+    'final_audit_action_sparks_priority_ok': 'основные разделы имеют приоритет, дополнительный каталог отделён, терминология Искр едина.',
+    'final_audit_action_sparks_priority_fix': 'проверь порядок навигации, названия разделов и пользовательскую терминологию.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.5.1</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические потоки</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nОсновные разделы Boostora возвращены на первый план. Дополнительный каталог вынесен отдельно, а единая внутренняя валюта во всём интерфейсе называется «Искры».',
+})
+TEXTS['en'].update({
+    'marketplace_button': '🧰 Additional services',
+    'marketplace_catalog_root': '<b>🧰 Additional services</b>\n\nThis is a separate optional catalogue. Boostora’s primary features are tasks, campaigns, earning Sparks and the advertising network.\n\nChoose a section. Services: <b>{services}</b> · sections: <b>{folders}</b>',
+    'marketplace_catalog_category': '<b>🧰 Additional services · {category}</b>\n\nChoose a subsection. Services: <b>{services}</b> · subsections: <b>{folders}</b>',
+    'marketplace_catalog_services': '<b>🧰 {category} → {subcategory}</b>\n\nPage <b>{page}/{pages}</b>\n\n{items}\n\nYou choose each item yourself. The current price in Sparks is shown before confirmation.',
+    'wallet_topup_button': 'Buy Sparks with ⭐',
+    'insufficient_internal_balance': 'Not enough Sparks. Buy Sparks with Stars or earn them by completing tasks.',
+    'final_audit_sparks_core_priority': 'Core features first, optional services separate, currency named Sparks',
+    'final_audit_action_sparks_priority_ok': 'core navigation is primary, the optional catalogue is separate, and Sparks wording is consistent.',
+    'final_audit_action_sparks_priority_fix': 'check navigation order, section names, and user-facing currency wording.',
+    'owner_release_screen': '<b>Boostora v3.5.1 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nBoostora core features are primary again. The provider catalogue is optional, and the internal currency is called Sparks.',
+})
+
+# Normalize legacy wording without renaming database fields or API payload keys.
+_ru_replacements = (
+    ('кредитный баланс', 'баланс Искр'), ('Кредитный баланс', 'Баланс Искр'),
+    ('кредитного баланса', 'баланса Искр'), ('Кредитного баланса', 'Баланса Искр'),
+    ('кредитами', 'Искрами'), ('Кредитами', 'Искрами'),
+    ('кредитах', 'Искрах'), ('Кредитах', 'Искрах'),
+    ('кредитов', 'Искр'), ('Кредитов', 'Искр'),
+    ('кредиты', 'Искры'), ('Кредиты', 'Искры'),
+    ('кредита', 'Искры'), ('Кредита', 'Искры'),
+    ('кредит', 'Искра'), ('Кредит', 'Искра'),
+)
+for _key, _value in list(TEXTS.get('ru', {}).items()):
+    if isinstance(_value, str):
+        for _old, _new in _ru_replacements:
+            _value = _value.replace(_old, _new)
+        TEXTS['ru'][_key] = _value
+for _language, _mapping in TEXTS.items():
+    if _language == 'ru':
+        continue
+    for _key, _value in list(_mapping.items()):
+        if isinstance(_value, str):
+            _mapping[_key] = _value.replace('credits', 'Sparks').replace('Credits', 'Sparks').replace('credit', 'Spark').replace('Credit', 'Spark')
