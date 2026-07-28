@@ -2,404 +2,157 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#12091f">
   <meta name="color-scheme" content="dark">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://telegram.org; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org">
   <title>Boostora</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg: var(--tg-theme-bg-color, #12091f);
-      --surface: var(--tg-theme-secondary-bg-color, #21132f);
-      --text: var(--tg-theme-text-color, #fff);
-      --hint: var(--tg-theme-hint-color, rgba(255,255,255,.7));
-      --button: var(--tg-theme-button-color, #f0b33f);
-      --button-text: var(--tg-theme-button-text-color, #241404);
-      --line: rgba(255,255,255,.13);
-      --card: rgba(255,255,255,.075);
-      --gold: #f0b33f;
-      --purple: #7b3cff;
-      --green: #43e29b;
-      --danger: #ff7474;
-      --safe-top: max(10px, env(safe-area-inset-top));
-      --safe-bottom: max(10px, env(safe-area-inset-bottom));
+      --bg: var(--tg-theme-bg-color,#10081b); --surface: var(--tg-theme-secondary-bg-color,#21132f);
+      --text: var(--tg-theme-text-color,#fff); --hint: var(--tg-theme-hint-color,rgba(255,255,255,.68));
+      --button: var(--tg-theme-button-color,#8a4cff); --button-text: var(--tg-theme-button-text-color,#fff);
+      --gold:#f3b447; --purple:#7b3cff; --pink:#d93df2; --green:#47dfa0; --red:#ff7474;
+      --line:rgba(255,255,255,.12); --card:rgba(255,255,255,.075);
+      --safe-top:max(8px,env(safe-area-inset-top)); --safe-bottom:max(8px,env(safe-area-inset-bottom));
     }
-    * { box-sizing: border-box; }
-    html { background: var(--bg); }
-    body {
-      margin: 0; min-height: 100vh; color: var(--text);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background:
-        radial-gradient(circle at 10% -10%, rgba(123,60,255,.36), transparent 35%),
-        radial-gradient(circle at 95% 4%, rgba(240,179,63,.18), transparent 26%), var(--bg);
-      -webkit-tap-highlight-color: transparent;
-    }
-    button { font: inherit; cursor: pointer; touch-action: manipulation; } button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-    [hidden] { display: none !important; }
-    .top { position: sticky; top: 0; z-index: 30; padding-top: env(safe-area-inset-top); background: rgba(18,9,31,.82); backdrop-filter: blur(18px); border-bottom: 1px solid var(--line); }
-    .topin, .wrap { width: min(100%, 980px); margin: 0 auto; }
-    .topin { min-height: 58px; padding: 9px 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .brand { display: flex; align-items: center; gap: 9px; font-weight: 900; }
-    .mark { width: 38px; height: 38px; border-radius: 13px; display: grid; place-items: center; overflow: hidden; background: linear-gradient(135deg,#8a4cff,#f0b33f); box-shadow: 0 10px 25px rgba(0,0,0,.28); } .mark img { width: 100%; height: 100%; object-fit: cover; }
-    .pill { padding: 7px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--hint); background: var(--card); font-size: 12px; white-space: nowrap; }
-    .wrap { padding: 16px 14px calc(90px + var(--safe-bottom)); }
-    .view { animation: appear .18s ease; }
-    @keyframes appear { from { opacity: .2; transform: translateY(5px); } }
-    .hero { display: grid; grid-template-columns: 1.1fr .9fr; align-items: center; gap: 16px; padding: 21px; border-radius: 29px; overflow: hidden; background: linear-gradient(135deg,rgba(42,18,72,.99),rgba(91,36,180,.94) 58%,rgba(198,141,42,.93)); box-shadow: 0 18px 48px rgba(0,0,0,.33); }
-    .hero h1 { margin: 0 0 9px; font-size: clamp(29px,7vw,51px); line-height: .98; }
-    .hero p { margin: 0; color: rgba(255,255,255,.76); line-height: 1.48; }
-    .hero img { width: 100%; max-height: 270px; object-fit: contain; filter: drop-shadow(0 16px 25px rgba(0,0,0,.32)); }
-    .eyebrow { margin-bottom: 8px !important; color: #ffe19a !important; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
-    .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 15px; }
-    .btn { min-height: 47px; border: 0; border-radius: 16px; padding: 12px 14px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 850; background: var(--button); color: var(--button-text); box-shadow: 0 9px 22px rgba(0,0,0,.18); }
-    .btn.secondary { color: #fff; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); box-shadow: none; }
-    .btn.full { width: 100%; }
-    .btn:disabled { opacity: .55; cursor: wait; }
-    .state { margin-top: 12px !important; font-size: 13px; }
-    .section-head { display: flex; justify-content: space-between; align-items: end; gap: 10px; margin: 25px 2px 11px; }
-    .section-head h2 { margin: 0; font-size: 22px; }
-    .section-head span { color: var(--hint); font-size: 12px; }
-    .grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
-    .card { min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 23px; background: linear-gradient(180deg,rgba(255,255,255,.105),rgba(255,255,255,.05)); box-shadow: 0 10px 29px rgba(0,0,0,.16); }
-    .card img { width: 100%; height: 124px; object-fit: cover; border-radius: 17px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.05); }
-    .card h3 { margin: 11px 0 6px; font-size: 17px; }
-    .muted { color: var(--hint); line-height: 1.45; }
-    .card .btn { margin-top: 12px; width: 100%; }
-    .stat-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
-    .stat { padding: 13px; border-radius: 19px; border: 1px solid var(--line); background: var(--card); }
-    .stat b { display: block; font-size: 23px; margin-bottom: 3px; }
-    .stat span { color: var(--hint); font-size: 12px; }
-    .profile { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--card); }
-    .avatar { width: 64px; height: 64px; border-radius: 18px; display: block; object-fit: cover; border: 1px solid var(--line); background: linear-gradient(135deg,#7b3cff,#d93df2); }
-    .profile b { display: block; }
-    .progress { height: 10px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.1); margin-top: 10px; }
-    .progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#7b3cff,#f0b33f); border-radius: inherit; transition: width .25s ease; }
-    .notice { margin-top: 14px; padding: 13px 14px; border-radius: 18px; border: 1px solid rgba(240,179,63,.25); background: rgba(240,179,63,.09); color: #ffe4a6; }
-    .management { margin-top: 14px; padding: 14px; border: 1px solid rgba(123,60,255,.32); border-radius: 23px; background: rgba(123,60,255,.09); }
-    .management h3 { margin: 0 0 11px; } .management-art { width: 100%; max-height: 180px; object-fit: cover; border-radius: 18px; margin-bottom: 12px; border: 1px solid var(--line); }
-    .management .actions { margin: 0; }
-    .bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 7px 10px calc(7px + env(safe-area-inset-bottom)); background: rgba(18,9,31,.9); backdrop-filter: blur(18px); border-top: 1px solid var(--line); }
-    .nav { width: min(100%,650px); margin: 0 auto; display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; }
-    .nav button { min-width: 0; min-height: 56px; padding: 6px 3px; border: 0; border-radius: 15px; color: var(--hint); background: transparent; font-size: 11px; }
-    .nav button b { display: block; font-size: 19px; margin-bottom: 2px; }
-    .nav button.active { color: #fff; background: rgba(255,255,255,.11); }
-    .toast { position: fixed; left: 50%; bottom: calc(82px + env(safe-area-inset-bottom)); z-index: 80; transform: translate(-50%,18px); width: min(calc(100% - 28px),520px); padding: 12px 14px; border-radius: 16px; background: #2b183b; border: 1px solid var(--line); box-shadow: 0 14px 35px rgba(0,0,0,.4); opacity: 0; pointer-events: none; transition: .2s ease; text-align: center; }
-    .toast.show { opacity: 1; transform: translate(-50%,0); }
-    @media (max-width:760px) { .hero { grid-template-columns: 1fr; } .hero img { max-height: 210px; } .grid { grid-template-columns: 1fr 1fr; } .stat-grid { grid-template-columns: 1fr 1fr; } }
-    @media (max-width:480px) { .grid { grid-template-columns: 1fr; } .hero { padding: 18px; border-radius: 24px; } .wrap,.topin { padding-left: 12px; padding-right: 12px; } }
-    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+    *{box-sizing:border-box} html{background:var(--bg)} body{margin:0;min-height:100vh;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(circle at 5% -5%,rgba(123,60,255,.38),transparent 34%),radial-gradient(circle at 100% 0,rgba(243,180,71,.16),transparent 28%),var(--bg);-webkit-tap-highlight-color:transparent}
+    button,input,select,textarea{font:inherit} button{cursor:pointer;touch-action:manipulation} [hidden]{display:none!important}
+    .top{position:sticky;top:0;z-index:30;padding-top:env(safe-area-inset-top);background:rgba(16,8,27,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+    .topin,.wrap{width:min(100%,980px);margin:0 auto}.topin{min-height:60px;padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px}.brand{display:flex;align-items:center;gap:10px;font-weight:900}.logo{width:40px;height:40px;border-radius:14px;object-fit:cover;box-shadow:0 9px 25px rgba(0,0,0,.34)}.pill{padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);font-size:12px;color:var(--hint);white-space:nowrap}
+    .wrap{padding:15px 13px calc(92px + var(--safe-bottom))}.page{animation:appear .16s ease}@keyframes appear{from{opacity:.2;transform:translateY(4px)}}
+    .hero{display:grid;grid-template-columns:1.08fr .92fr;align-items:center;gap:14px;padding:20px;border-radius:28px;overflow:hidden;background:linear-gradient(135deg,rgba(49,21,79,.98),rgba(102,40,199,.93) 58%,rgba(190,128,35,.9));box-shadow:0 18px 45px rgba(0,0,0,.32)}.hero h1{margin:0 0 8px;font-size:clamp(28px,7vw,48px);line-height:1}.hero p{margin:0;color:rgba(255,255,255,.78);line-height:1.45}.hero img{width:100%;max-height:235px;object-fit:contain;filter:drop-shadow(0 15px 25px rgba(0,0,0,.32))}.eyebrow{font-size:11px!important;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:#ffe2a0!important;margin-bottom:8px!important}
+    .section-head{display:flex;align-items:end;justify-content:space-between;gap:9px;margin:23px 2px 10px}.section-head h2{margin:0;font-size:21px}.section-head span{color:var(--hint);font-size:12px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.card{min-width:0;padding:13px;border:1px solid var(--line);border-radius:22px;background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.045));box-shadow:0 10px 26px rgba(0,0,0,.15)}.card img{width:100%;height:126px;object-fit:cover;border-radius:17px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04)}.card h3{margin:10px 0 5px;font-size:17px}.card p{margin:5px 0}.muted{color:var(--hint);line-height:1.42}.small{font-size:12px}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.btn{min-height:44px;border:0;border-radius:15px;padding:11px 13px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-weight:850;color:var(--button-text);background:linear-gradient(135deg,var(--purple),var(--pink));box-shadow:0 8px 20px rgba(0,0,0,.18)}.btn.gold{background:linear-gradient(135deg,#ffd36a,#e69b1c);color:#251604}.btn.secondary{background:rgba(255,255,255,.1);color:#fff;border:1px solid var(--line);box-shadow:none}.btn.danger{background:rgba(255,116,116,.15);color:#ffd2d2;border:1px solid rgba(255,116,116,.3);box-shadow:none}.btn.full{width:100%}.btn:disabled{opacity:.55;cursor:wait}.btn.tiny{min-height:35px;padding:7px 10px;border-radius:12px;font-size:12px}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.stat{padding:12px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.stat b{display:block;font-size:22px;margin-bottom:3px}.stat span{color:var(--hint);font-size:11px}.profile{display:flex;align-items:center;gap:12px;padding:13px;border:1px solid var(--line);border-radius:21px;background:var(--card)}.avatar{width:62px;height:62px;border-radius:18px;object-fit:cover;border:1px solid var(--line)}
+    .chips{display:flex;gap:7px;overflow:auto;padding:2px 0 6px;scrollbar-width:none}.chip{flex:0 0 auto;min-height:38px;border:1px solid var(--line);border-radius:999px;padding:8px 12px;background:var(--card);color:var(--text);font-weight:750}.chip.active{background:linear-gradient(135deg,var(--purple),var(--pink));border-color:transparent}.search{display:flex;gap:8px;margin-bottom:10px}.field,input,select,textarea{width:100%;border:1px solid var(--line);border-radius:15px;padding:12px 13px;color:var(--text);background:rgba(255,255,255,.075);outline:none}.field:focus,input:focus,select:focus,textarea:focus{border-color:rgba(243,180,71,.75);box-shadow:0 0 0 3px rgba(243,180,71,.1)} textarea{min-height:90px;resize:vertical} label{display:block;margin:10px 0 5px;color:var(--hint);font-size:12px;font-weight:750}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.list{display:grid;gap:9px}.row{padding:12px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.row-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.row h3,.row h4{margin:0 0 5px}.badge{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800;background:rgba(255,255,255,.1);color:var(--hint)}.badge.green{background:rgba(71,223,160,.12);color:#a6ffd7}.badge.red{background:rgba(255,116,116,.13);color:#ffc0c0}.badge.gold{background:rgba(243,180,71,.13);color:#ffe0a0}.price{font-weight:900;color:#ffe09a}.progress{height:9px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.1);margin-top:8px}.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--gold));border-radius:inherit}.empty{padding:24px 15px;text-align:center;color:var(--hint);border:1px dashed var(--line);border-radius:20px}.notice{padding:12px 13px;border:1px solid rgba(243,180,71,.26);border-radius:17px;background:rgba(243,180,71,.08);color:#ffe6af;margin-bottom:11px}.notice.error{border-color:rgba(255,116,116,.28);background:rgba(255,116,116,.08);color:#ffd0d0}
+    .bottom{position:fixed;left:0;right:0;bottom:0;z-index:40;padding:6px 8px calc(6px + env(safe-area-inset-bottom));background:rgba(16,8,27,.92);backdrop-filter:blur(18px);border-top:1px solid var(--line)}.nav{width:min(100%,720px);margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.nav button{min-width:0;min-height:58px;padding:5px 2px;border:0;border-radius:14px;background:transparent;color:var(--hint);font-size:10px}.nav b{display:block;font-size:19px;margin-bottom:2px}.nav button.active{background:rgba(255,255,255,.11);color:#fff}
+    .modal-backdrop{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.65);display:grid;align-items:end;padding-top:var(--safe-top)}.modal{width:min(100%,720px);max-height:92vh;overflow:auto;margin:0 auto;padding:18px 15px calc(18px + env(safe-area-inset-bottom));border-radius:25px 25px 0 0;background:#21132f;border:1px solid var(--line);box-shadow:0 -18px 55px rgba(0,0,0,.45)}.modal-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}.modal-head h2{margin:0}.close{width:40px;height:40px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:#fff;font-size:20px}.toast{position:fixed;left:50%;bottom:calc(82px + env(safe-area-inset-bottom));z-index:120;transform:translate(-50%,18px);width:min(calc(100% - 28px),520px);padding:12px 14px;border-radius:16px;background:#2b183b;border:1px solid var(--line);box-shadow:0 14px 35px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.2s;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}.loader{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    @media(max-width:760px){.hero{grid-template-columns:1fr}.hero img{max-height:190px}.grid{grid-template-columns:1fr 1fr}.stat-grid{grid-template-columns:1fr 1fr}}@media(max-width:500px){.grid,.grid.two,.form-grid{grid-template-columns:1fr}.hero{padding:17px;border-radius:23px}.wrap,.topin{padding-left:11px;padding-right:11px}.nav button{font-size:9px}}
   </style>
 </head>
 <body>
-  <header class="top">
-    <div class="topin">
-      <div class="brand"><span class="mark"><img src="assets/boostora-logo.png" alt=""></span><span id="brandName">Boostora</span></div>
-      <span class="pill" id="rolePill">Подключение…</span>
-    </div>
-  </header>
+<header class="top"><div class="topin"><div class="brand"><img class="logo" src="assets/boostora-logo.png" alt=""><span id="brandName">Boostora</span></div><span class="pill" id="rolePill">Подключение…</span></div></header>
+<main class="wrap" id="app"><section class="empty"><span class="loader"></span><p>Загружаем кабинет…</p></section></main>
+<nav class="bottom" id="bottomNav" hidden><div class="nav">
+  <button data-page="home" class="active"><b>🏠</b>Главная</button><button data-page="services"><b>🧩</b>Услуги</button><button data-page="work"><b>🔥</b>Работа</button><button data-page="wallet"><b>💳</b>Баланс</button><button data-page="profile"><b>👤</b>Профиль</button>
+</div></nav>
+<div class="modal-backdrop" id="modalBackdrop" hidden><section class="modal"><div class="modal-head"><h2 id="modalTitle">Окно</h2><button class="close" id="modalClose" aria-label="Закрыть">×</button></div><div id="modalBody"></div></section></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(() => {
+  'use strict';
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  const app = document.getElementById('app'), nav = document.getElementById('bottomNav');
+  const modalBackdrop = document.getElementById('modalBackdrop'), modalTitle = document.getElementById('modalTitle'), modalBody = document.getElementById('modalBody');
+  let session = null, currentPage = 'home', toastTimer = null;
+  const cache = {catalog:null,wallet:null,campaigns:null,tasks:null,profile:null,orders:null,admin:null,owner:null,ownerCatalog:null};
+  const catalogState = {category:'',subcategory:'',query:'',page:1};
+  const ownerCatalogState = {category:'',subcategory:'',page:1};
 
-  <main class="wrap">
-    <section class="view" data-view="home">
-      <div class="hero">
-        <div>
-          <p class="eyebrow">Кабинет продвижения</p>
-          <h1>Управляй активностью</h1>
-          <p>Задания, кампании, взаимная активность, баланс и PRO — в одном кабинете. Доступные действия зависят от твоей роли.</p>
-          <div class="actions">
-            <button class="btn" data-action="hub">🧭 Открыть кабинет</button>
-            <button class="btn secondary" data-action="main">🤖 Меню бота</button>
-          </div>
-          <p class="state" id="telegramState">Проверяем подключение к Telegram…</p>
-        </div>
-        <img src="assets/hero-growth.webp" alt="Рост активности Boostora">
-      </div>
+  const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+  const fmt = (value) => new Intl.NumberFormat('ru-RU').format(Number(value || 0));
+  const roleName = role => role === 'client' ? 'Заказчик' : role === 'performer' ? 'Исполнитель' : 'Роль не выбрана';
+  const statusName = status => ({draft:'Ожидает оплаты',invoice_failed:'Счёт не создан',paid:'Оплачен',paid_pending:'Оплачен, ожидает запуска',placed:'Запущен',pending:'В работе',processing:'В работе',completed:'Выполнен',partial:'Частично',canceled:'Отменён',failed:'Ошибка',active:'Активна',paused:'Приостановлена',completed_campaign:'Завершена',taken:'Выполняется',manual_review:'На проверке',approved:'Одобрено',rejected:'Отклонено'}[status] || status || '—');
+  const resultText = key => ({
+    campaign_created_active:'Кампания создана и запущена.',campaign_created_draft:'Черновик сохранён.',campaign_balance_low:'Недостаточно Искр для запуска.',campaign_target_invalid:'Проверь ссылку.',campaign_target_message_link_required:'Нужна ссылка на конкретный пост.',campaign_target_admin_required:'Добавь бота администратором канала.',campaign_price_below_floor:'Цена ниже допустимого минимума.',campaign_paused:'Кампания приостановлена.',campaign_resumed:'Кампания продолжена.',campaign_launched:'Кампания запущена.',
+    task_taken:'Задание взято.',task_limit_reached:'Достигнут лимит активных заданий.',task_repeat_blocked:'Это задание уже выполнялось.',proof_accepted:'Подтверждение принято.',proof_sent_manual_review:'Отправлено на ручную проверку.',proof_empty:'Добавь подтверждение.',task_auto_verified:'Выполнение подтверждено.',task_verification_failed:'Выполнение пока не найдено.',
+    boostore_quantity_out_of_range:'Количество вне допустимого диапазона.',boostore_order_link_invalid:'Нужна корректная ссылка Telegram.',boostore_service_not_enabled:'Услуга временно недоступна.',service_temporarily_unavailable:'Оформление заказов временно приостановлено.',boostore_order_payment_required:'Сначала требуется подтверждённая оплата.',boostore_order_placed:'Заказ запущен.',boostore_sync_success:'Каталог обновлён.',boostore_service_enabled:'Услуга добавлена в витрину.',boostore_service_disabled:'Услуга убрана из витрины.',
+    admin_submission_approved:'Заявка одобрена.',admin_submission_rejected:'Заявка отклонена.'
+  }[key] || key || 'Готово');
 
-      <div class="section-head"><h2>Твой профиль</h2><span id="connectionBadge">проверка…</span></div>
-      <div class="profile">
-        <img class="avatar profile-image" src="assets/telegram-profile.webp" alt="">
-        <div><b id="userName">Гость</b><span class="muted" id="userDetails">Ожидаем безопасную сессию Telegram.</span></div>
-      </div>
+  function toast(text, error=false){ const n=document.getElementById('toast'); n.textContent=text; n.style.borderColor=error?'rgba(255,116,116,.5)':''; n.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>n.classList.remove('show'),3000); }
+  function openModal(title, html){ modalTitle.textContent=title; modalBody.innerHTML=html; modalBackdrop.hidden=false; try{tg&&tg.BackButton.show();}catch(_){} }
+  function closeModal(){ modalBackdrop.hidden=true; modalBody.innerHTML=''; try{tg&&tg.BackButton.hide();}catch(_){} }
+  document.getElementById('modalClose').onclick=closeModal; modalBackdrop.addEventListener('click',e=>{if(e.target===modalBackdrop)closeModal();});
+  if(tg){ tg.ready(); tg.expand(); try{tg.enableClosingConfirmation();tg.BackButton.onClick(closeModal);}catch(_){} }
 
-      <div class="section-head"><h2>Сводка</h2><span>только твои данные</span></div>
-      <div class="stat-grid">
-        <div class="stat"><b id="balanceStat">—</b><span>доступно</span></div>
-        <div class="stat"><b id="workStat">—</b><span id="workLabel">активность</span></div>
-        <div class="stat"><b id="modeStat">—</b><span>режим</span></div>
-        <div class="stat"><b id="obligationStat">—</b><span>осталось действий</span></div>
-      </div>
-
-      <div class="section-head"><h2>Быстрые действия</h2></div>
-      <div class="grid" id="quickGrid">
-        <article class="card common-card"><img src="assets/wallet-hold.webp" alt="Кошелёк"><h3>Кошелёк</h3><p class="muted">Баланс, пополнение, история и награды.</p><button class="btn secondary" data-action="wallet">Открыть</button></article>
-        <article class="card common-card"><img src="assets/bot-actions.webp" alt="Разделы Boostora"><h3>Все разделы</h3><p class="muted">Открой основной кабинет и выбери нужное действие.</p><button class="btn secondary" data-action="hub">Открыть</button></article>
-        <article class="card performer-only" hidden><img src="assets/liker.webp" alt="Задания"><h3>Задания</h3><p class="muted">Выбери доступное задание и отправь подтверждение.</p><button class="btn secondary" data-action="tasks">Открыть</button></article>
-        <article class="card client-only" hidden><img src="assets/commenter.webp" alt="Кампании"><h3>Мои кампании</h3><p class="muted">Создание, запуск и контроль продвижения.</p><button class="btn secondary" data-action="campaigns">Открыть</button></article>
-        <article class="card"><img src="assets/obligations.webp" alt="Standard и PRO"><h3>Standard и PRO</h3><p class="muted">Выбор режима и твои обязательства.</p><button class="btn secondary" data-action="engagement">Открыть</button></article>
-      </div>
-      <div class="notice" id="registrationNotice" hidden>Сначала открой бота и заверши выбор роли, принятие правил и юридических условий.</div>
-    </section>
-
-    <section class="view" data-view="work" hidden>
-      <div class="section-head"><h2 id="workTitle">Работа</h2><span id="workHint">доступно по роли</span></div>
-      <div class="grid performer-only" hidden>
-        <article class="card"><img src="assets/liker.webp" alt="Доступные задания"><h3>Доступные задания</h3><p class="muted"><span id="availableTasks">0</span> заданий ждут исполнителей.</p><button class="btn" data-action="tasks">Выбрать задание</button></article>
-        <article class="card"><img src="assets/commenter.webp" alt="Активные задания"><h3>Мои выполнения</h3><p class="muted">Проверь активные задания, proof и статус проверки.</p><button class="btn secondary" data-action="tasks">Открыть</button></article>
-        <article class="card"><img src="assets/standard.webp" alt="Награды"><h3>Награды</h3><p class="muted">Бонусы, достижения и приглашения.</p><button class="btn secondary" data-action="rewards">Открыть</button></article>
-      </div>
-      <div class="grid client-only" hidden>
-        <article class="card"><img src="assets/hero-growth.webp" alt="Кампании"><h3>Мои кампании</h3><p class="muted">Всего: <span id="campaignCount">0</span>, активных: <span id="activeCampaignCount">0</span>.</p><button class="btn" data-action="campaigns">Управлять</button></article>
-        <article class="card"><img src="assets/boostore.webp" alt="Услуги Telegram"><h3>Услуги Telegram</h3><p class="muted">Подписчики, просмотры, реакции, комментарии и другие разделы.</p><button class="btn secondary" data-action="marketplace">Открыть каталог</button></article>
-        <article class="card"><img src="assets/commenter.webp" alt="Статистика"><h3>Статистика</h3><p class="muted">Результаты, скорость и качество кампаний.</p><button class="btn secondary" data-action="stats">Открыть</button></article>
-      </div>
-      <div class="section-head"><h2>Общее</h2></div>
-      <div class="grid">
-        <article class="card"><img src="assets/pro.webp" alt="PRO"><h3>PRO</h3><p class="muted">Активность без ответных обязательств Standard.</p><button class="btn secondary" data-action="vip">Открыть PRO</button></article>
-        <article class="card"><img src="assets/community-rules.webp" alt="Правила"><h3>Правила</h3><p class="muted">Условия участия и безопасной работы.</p><button class="btn secondary" data-action="rules">Открыть</button></article>
-      </div>
-    </section>
-
-    <section class="view" data-view="balance" hidden>
-      <div class="section-head"><h2>Кошелёк</h2><span>личные данные</span></div>
-      <div class="stat-grid">
-        <div class="stat"><b id="walletAvailable">0</b><span>доступно</span></div>
-        <div class="stat"><b id="walletCampaign">0</b><span>для кампаний</span></div>
-        <div class="stat"><b id="walletHold">0</b><span>на проверке</span></div>
-        <div class="stat"><b id="walletEarned">0</b><span>заработано</span></div>
-      </div>
-      <div class="section-head"><h2>Действия</h2></div>
-      <div class="grid">
-        <article class="card"><img src="assets/wallet-hold.webp" alt="Кошелёк"><h3>Управление балансом</h3><p class="muted">Пополнение Stars, обмен и доступные средства.</p><button class="btn" data-action="wallet">Открыть кошелёк</button></article>
-        <article class="card"><img src="assets/obligations.webp" alt="История"><h3>История</h3><p class="muted">Операции, начисления и удержания.</p><button class="btn secondary" data-action="history">Открыть историю</button></article>
-        <article class="card"><img src="assets/standard.webp" alt="Рефералы"><h3>Приглашения</h3><p class="muted">Реферальная ссылка и награды.</p><button class="btn secondary" data-action="referrals">Открыть</button></article>
-      </div>
-    </section>
-
-    <section class="view" data-view="more" hidden>
-      <div class="section-head"><h2>Standard и PRO</h2><span id="modeCaption">режим не выбран</span></div>
-      <div class="grid">
-        <article class="card"><img src="assets/standard.webp" alt="Standard"><h3>Standard</h3><p class="muted">Взаимная активность с ответными действиями.</p><button class="btn secondary" data-action="engagement">Настроить</button></article>
-        <article class="card"><img src="assets/pro.webp" alt="PRO"><h3>PRO</h3><p class="muted">Без ответных действий. Цена показывается в боте.</p><button class="btn secondary" data-action="engagement">Подробнее</button></article>
-        <article class="card"><img src="assets/obligations.webp" alt="Обязательства"><h3>Мой прогресс</h3><p class="muted"><span id="obligationText">Нет активных обязательств.</span></p><div class="progress"><i id="obligationProgress"></i></div><button class="btn secondary" data-action="obligations">Открыть</button></article>
-      </div>
-
-      <div class="section-head"><h2>Документы</h2></div>
-      <div class="grid">
-        <article class="card"><img src="assets/community-rules.webp" alt="Правила"><h3>Правила сообщества</h3><button class="btn secondary" data-action="rules">Открыть</button></article>
-        <article class="card"><img src="assets/community-rules.webp" alt="Условия"><h3>Юридические условия</h3><button class="btn secondary" data-action="legal">Открыть</button></article>
-      </div>
-
-      <section class="management" id="adminPanel" hidden>
-        <img class="management-art" src="assets/server-status.webp" alt="">
-        <h3>🛡 Управление</h3>
-        <div class="actions">
-          <button class="btn secondary" data-action="admin">Админ-центр</button>
-          <button class="btn secondary" data-action="admin_queue">Проверка заявок</button>
-          <button class="btn secondary" data-action="admin_obligations">Обязательства</button>
-          <button class="btn secondary" data-action="admin_logs">Журнал</button>
-        </div>
-      </section>
-
-      <section class="management" id="ownerPanel" hidden>
-        <img class="management-art" src="assets/release-center.webp" alt="">
-        <h3>👑 Раздел владельца</h3>
-        <div class="actions">
-          <button class="btn secondary" data-action="owner_analytics">Коммерция</button>
-          <button class="btn secondary" data-action="owner_provider">Поставщик услуг</button>
-          <button class="btn secondary" data-action="owner_release">Проверка релиза</button>
-        </div>
-        <p class="muted" id="ownerVersion" style="margin-top:10px"></p>
-      </section>
-    </section>
-  </main>
-
-  <nav class="bottom" aria-label="Навигация">
-    <div class="nav">
-      <button class="active" data-nav="home"><b>🏠</b>Главная</button>
-      <button data-nav="work"><b>🔥</b>Работа</button>
-      <button data-nav="balance"><b>💳</b>Баланс</button>
-      <button data-nav="more"><b>☰</b>Ещё</button>
-    </div>
-  </nav>
-  <div class="toast" id="toast" role="status"></div>
-
-  <script>
-  (() => {
-    'use strict';
-    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-    const $ = (id) => document.getElementById(id);
-    const views = [...document.querySelectorAll('[data-view]')];
-    const navButtons = [...document.querySelectorAll('[data-nav]')];
-    const actionButtons = [...document.querySelectorAll('[data-action]')];
-    const fallbackParams = {
-      main:'main_menu', hub:'smart_hub', tasks:'tasks', wallet:'wallet', history:'history',
-      campaigns:'campaigns', stats:'stats', marketplace:'marketplace', engagement:'engagement_mode',
-      obligations:'engagement_obligations', rules:'community_rules', legal:'legal_docs', rewards:'rewards',
-      referrals:'referrals', vip:'vip', admin:'admin', admin_queue:'admin_queue',
-      admin_obligations:'admin_engagement_obligations', admin_logs:'admin_logs',
-      owner_analytics:'owner_analytics', owner_release:'owner_release', owner_provider:'owner_provider'
-    };
-    let config = {brand_name:'Boostora', bot_url:''};
-    let session = null;
-    let toastTimer = null;
-
-    function toast(text) {
-      const node = $('toast');
-      node.textContent = text;
-      node.classList.add('show');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => node.classList.remove('show'), 2600);
+  async function api(operation,payload={}){
+    if(!tg||!tg.initData) throw new Error('Открой Mini App из Telegram.');
+    const response=await fetch('/api/miniapp/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData,operation,payload})});
+    let data={}; try{data=await response.json();}catch(_){throw new Error('Сервер вернул неверный ответ.');}
+    if(!response.ok||data.ok===false){
+      const err=data.error||data.result||'request_failed';
+      if(err==='rules_required'||err==='legal_required'){await showDocumentsGate();}
+      if(err==='subscription_required') showSubscriptionGate(data.required_chats||[]);
+      if(err==='role_required'||err==='client_role_required') {toast('Сначала выбери подходящую роль в профиле.',true);setPage('profile');}
+      throw Object.assign(new Error(resultText(err)),{code:err,data});
     }
-    function setView(name) {
-      views.forEach((view) => { view.hidden = view.dataset.view !== name; });
-      navButtons.forEach((button) => button.classList.toggle('active', button.dataset.nav === name));
-      window.scrollTo({top:0, behavior:'smooth'});
-      try { tg && tg.HapticFeedback.selectionChanged(); } catch (_) {}
-    }
-    function setRoleVisibility(role) {
-      document.querySelectorAll('.performer-only').forEach((node) => { node.hidden = role !== 'performer'; });
-      document.querySelectorAll('.client-only').forEach((node) => { node.hidden = role !== 'client'; });
-      $('workTitle').textContent = role === 'client' ? 'Продвижение' : role === 'performer' ? 'Задания' : 'Работа';
-      $('workHint').textContent = role ? 'доступно по твоей роли' : 'сначала выбери роль в боте';
-    }
-    function openTelegram(url) {
-      if (!url) { toast('Ссылка на бота пока не настроена.'); return; }
-      try {
-        if (tg && typeof tg.openTelegramLink === 'function') tg.openTelegramLink(url);
-        else window.location.href = url;
-      } catch (_) { window.location.href = url; }
-    }
-    function fallbackUrl(action) {
-      if (!config.bot_url) return '';
-      const param = fallbackParams[action];
-      return param ? `${config.bot_url}?start=wa_${encodeURIComponent(param)}` : config.bot_url;
-    }
-    async function invokeAction(action, button) {
-      if (button) button.disabled = true;
-      try {
-        if (!tg || !tg.initData) {
-          openTelegram(fallbackUrl(action));
-          return;
-        }
-        const response = await fetch('/api/miniapp/action', {
-          method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({init_data:tg.initData, action})
-        });
-        const data = await response.json();
-        if (response.status === 403) { toast('Этот раздел недоступен для твоей роли.'); return; }
-        if (!response.ok || !data.open_url) throw new Error(data.error || 'action_failed');
-        openTelegram(data.open_url);
-      } catch (_) {
-        toast('Не удалось открыть раздел. Попробуй ещё раз.');
-      } finally {
-        if (button) button.disabled = false;
-      }
-    }
-    function renderDashboard(data) {
-      const dashboard = data.dashboard || {};
-      const role = (data.access && data.access.role) || dashboard.role || '';
-      const roleText = role === 'client' ? 'Заказчик' : role === 'performer' ? 'Исполнитель' : 'Роль не выбрана';
-      $('rolePill').textContent = data.access && data.access.is_owner ? 'Владелец' : data.access && data.access.is_admin ? 'Администратор' : roleText;
-      setRoleVisibility(role);
-      $('registrationNotice').hidden = !!dashboard.registered && !!role;
+    return data;
+  }
+  async function loadSession(){
+    if(!tg||!tg.initData){ app.innerHTML='<section class="notice error">Открой Boostora кнопкой Mini App внутри Telegram.</section>'; return; }
+    const response=await fetch('/api/telegram/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData})});
+    const data=await response.json(); if(!response.ok||!data.authenticated) throw new Error('Сессия Telegram не подтверждена.');
+    session=data; document.getElementById('brandName').textContent='Boostora'; updateRolePill(); nav.hidden=false;
+    const docs=data.bootstrap&&data.bootstrap.documents||{};
+    if(!docs.rules||!docs.legal){ await showDocumentsGate(); return; }
+    renderCurrent();
+    if(!session.access.role) setTimeout(()=>showRoleGate(),100);
+    fetch('/api/miniapp/open',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData,source:'standalone_miniapp',platform:tg.platform||''})}).catch(()=>{});
+  }
+  function updateRolePill(){ const a=session.access||{}; document.getElementById('rolePill').textContent=a.is_owner?'Владелец':a.is_admin?'Администратор':roleName(a.role); }
+  async function refreshSession(){ const response=await fetch('/api/telegram/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData})}); const data=await response.json(); if(response.ok&&data.authenticated){session=data;updateRolePill();} }
 
-      const wallet = dashboard.wallet || {};
-      const activity = dashboard.activity || {};
-      const engagement = dashboard.engagement || {};
-      $('balanceStat').textContent = wallet.available ?? 0;
-      $('walletAvailable').textContent = wallet.available ?? 0;
-      $('walletCampaign').textContent = wallet.campaign ?? 0;
-      $('walletHold').textContent = wallet.hold ?? 0;
-      $('walletEarned').textContent = wallet.earned ?? 0;
-      if (role === 'client') {
-        $('workStat').textContent = activity.client_active ?? 0;
-        $('workLabel').textContent = 'активных кампаний';
-      } else {
-        $('workStat').textContent = `${activity.active_tasks ?? 0}/${activity.task_limit ?? 0}`;
-        $('workLabel').textContent = 'активных заданий';
-      }
-      $('availableTasks').textContent = activity.available_tasks ?? 0;
-      $('campaignCount').textContent = activity.client_campaigns ?? 0;
-      $('activeCampaignCount').textContent = activity.client_active ?? 0;
-      const mode = engagement.mode === 'pro' ? 'PRO' : engagement.mode === 'standard' ? 'Standard' : '—';
-      $('modeStat').textContent = mode;
-      $('modeCaption').textContent = mode === '—' ? 'режим не выбран' : `текущий режим: ${mode}`;
-      $('obligationStat').textContent = engagement.remaining ?? 0;
-      const required = Math.max(Number(engagement.required || 0), 1);
-      const done = Number(engagement.done || 0);
-      const percent = Math.max(0, Math.min(100, Math.round(done * 100 / required)));
-      $('obligationProgress').style.width = `${percent}%`;
-      $('obligationText').textContent = Number(engagement.remaining || 0) > 0
-        ? `Выполнено ${done}, осталось ${engagement.remaining}.`
-        : 'Активных обязательств нет.';
+  function setLoading(text='Загрузка…'){app.innerHTML=`<section class="empty"><span class="loader"></span><p>${esc(text)}</p></section>`;}
+  function setPage(name){currentPage=name; document.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===name)); renderCurrent(); window.scrollTo({top:0,behavior:'smooth'}); try{tg&&tg.HapticFeedback.selectionChanged();}catch(_){} }
+  nav.addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b)setPage(b.dataset.page);});
+  async function renderCurrent(){ try{if(currentPage==='home')renderHome();else if(currentPage==='services')await renderServices();else if(currentPage==='work')await renderWork();else if(currentPage==='wallet')await renderWallet();else if(currentPage==='profile')await renderProfile();else if(currentPage==='management')await renderManagement();}catch(e){if(!['rules_required','legal_required','subscription_required','role_required','client_role_required'].includes(e.code))app.innerHTML=`<section class="notice error">${esc(e.message||'Не удалось загрузить раздел.')}</section>`;} }
 
-      const isAdmin = !!(data.access && data.access.is_admin);
-      const isOwner = !!(data.access && data.access.is_owner);
-      const adminPanel = $('adminPanel');
-      const ownerPanel = $('ownerPanel');
-      if (isAdmin) adminPanel.hidden = false;
-      else adminPanel.remove();
-      if (isOwner) {
-        ownerPanel.hidden = false;
-        if (data.owner_meta) $('ownerVersion').textContent = data.owner_meta.version || '';
-      } else {
-        ownerPanel.remove();
-      }
+  function renderHome(){
+    const d=session.dashboard||{},w=d.wallet||{},a=d.activity||{},eng=d.engagement||{},role=session.access.role;
+    const work=role==='client'?a.client_active||0:a.active_tasks||0;
+    app.innerHTML=`<section class="page"><div class="hero"><div><p class="eyebrow">Самостоятельный кабинет</p><h1>Всё внутри Boostora</h1><p>Выбирай услуги, оплачивай Stars, управляй заказами, выполняй задания и следи за балансом без возврата в чат.</p><div class="actions"><button class="btn gold" data-go="services">🧩 Услуги Telegram</button><button class="btn secondary" data-go="work">🔥 ${role==='performer'?'Задания':'Кампании'}</button></div></div><img src="assets/hero-growth.webp" alt=""></div>
+      <div class="section-head"><h2>Обзор</h2><span>${esc(roleName(role))}</span></div><div class="stat-grid"><div class="stat"><b>${fmt(w.available)}</b><span>доступно</span></div><div class="stat"><b>${fmt(w.campaign)}</b><span>Искр для кампаний</span></div><div class="stat"><b>${fmt(work)}</b><span>${role==='client'?'активных кампаний':'активных заданий'}</span></div><div class="stat"><b>${fmt(eng.remaining)}</b><span>обязательств</span></div></div>
+      <div class="section-head"><h2>Быстрые действия</h2></div><div class="grid"><article class="card"><img src="assets/boostore.webp" alt=""><h3>Услуги Telegram</h3><p class="muted">Каталог по разделам с оплатой внутри Mini App.</p><button class="btn full" data-go="services">Открыть каталог</button></article><article class="card"><img src="assets/wallet-hold.webp" alt=""><h3>Кошелёк</h3><p class="muted">Пополнение Stars и история операций.</p><button class="btn secondary full" data-go="wallet">Открыть</button></article><article class="card"><img src="assets/telegram-profile.webp" alt=""><h3>Профиль</h3><p class="muted">Роль, язык, Standard/PRO и документы.</p><button class="btn secondary full" data-go="profile">Настроить</button></article><article class="card"><img src="assets/liker.webp" alt=""><h3>Реакции</h3><p class="muted">Запусти активность для публикаций Telegram.</p><button class="btn full" data-go="services">Выбрать услугу</button></article><article class="card"><img src="assets/commenter.webp" alt=""><h3>Комментарии</h3><p class="muted">Подбери нужный формат комментариев в каталоге.</p><button class="btn secondary full" data-go="services">Открыть каталог</button></article></div></section>`;
+    app.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>setPage(b.dataset.go));
+  }
 
-      const allowed = new Set((data.access && data.access.allowed_actions) || []);
-      actionButtons.forEach((button) => {
-        const action = button.dataset.action;
-        if ((action.startsWith('admin') || action.startsWith('owner')) && !allowed.has(action)) button.hidden = true;
-      });
-    }
-    async function loadConfig() {
-      const response = await fetch('/api/config', {cache:'no-store'});
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error('config');
-      config = data;
-      $('brandName').textContent = data.brand_name || 'Boostora';
-    }
-    async function authenticate() {
-      if (!tg || !tg.initData) {
-        $('connectionBadge').textContent = 'веб-предпросмотр';
-        $('telegramState').textContent = 'Открой Mini App из Telegram, чтобы увидеть личный кабинет.';
-        $('userDetails').textContent = 'В браузере доступен только предварительный просмотр.';
-        setRoleVisibility('');
-        return;
-      }
-      const response = await fetch('/api/telegram/session', {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({init_data:tg.initData})
-      });
-      const data = await response.json();
-      if (!response.ok || !data.authenticated) throw new Error(data.reason || 'auth');
-      session = data;
-      const user = data.user || {};
-      const name = [user.first_name,user.last_name].filter(Boolean).join(' ') || 'Пользователь Telegram';
-      $('userName').textContent = name;
-      $('userDetails').textContent = user.username ? `@${user.username} · профиль подтверждён` : 'Профиль подтверждён Telegram';
-      $('connectionBadge').textContent = 'подключено';
-      $('telegramState').textContent = `Здравствуйте, ${user.first_name || name}. Все кнопки готовы.`;
-      renderDashboard(data);
-      try {
-        fetch('/api/miniapp/open', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({init_data:tg.initData,source:'interactive_miniapp',platform:tg.platform || ''})});
-      } catch (_) {}
-    }
+  async function renderServices(){
+    setLoading('Загружаем услуги Telegram…'); const data=await api('catalog.get',catalogState); cache.catalog=data;
+    const cats=[{code:'',label:'Все',enabled:data.total},...(data.categories||[])]; const subs=[{code:'',label:'Все'},...(data.subcategories||[])];
+    const services=(data.services||[]).map(s=>`<article class="row"><div class="row-head"><div><h3>${esc(s.name)}</h3><span class="badge">${esc(s.subcategory_label)}</span></div><span class="price">от ${fmt(s.example_price_stars)} ⭐</span></div><p class="muted small">Количество: ${fmt(s.min)}–${s.max?fmt(s.max):'без верхнего лимита'}</p><button class="btn full" data-order="${esc(s.id)}">Заказать</button></article>`).join('')||'<div class="empty">В выбранном разделе пока нет включённых услуг.</div>';
+    app.innerHTML=`<section class="page"><div class="section-head"><h2>Услуги Telegram</h2><span>${fmt(data.total)} позиций</span></div><div class="search"><input id="serviceSearch" value="${esc(catalogState.query)}" placeholder="Поиск услуги"><button class="btn tiny" id="serviceSearchBtn">Найти</button></div><div class="chips" id="categoryChips">${cats.map(c=>`<button class="chip ${catalogState.category===c.code?'active':''}" data-cat="${esc(c.code)}">${esc(c.label)}${c.enabled!==undefined?` · ${fmt(c.enabled)}`:''}</button>`).join('')}</div>${catalogState.category?`<div class="chips">${subs.map(s=>`<button class="chip ${catalogState.subcategory===s.code?'active':''}" data-sub="${esc(s.code)}">${esc(s.label)}</button>`).join('')}</div>`:''}<div class="list">${services}</div><div class="actions"><button class="btn secondary" id="catalogPrev" ${data.page<=1?'disabled':''}>← Назад</button><span class="pill">${data.page}/${data.pages}</span><button class="btn secondary" id="catalogNext" ${data.page>=data.pages?'disabled':''}>Дальше →</button><button class="btn secondary" id="myOrders">📋 Мои заказы</button></div></section>`;
+    app.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{catalogState.category=b.dataset.cat;catalogState.subcategory='';catalogState.page=1;renderServices();}); app.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{catalogState.subcategory=b.dataset.sub;catalogState.page=1;renderServices();});
+    document.getElementById('serviceSearchBtn').onclick=()=>{catalogState.query=document.getElementById('serviceSearch').value.trim();catalogState.page=1;renderServices();}; document.getElementById('serviceSearch').onkeydown=e=>{if(e.key==='Enter')document.getElementById('serviceSearchBtn').click();};
+    document.getElementById('catalogPrev').onclick=()=>{catalogState.page--;renderServices();}; document.getElementById('catalogNext').onclick=()=>{catalogState.page++;renderServices();}; document.getElementById('myOrders').onclick=showOrders;
+    app.querySelectorAll('[data-order]').forEach(b=>b.onclick=()=>openOrderModal((data.services||[]).find(s=>s.id===b.dataset.order)));
+  }
+  function openOrderModal(service){ if(!service)return; openModal('Оформление заказа',`<div class="profile"><img class="avatar" src="assets/boostore.webp" alt=""><div><b>${esc(service.name)}</b><div class="muted small">${esc(service.category_label)} → ${esc(service.subcategory_label)}</div></div></div><label>Ссылка Telegram</label><input id="orderLink" placeholder="https://t.me/channel/123 или @username"><label>Количество (${fmt(service.min)}–${service.max?fmt(service.max):'∞'})</label><input id="orderQty" inputmode="numeric" value="${esc(service.min||1)}"><div class="notice" style="margin-top:12px">Точная сумма в Stars будет показана перед оплатой.</div><button class="btn gold full" id="orderPay">Рассчитать и оплатить</button>`); document.getElementById('orderPay').onclick=async()=>{const b=document.getElementById('orderPay');b.disabled=true;try{const data=await api('catalog.prepare_order',{service_id:service.id,link:document.getElementById('orderLink').value,quantity:Number(document.getElementById('orderQty').value)});await openInvoice(data.invoice_url,async status=>{if(status==='paid'){toast('Оплата прошла. Заказ принят.');closeModal();setTimeout(showOrders,1200);}else if(status==='cancelled'||status==='failed')toast('Оплата не завершена.',true);});}catch(e){toast(e.message,true);}finally{b.disabled=false;}}; }
+  async function showOrders(){ openModal('Мои заказы','<section class="empty"><span class="loader"></span></section>'); try{const data=await api('orders.get');cache.orders=data;modalBody.innerHTML=(data.orders||[]).map(o=>`<article class="row"><div class="row-head"><div><h4>#${o.id} · ${esc(o.service_name||'Услуга Telegram')}</h4><span class="badge ${['completed','placed','processing','pending'].includes(o.provider_status)?'green':o.provider_status==='failed'?'red':'gold'}">${esc(statusName(o.provider_status))}</span></div><span class="price">${fmt(o.charge_value)} ⭐</span></div><p class="muted small">${fmt(o.quantity)} ед. · ${esc(o.created_at||'')}</p><p class="mono small">${esc(o.link||'')}</p>${o.last_error?`<p class="muted small">Заказ временно требует проверки.</p>`:''}</article>`).join('')||'<div class="empty">Заказов пока нет.</div>'; }catch(e){modalBody.innerHTML=`<div class="notice error">${esc(e.message)}</div>`;} }
 
-    navButtons.forEach((button) => button.addEventListener('click', () => setView(button.dataset.nav)));
-    actionButtons.forEach((button) => button.addEventListener('click', () => invokeAction(button.dataset.action, button)));
-    if (tg) {
-      tg.ready(); tg.expand();
-      try { tg.enableClosingConfirmation(); } catch (_) {}
-    }
-    loadConfig().catch(() => toast('Не удалось загрузить настройки.')).finally(() => {
-      authenticate().catch(() => {
-        $('connectionBadge').textContent = 'ошибка подключения';
-        $('telegramState').textContent = 'Закрой Mini App и открой её снова кнопкой из Boostora.';
-        toast('Сессия Telegram не подтверждена.');
-      });
-    });
-  })();
-  </script>
+  async function renderWork(){ const role=session.access.role;if(!role){showRoleGate();return;} if(role==='client')await renderCampaigns();else await renderTasks(); }
+  async function renderCampaigns(){setLoading('Загружаем кампании…');const data=await api('campaigns.get');cache.campaigns=data;const rows=(data.campaigns||[]).map(c=>`<article class="row"><div class="row-head"><div><h3>${esc(c.title||`Кампания #${c.id}`)}</h3><span class="badge ${c.status==='active'?'green':'gold'}">${esc(statusName(c.status))}</span></div><b>${fmt(c.completed_quantity)}/${fmt(c.total_quantity)}</b></div><p class="muted small">Награда ${fmt(c.reward_amount)} Искр · бюджет ${fmt(c.budget_total)}</p><div class="progress"><i style="width:${Math.min(100,Math.round((c.completed_quantity||0)*100/Math.max(1,c.total_quantity||1)))}%"></i></div><div class="actions">${c.status==='active'?`<button class="btn secondary tiny" data-cstatus="paused" data-cid="${c.id}">Пауза</button>`:''}${c.status==='paused'?`<button class="btn tiny" data-cstatus="active" data-cid="${c.id}">Продолжить</button>`:''}<button class="btn secondary tiny" data-open-link="${esc(c.target_url)}">Открыть цель</button></div></article>`).join('')||'<div class="empty">Кампаний пока нет.</div>';app.innerHTML=`<section class="page"><div class="hero"><div><p class="eyebrow">Продвижение</p><h1>Кампании</h1><p>Создание, бюджет, прогресс и управление работают внутри Mini App.</p></div><img src="assets/bot-actions.webp" alt=""></div><div class="section-head"><h2>Мои кампании</h2><button class="btn tiny" id="newCampaign">＋ Создать</button></div><div class="stat-grid"><div class="stat"><b>${fmt(data.stats.active_campaigns)}</b><span>активных</span></div><div class="stat"><b>${fmt(data.stats.draft_campaigns)}</b><span>черновиков</span></div><div class="stat"><b>${fmt(data.stats.completed_total)}</b><span>выполнений</span></div><div class="stat"><b>${fmt(data.stats.budget_spent)}</b><span>потрачено Искр</span></div></div><div class="section-head"><h2>Список</h2></div><div class="list">${rows}</div></section>`;document.getElementById('newCampaign').onclick=()=>openCampaignModal(data.task_types||[]);bindExternalLinks();app.querySelectorAll('[data-cstatus]').forEach(b=>b.onclick=async()=>{try{const r=await api('campaigns.status',{campaign_id:Number(b.dataset.cid),status:b.dataset.cstatus});toast(resultText(r.result));renderCampaigns();}catch(e){toast(e.message,true);}});}
+  function openCampaignModal(types){openModal('Новая кампания',`<label>Тип задания</label><select id="campType">${types.map(t=>`<option value="${esc(t.code)}">${esc(t.title)} · от ${fmt(t.floor)} Искр</option>`).join('')}</select><label>Ссылка Telegram</label><input id="campTarget" placeholder="https://t.me/channel/123"><div class="form-grid"><div><label>Количество</label><input id="campQty" inputmode="numeric" value="10"></div><div><label>Цена за 1</label><input id="campPrice" inputmode="numeric" placeholder="авто"></div></div><label>Режим</label><select id="campMode"><option value="">Обычная кампания</option><option value="standard">Standard — с ответными действиями</option><option value="pro">PRO — без обязательств</option></select><div class="actions"><button class="btn secondary" id="campQuote">Рассчитать</button><button class="btn gold" id="campCreate">Создать и запустить</button></div><div id="campQuoteResult"></div>`);document.getElementById('campQuote').onclick=async()=>{try{const d=await api('campaigns.quote',{task_type:document.getElementById('campType').value,quantity:Number(document.getElementById('campQty').value),unit_price:document.getElementById('campPrice').value});const p=d.pricing;document.getElementById('campQuoteResult').innerHTML=`<div class="notice" style="margin-top:12px">Цена за выполнение: <b>${fmt(p.client_unit_price)}</b> Искр<br>Награда исполнителю: <b>${fmt(p.performer_reward)}</b><br>Общий бюджет: <b>${fmt(p.budget_total)}</b> Искр</div>`;}catch(e){toast(e.message,true);}};document.getElementById('campCreate').onclick=async()=>{const b=document.getElementById('campCreate');b.disabled=true;try{const d=await api('campaigns.create',{task_type:document.getElementById('campType').value,target:document.getElementById('campTarget').value,quantity:Number(document.getElementById('campQty').value),unit_price:document.getElementById('campPrice').value,engagement_mode:document.getElementById('campMode').value,launch_now:true});toast(resultText(d.result));closeModal();await refreshSession();renderCampaigns();}catch(e){toast(e.message,true);}finally{b.disabled=false;}};}
+  async function renderTasks(){setLoading('Загружаем задания…');const data=await api('tasks.get');cache.tasks=data;const available=(data.available||[]).map(t=>`<article class="row"><div class="row-head"><div><h3>${esc(t.title||`Задание #${t.id}`)}</h3><span class="badge green">${fmt(t.reward_amount)} Искр</span></div><span class="badge">осталось ${fmt((t.total_quantity||0)-(t.completed_quantity||0))}</span></div><p class="muted small">${esc(t.task_type)}</p><div class="actions"><button class="btn secondary tiny" data-open-link="${esc(t.target_url)}">Открыть цель</button><button class="btn tiny" data-take="${t.id}">Взять</button></div></article>`).join('')||'<div class="empty">Новых заданий пока нет.</div>';const subs=(data.submissions||[]).map(s=>`<article class="row"><div class="row-head"><div><h3>${esc(s.campaign_title||`Задание #${s.campaign_id}`)}</h3><span class="badge ${s.status==='approved'?'green':s.status==='rejected'?'red':'gold'}">${esc(statusName(s.status))}</span></div><b>${fmt(s.reward_amount)} Искр</b></div>${s.reject_reason?`<p class="muted small">Причина: ${esc(s.reject_reason)}</p>`:''}<div class="actions"><button class="btn secondary tiny" data-open-link="${esc(s.target_url)}">Открыть цель</button>${s.status==='taken'?`<button class="btn tiny" data-check="${s.id}">Проверить</button><button class="btn secondary tiny" data-proof="${s.id}">Отправить proof</button>`:''}</div></article>`).join('')||'<div class="empty">Активных заданий нет.</div>';app.innerHTML=`<section class="page"><div class="section-head"><h2>Задания</h2><span>${data.active_count}/${data.active_limit} активно</span></div><div class="section-head"><h2>Доступные</h2></div><div class="list">${available}</div><div class="section-head"><h2>Мои выполнения</h2></div><div class="list">${subs}</div></section>`;bindExternalLinks();app.querySelectorAll('[data-take]').forEach(b=>b.onclick=async()=>{try{const d=await api('tasks.take',{campaign_id:Number(b.dataset.take)});toast(resultText(d.result));renderTasks();}catch(e){toast(e.message,true);}});app.querySelectorAll('[data-check]').forEach(b=>b.onclick=async()=>{try{const d=await api('tasks.check',{submission_id:Number(b.dataset.check)});toast(resultText(d.result));renderTasks();}catch(e){toast(e.message,true);}});app.querySelectorAll('[data-proof]').forEach(b=>b.onclick=()=>openProofModal(Number(b.dataset.proof)));}
+  function openProofModal(id){openModal('Подтверждение выполнения',`<label>Опиши выполненное действие и приложи ссылку, если она нужна</label><textarea id="proofText" placeholder="Выполнил задание…"></textarea><button class="btn full" id="proofSend">Отправить на проверку</button>`);document.getElementById('proofSend').onclick=async()=>{try{const d=await api('tasks.submit',{submission_id:id,proof:document.getElementById('proofText').value});toast(resultText(d.result));closeModal();renderTasks();}catch(e){toast(e.message,true);}};}
+
+  async function renderWallet(){setLoading('Загружаем кошелёк…');const data=await api('wallet.get');cache.wallet=data;const w=data.summary||{};const packs=(data.packs||[]).map(p=>`<button class="chip" data-pack="${esc(p.code)}">${fmt(p.sparks)} Искр · ${fmt(p.stars)} ⭐</button>`).join('');const tx=(data.transactions||[]).map(t=>`<article class="row"><div class="row-head"><div><h4>${esc(t.entry_type.replaceAll('_',' '))}</h4><span class="muted small">${esc(t.created_at)}</span></div><b style="color:${t.direction==='credit'?'#a6ffd7':'#ffc0c0'}">${t.direction==='credit'?'+':'−'}${fmt(t.amount)} ${esc(t.currency_code)}</b></div></article>`).join('')||'<div class="empty">Операций пока нет.</div>';app.innerHTML=`<section class="page"><div class="hero"><div><p class="eyebrow">Кошелёк Boostora</p><h1>${fmt(w.campaign_balance)} Искр</h1><p>Доступно для кампаний. Пополнение Telegram Stars открывается прямо в Mini App.</p></div><img src="assets/wallet-hold.webp" alt=""></div><div class="section-head"><h2>Баланс</h2></div><div class="stat-grid"><div class="stat"><b>${fmt(w.internal_balance)}</b><span>основные Искры</span></div><div class="stat"><b>${fmt(w.bonus_balance)}</b><span>бонусные</span></div><div class="stat"><b>${fmt(w.hold_balance)}</b><span>на удержании</span></div><div class="stat"><b>${fmt(w.lifetime_earned)}</b><span>заработано</span></div></div><div class="section-head"><h2>Пополнить</h2><button class="btn tiny secondary" id="customTopup">Своя сумма</button></div><div class="chips">${packs}</div><div class="section-head"><h2>История</h2></div><div class="list">${tx}</div></section>`;app.querySelectorAll('[data-pack]').forEach(b=>b.onclick=()=>createWalletInvoice({kind:'pack',code:b.dataset.pack}));document.getElementById('customTopup').onclick=()=>openCustomTopup();}
+  async function createWalletInvoice(payload){try{const d=await api('wallet.invoice',payload);await openInvoice(d.invoice_url,async status=>{if(status==='paid'){toast('Баланс пополнен.');setTimeout(async()=>{await refreshSession();renderWallet();},900);}});}catch(e){toast(e.message,true);}}
+  function openCustomTopup(){openModal('Своя сумма',`<label>Сколько Искр купить</label><input id="customSparks" inputmode="numeric" value="100"><button class="btn gold full" id="customPay">Перейти к оплате</button>`);document.getElementById('customPay').onclick=()=>createWalletInvoice({kind:'custom',sparks:Number(document.getElementById('customSparks').value)});}
+
+  async function renderProfile(){setLoading('Загружаем профиль…');const data=await api('profile.get');cache.profile=data;const u=data.user||{},eng=data.engagement||{},ob=data.obligations||{},ref=data.referrals||{};const done=Number(ob.total_done||0),required=Math.max(1,Number(eng.required_actions||10));const pct=Math.min(100,Math.round(done*100/required));app.innerHTML=`<section class="page"><div class="profile"><img class="avatar" src="assets/telegram-profile.webp" alt=""><div><b>${esc([u.first_name,u.last_name].filter(Boolean).join(' ')||u.username||'Пользователь')}</b><div class="muted">${u.username?'@'+esc(u.username):''} · ${esc(roleName(u.role))}</div></div></div><div class="section-head"><h2>Роль</h2><span>меняется сразу</span></div><div class="grid two"><button class="btn ${u.role==='client'?'gold':'secondary'}" data-role="client">Заказчик</button><button class="btn ${u.role==='performer'?'gold':'secondary'}" data-role="performer">Исполнитель</button></div><div class="section-head"><h2>Standard и PRO</h2><span>${esc(eng.mode==='pro'?'PRO':eng.mode==='standard'?'Standard':'не выбран')}</span></div><div class="grid two"><article class="card"><img src="assets/standard.webp" alt=""><h3>Standard</h3><p class="muted">Взаимная активность с ответными действиями.</p><button class="btn secondary full" id="setStandard">Выбрать Standard</button></article><article class="card"><img src="assets/pro.webp" alt=""><h3>PRO</h3><p class="muted">Без ответных обязательств на 30 дней.</p><button class="btn gold full" id="buyPro">Купить за ${fmt(eng.pro_price_stars||199)} ⭐</button></article></div><div class="section-head"><h2>Обязательства</h2><span>осталось ${fmt(ob.total_remaining)}</span></div><div class="profile"><img class="avatar" src="assets/obligations.webp" alt=""><div><b>Ответные действия Standard</b><div class="muted small">Следи за сроками и прогрессом прямо здесь.</div></div></div><div class="row" style="margin-top:9px"><div class="row-head"><b>Прогресс</b><span>${fmt(done)}/${fmt(required)}</span></div><div class="progress"><i style="width:${pct}%"></i></div></div><div class="section-head"><h2>Приглашения</h2><span>${fmt(ref.invited_count)} человек</span></div><div class="row"><p class="mono small">${esc(ref.link)}</p><div class="actions"><button class="btn tiny" id="copyReferral">Копировать ссылку</button><span class="badge green">заработано ${fmt(ref.total_earned)}</span></div></div><div class="section-head"><h2>Настройки</h2></div><div class="grid two"><button class="btn secondary" id="changeLanguage">🌐 Язык</button><button class="btn secondary" id="documentsBtn">📄 Правила и документы</button>${session.access.is_admin?'<button class="btn secondary" id="managementBtn">🛠 Управление</button>':''}</div></section>`;
+    app.querySelectorAll('[data-role]').forEach(b=>b.onclick=async()=>{try{await api('profile.update',{role:b.dataset.role});await refreshSession();toast('Роль обновлена.');renderProfile();}catch(e){toast(e.message,true);}});document.getElementById('setStandard').onclick=async()=>{try{await api('engagement.standard');await refreshSession();toast('Режим Standard включён.');renderProfile();}catch(e){toast(e.message,true);}};document.getElementById('buyPro').onclick=async()=>{try{const d=await api('engagement.pro_invoice');await openInvoice(d.invoice_url,async status=>{if(status==='paid'){toast('PRO активирован.');setTimeout(async()=>{await refreshSession();renderProfile();},900);}});}catch(e){toast(e.message,true);}};document.getElementById('copyReferral').onclick=()=>copyText(ref.link);document.getElementById('changeLanguage').onclick=()=>showLanguageModal(data.languages||[]);document.getElementById('documentsBtn').onclick=showDocumentsGate;if(document.getElementById('managementBtn'))document.getElementById('managementBtn').onclick=()=>setPage('management'); }
+  function showLanguageModal(languages){openModal('Язык',`<div class="list">${languages.map(l=>`<button class="btn secondary full" data-lang="${esc(l.code)}">${esc(l.label)}</button>`).join('')}</div>`);modalBody.querySelectorAll('[data-lang]').forEach(b=>b.onclick=async()=>{try{await api('profile.update',{language:b.dataset.lang});toast('Язык сохранён.');closeModal();renderProfile();}catch(e){toast(e.message,true);}});}
+  function showRoleGate(){openModal('Выбери роль',`<p class="muted">Заказчик создаёт кампании и покупает услуги. Исполнитель выполняет задания и получает Искры.</p><div class="grid two"><button class="btn gold" data-gate-role="client">Я заказчик</button><button class="btn" data-gate-role="performer">Я исполнитель</button></div>`);modalBody.querySelectorAll('[data-gate-role]').forEach(b=>b.onclick=async()=>{try{await api('profile.update',{role:b.dataset.gateRole});await refreshSession();closeModal();renderCurrent();}catch(e){toast(e.message,true);}});}
+  async function showDocumentsGate(){try{const d=await api('documents.get');const rules=d.rules||{},legal=d.legal||{};openModal('Правила и условия',`<div class="profile"><img class="avatar" src="assets/community-rules.webp" alt=""><div><b>Правила и условия</b><div class="muted small">Безопасная работа для заказчиков и исполнителей.</div></div></div>${!rules.accepted?`<h3>Правила сообщества</h3>${(rules.sections||[]).map(s=>`<details class="row"><summary><b>${esc(s.title)}</b></summary><p class="muted">${esc(s.body)}</p></details>`).join('')}`:''}${!legal.accepted?`<h3>Юридические условия</h3>${(legal.sections||[]).map(s=>`<details class="row"><summary><b>${esc(s.title)}</b></summary><p class="muted">${esc(s.body)}</p></details>`).join('')}`:''}${rules.accepted&&legal.accepted?'<div class="notice">Все документы приняты.</div>':'<button class="btn gold full" id="acceptAllDocs">Принять и продолжить</button>'}`);if(document.getElementById('acceptAllDocs'))document.getElementById('acceptAllDocs').onclick=async()=>{try{await api('documents.accept',{kind:'all'});await refreshSession();closeModal();toast('Документы приняты.');renderCurrent();if(!session.access.role)setTimeout(()=>showRoleGate(),100);}catch(e){toast(e.message,true);}};}catch(e){toast(e.message,true);}}
+  function showSubscriptionGate(chats){openModal('Нужно вступить в сообщество',`<p class="muted">Для работы в Boostora вступи в обязательное сообщество, затем нажми проверку.</p><div class="list">${chats.map(c=>`<button class="btn secondary full" data-join="${esc(c.url)}">Открыть ${esc(c.name)}</button>`).join('')}</div><button class="btn gold full" id="checkSub" style="margin-top:10px">Проверить подписку</button>`);modalBody.querySelectorAll('[data-join]').forEach(b=>b.onclick=()=>openExternal(b.dataset.join));document.getElementById('checkSub').onclick=async()=>{try{const d=await api('subscription.check');if(d.subscribed){closeModal();toast('Подписка подтверждена.');renderCurrent();}else toast('Подписка пока не найдена.',true);}catch(e){toast(e.message,true);}};}
+
+  async function renderManagement(){if(!session.access.is_admin){setPage('profile');return;}setLoading('Загружаем управление…');const admin=await api('admin.get');cache.admin=admin;let owner=null;if(session.access.is_owner){owner=await api('owner.get');cache.owner=owner;}const queue=(admin.queue||[]).map(q=>`<article class="row"><div class="row-head"><div><h4>Заявка #${q.id}</h4><span class="badge ${Number(q.risk_score||0)>40?'red':'gold'}">риск ${fmt(q.risk_score)}</span></div><b>${fmt(q.reward_amount)} Искр</b></div><p class="muted small">${esc(q.campaign_title||q.task_type||'')}</p><p class="small">${esc(q.proof_text||'Без текста')}</p><div class="actions"><button class="btn tiny" data-review="approve" data-sid="${q.id}">Одобрить</button><button class="btn danger tiny" data-review="reject" data-sid="${q.id}">Отклонить</button></div></article>`).join('')||'<div class="empty">Очередь пуста.</div>';const ownerHtml=owner?`<div class="section-head"><h2>Владелец</h2><span>закрытый раздел</span></div><div class="stat-grid"><div class="stat"><b>${fmt(owner.commerce?.total_users)}</b><span>пользователей</span></div><div class="stat"><b>${fmt(owner.commerce?.active_campaigns)}</b><span>активных кампаний</span></div><div class="stat"><b>${fmt(owner.provider?.order_summary?.total)}</b><span>заказов услуг</span></div><div class="stat"><b>${fmt(owner.release?.audit?.score)}</b><span>аудит</span></div></div><div class="grid two" style="margin-top:11px"><article class="card"><img src="assets/server-status.webp" alt=""><h3>Поставщик</h3><button class="btn secondary full" id="providerManage">🧩 Каталог услуг</button></article><article class="card"><img src="assets/release-center.webp" alt=""><h3>Контроль заказов</h3><button class="btn secondary full" id="pendingOrders">📦 Заказы услуг</button></article></div>`:'';app.innerHTML=`<section class="page"><div class="section-head"><h2>Управление</h2><button class="btn secondary tiny" data-go="profile">← Профиль</button></div><div class="stat-grid"><div class="stat"><b>${fmt(admin.stats?.queue_count)}</b><span>на проверке</span></div><div class="stat"><b>${fmt(admin.stats?.blocked_users)}</b><span>заблокировано</span></div><div class="stat"><b>${fmt(admin.stats?.high_risk_users)}</b><span>высокий риск</span></div><div class="stat"><b>${fmt(admin.stats?.rejected_total)}</b><span>отклонено</span></div></div>${ownerHtml}<div class="section-head"><h2>Ручная проверка</h2></div><div class="list">${queue}</div></section>`;app.querySelector('[data-go]').onclick=()=>setPage('profile');app.querySelectorAll('[data-review]').forEach(b=>b.onclick=()=>reviewSubmission(Number(b.dataset.sid),b.dataset.review==='approve'));if(document.getElementById('providerManage'))document.getElementById('providerManage').onclick=showOwnerCatalog;if(document.getElementById('pendingOrders'))document.getElementById('pendingOrders').onclick=showOwnerOrders;}
+  async function reviewSubmission(id,approve){let reason='';if(!approve)reason=prompt('Причина отклонения:')||'Не подтверждено';try{const d=await api('admin.review',{submission_id:id,approve,reason});toast(resultText(d.result));renderManagement();}catch(e){toast(e.message,true);}}
+  async function showOwnerCatalog(){openModal('Управление каталогом','<section class="empty"><span class="loader"></span></section>');await loadOwnerCatalog();}
+  async function loadOwnerCatalog(){try{const d=await api('owner.catalog',ownerCatalogState);cache.ownerCatalog=d;const cats=[{code:'',label:'Все'},...(d.categories||[])],subs=[{code:'',label:'Все'},...(d.subcategories||[])];modalBody.innerHTML=`<div class="actions"><button class="btn tiny gold" id="syncCatalog">Синхронизировать</button>${ownerCatalogState.category?`<button class="btn tiny secondary" id="enableFolder">Добавить раздел</button><button class="btn tiny danger" id="disableFolder">Убрать раздел</button>`:''}</div><div class="chips">${cats.map(c=>`<button class="chip ${ownerCatalogState.category===c.code?'active':''}" data-ocat="${esc(c.code)}">${esc(c.label)}</button>`).join('')}</div>${ownerCatalogState.category?`<div class="chips">${subs.map(s=>`<button class="chip ${ownerCatalogState.subcategory===s.code?'active':''}" data-osub="${esc(s.code)}">${esc(s.label)}</button>`).join('')}</div>`:''}<div class="list">${(d.services||[]).map(s=>`<article class="row"><div class="row-head"><div><h4>${esc(s.name)}</h4><span class="badge">${esc(s.subcategory_label)}</span><p class="muted small">Тариф: ${esc(s.rate??'—')} · наценка ${fmt(s.markup_percent)}%</p></div><span class="badge ${s.enabled?'green':'red'}">${s.enabled?'В витрине':'Скрыта'}</span></div><button class="btn ${s.enabled?'danger':'secondary'} tiny full" data-toggle-service="${esc(s.id)}">${s.enabled?'Убрать':'Добавить'}</button></article>`).join('')||'<div class="empty">Нет услуг.</div>'}<div class="actions"><button class="btn secondary tiny" id="ownerPrev" ${d.page<=1?'disabled':''}>←</button><span class="pill">${d.page}/${d.pages}</span><button class="btn secondary tiny" id="ownerNext" ${d.page>=d.pages?'disabled':''}>→</button></div>`;modalBody.querySelectorAll('[data-ocat]').forEach(b=>b.onclick=()=>{ownerCatalogState.category=b.dataset.ocat;ownerCatalogState.subcategory='';ownerCatalogState.page=1;loadOwnerCatalog();});modalBody.querySelectorAll('[data-osub]').forEach(b=>b.onclick=()=>{ownerCatalogState.subcategory=b.dataset.osub;ownerCatalogState.page=1;loadOwnerCatalog();});modalBody.querySelectorAll('[data-toggle-service]').forEach(b=>b.onclick=()=>ownerCatalogAction('toggle',{service_id:b.dataset.toggleService}));document.getElementById('syncCatalog').onclick=()=>ownerCatalogAction('sync');if(document.getElementById('enableFolder'))document.getElementById('enableFolder').onclick=()=>ownerCatalogAction('folder_enable',{category:ownerCatalogState.category,subcategory:ownerCatalogState.subcategory});if(document.getElementById('disableFolder'))document.getElementById('disableFolder').onclick=()=>ownerCatalogAction('folder_disable',{category:ownerCatalogState.category,subcategory:ownerCatalogState.subcategory});document.getElementById('ownerPrev').onclick=()=>{ownerCatalogState.page--;loadOwnerCatalog();};document.getElementById('ownerNext').onclick=()=>{ownerCatalogState.page++;loadOwnerCatalog();};}catch(e){modalBody.innerHTML=`<div class="notice error">${esc(e.message)}</div>`;}}
+  async function ownerCatalogAction(action,extra={}){try{const d=await api('owner.catalog_action',{action,...extra});toast(resultText(d.result));loadOwnerCatalog();}catch(e){toast(e.message,true);}}
+  async function showOwnerOrders(){openModal('Заказы поставщика','<section class="empty"><span class="loader"></span></section>');try{const rows=await api('owner.orders',{limit:150});modalBody.innerHTML=(rows.orders||[]).map(o=>`<article class="row"><div class="row-head"><div><h4>#${o.id} · ${esc(o.service_name||'Услуга')}</h4><p class="muted small">${esc(o.username?'@'+o.username:(o.first_name||'Пользователь'))} · ID ${fmt(o.owner_user_id)}</p><span class="badge">${esc(statusName(o.provider_status))}</span></div><b>${fmt(o.charge_value)} ⭐</b></div>${['paid_pending','failed'].includes(o.provider_status)?`<button class="btn tiny full" data-place-order="${o.id}">Запустить заказ</button>`:''}</article>`).join('')||'<div class="empty">Заказов нет.</div>';modalBody.querySelectorAll('[data-place-order]').forEach(b=>b.onclick=async()=>{try{const d=await api('owner.place_order',{order_id:Number(b.dataset.placeOrder)});toast(resultText(d.result));showOwnerOrders();}catch(e){toast(e.message,true);}});}catch(e){modalBody.innerHTML=`<div class="notice error">${esc(e.message)}</div>`;}}
+
+  async function openInvoice(url,callback){return new Promise(resolve=>{if(!tg||typeof tg.openInvoice!=='function'){openExternal(url);resolve('opened');return;}tg.openInvoice(url,status=>{callback&&callback(status);resolve(status);});});}
+  function openExternal(url){if(!url)return;try{if(tg&&/^https:\/\/(t\.me|telegram\.me)\//i.test(url)&&tg.openTelegramLink)tg.openTelegramLink(url);else if(tg&&tg.openLink)tg.openLink(url);else location.href=url;}catch(_){location.href=url;}}
+  function bindExternalLinks(){app.querySelectorAll('[data-open-link]').forEach(b=>b.onclick=()=>openExternal(b.dataset.openLink));}
+  async function copyText(text){try{await navigator.clipboard.writeText(text);toast('Ссылка скопирована.');}catch(_){openExternal(text);}}
+
+  loadSession().catch(e=>{app.innerHTML=`<section class="notice error">${esc(e.message||'Не удалось открыть кабинет.')}</section>`;toast(e.message,true);});
+})();
+</script>
 </body>
 </html>

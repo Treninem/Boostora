@@ -3249,3 +3249,54 @@ TEXTS['en'].update({
     'final_audit_action_telegram_catalog_ok': 'services are grouped into folders and subfolders; the owner controls individual items and whole sections.',
     'final_audit_action_telegram_catalog_fix': 'check the catalogue, Telegram filter, pagination and owner actions.',
 })
+
+# Boostora v3.3.1 — consistency audit, catalogue reconciliation and public-text cleanup.
+TEXTS['ru'].update({
+    'subscription_check_unavailable': 'Не удалось проверить подписку автоматически. Попробуй ещё раз немного позже.',
+    'section_stub': '<b>{title}</b>\n\nРаздел временно недоступен. Вернись в главное меню и попробуй позже.',
+    'campaign_target_require_miniapp_senddata': 'Укажи корректную ссылку Mini App с параметром запуска. Подтверждение открытия должно поддерживаться самим приложением.',
+    'campaign_target_mini_app_invalid': 'Ссылка Mini App не подходит для автоматического подтверждения. Проверь адрес и параметр запуска.',
+    'campaign_target_saved_miniapp': 'Цель Mini App сохранена. Шаг 2/3 — укажи количество выполнений.',
+    'marketplace_screen': '<b>🧩 Услуги Telegram</b>\n\nВыбери нужный раздел каталога.',
+    'reward_item_row': '• <b>{title}</b> — {price} {internal_name}\n{desc}',
+    'stable_contract_patch_331_policy': 'v3.3.1: каталог синхронизируется полностью и атомарно, исчезнувшие позиции безопасно скрываются, заказы принимают только Telegram-ссылки, внешние названия экранируются, пользовательские тексты не раскрывают внутренние настройки, а регрессионные проверки не зависят от старых версий и окружения.',
+    'stable_contract_major_340_policy': 'v3.4.0: основные пользовательские операции выполняются внутри подписанной Telegram Mini App; бот остаётся точкой входа и обработчиком платежных событий; роли, документы, подписка, админские и владельческие права повторно проверяются сервером.',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.4.0</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические flows</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nПроведён полный аудит согласованности: каталог, роли, Mini App, тексты, переводы и тесты приведены к единой рабочей версии.',
+})
+TEXTS['en'].update({
+    'subscription_check_unavailable': 'The subscription could not be checked automatically. Please try again a little later.',
+    'section_stub': '<b>{title}</b>\n\nThis section is temporarily unavailable. Return to the main menu and try again later.',
+    'campaign_target_require_miniapp_senddata': 'Provide a valid Mini App link with a launch parameter. Open confirmation must be supported by the application.',
+    'campaign_target_mini_app_invalid': 'This Mini App link cannot be confirmed automatically. Check the address and launch parameter.',
+    'campaign_target_saved_miniapp': 'The Mini App target was saved. Step 2/3 — enter the required quantity.',
+    'marketplace_screen': '<b>🧩 Telegram services</b>\n\nChoose a catalogue section.',
+    'vip_plan_row': '• {title} — {desc} · {price} {internal_name}',
+    'reward_item_row': '• <b>{title}</b> — {price} {internal_name}\n{desc}',
+    'stable_contract_patch_331_policy': 'v3.3.1: catalogue synchronization is complete and atomic, missing positions are safely hidden, orders accept Telegram links only, external names are escaped, public messages reveal no internal settings, and regression checks no longer depend on old versions or inherited environment values.',
+    'stable_contract_major_340_policy': 'v3.4.0: primary user operations run inside the signed Telegram Mini App; the bot remains the entry point and payment-event processor; roles, documents, subscription, admin and owner permissions are revalidated server-side.',
+    'owner_release_screen': '<b>Boostora v3.4.0 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nA full consistency audit aligned the catalogue, roles, Mini App, public wording, translations and regression checks.',
+})
+
+# Boostora v3.3.1 — public wording cleanup for every supported language.
+TEXTS['de'].update({
+    'subscription_check_unavailable': 'Das Abonnement konnte nicht automatisch geprüft werden. Bitte versuche es etwas später erneut.',
+    'section_stub': '<b>{title}</b>\n\nDieser Bereich ist vorübergehend nicht verfügbar. Kehre zum Hauptmenü zurück und versuche es später erneut.',
+})
+TEXTS['es'].update({
+    'subscription_check_unavailable': 'No se pudo comprobar la suscripción automáticamente. Inténtalo de nuevo un poco más tarde.',
+    'section_stub': '<b>{title}</b>\n\nEsta sección no está disponible temporalmente. Vuelve al menú principal e inténtalo más tarde.',
+})
+TEXTS['pt'].update({
+    'subscription_check_unavailable': 'Não foi possível verificar a inscrição automaticamente. Tente novamente um pouco mais tarde.',
+    'section_stub': '<b>{title}</b>\n\nEsta seção está temporariamente indisponível. Volte ao menu principal e tente mais tarde.',
+})
+TEXTS['tr'].update({
+    'subscription_check_unavailable': 'Abonelik otomatik olarak kontrol edilemedi. Lütfen biraz sonra tekrar deneyin.',
+    'section_stub': '<b>{title}</b>\n\nBu bölüm geçici olarak kullanılamıyor. Ana menüye dönüp daha sonra tekrar deneyin.',
+})
+
+# Boostora v3.3.1 — Telegram-only order target validation.
+TEXTS['ru'].update({'boostore_order_link_invalid': 'Отправь ссылку Telegram вида https://t.me/... или @username.'})
+TEXTS['en'].update({'boostore_order_link_invalid': 'Send a Telegram link such as https://t.me/... or @username.'})

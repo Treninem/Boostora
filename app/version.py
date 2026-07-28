@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.3.0'
-APP_STAGE = 'telegram_catalog_and_premium_miniapp'
+APP_VERSION = 'Boostora v3.4.0'
+APP_STAGE = 'standalone_role_safe_miniapp'

@@ -112,83 +112,27 @@ def subscription_keyboard(user_id: int, version: int) -> InlineKeyboardMarkup:
 
 
 def main_menu_keyboard(user_id: int, role: str | None, version: int) -> InlineKeyboardMarkup:
-    markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(
-        InlineKeyboardButton(text=UserService.t(user_id, 'smart_hub_button'), callback_data=pack_callback(version, 'go', 'smart_hub')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'engagement_growth_button'), callback_data=pack_callback(version, 'go', 'engagement_growth')),
-    )
-    markup.add(InlineKeyboardButton(text=UserService.t(user_id, 'engagement_obligations_button'), callback_data=pack_callback(version, 'go', 'engagement_obligations')))
-    markup.add(
-        InlineKeyboardButton(text=UserService.t(user_id, 'marketplace_button'), callback_data=pack_callback(version, 'go', 'marketplace')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'community_rules_button'), callback_data=pack_callback(version, 'go', 'community_rules')),
-    )
-    markup.add(
-        InlineKeyboardButton(text=UserService.t(user_id, 'menu_wallet'), callback_data=pack_callback(version, 'go', 'wallet')),
-        InlineKeyboardButton(text=UserService.t(user_id, 'menu_vip'), callback_data=pack_callback(version, 'go', 'vip')),
-    )
-    if role == ROLE_PERFORMER:
+    markup = InlineKeyboardMarkup(row_width=1)
+    if settings.mini_app_url and WebAppInfo is not None:
         markup.add(
             InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_profile'),
-                callback_data=pack_callback(version, 'go', 'profile'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_tasks'),
-                callback_data=pack_callback(version, 'go', 'tasks'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_wallet'),
-                callback_data=pack_callback(version, 'go', 'wallet'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_history'),
-                callback_data=pack_callback(version, 'go', 'history'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_referrals'),
-                callback_data=pack_callback(version, 'go', 'referrals'),
-            ),
+                text='🚀 Открыть Boostora',
+                web_app=WebAppInfo(url=settings.mini_app_url),
+            )
         )
     else:
         markup.add(
             InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_campaigns'),
-                callback_data=pack_callback(version, 'go', 'campaigns'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_stats'),
-                callback_data=pack_callback(version, 'go', 'stats'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_wallet'),
-                callback_data=pack_callback(version, 'go', 'wallet'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_history'),
-                callback_data=pack_callback(version, 'go', 'history'),
-            ),
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_referrals'),
-                callback_data=pack_callback(version, 'go', 'referrals'),
-            ),
+                text=UserService.t(user_id, 'smart_hub_button'),
+                callback_data=pack_callback(version, 'go', 'smart_hub'),
+            )
         )
     markup.add(
         InlineKeyboardButton(
-            text=UserService.t(user_id, 'menu_change_role'),
-            callback_data=pack_callback(version, 'go', 'role'),
-        ),
-        InlineKeyboardButton(
-            text=UserService.t(user_id, 'menu_change_language'),
-            callback_data=pack_callback(version, 'go', 'language'),
-        ),
-    )
-    if UserService.is_admin(user_id):
-        markup.add(
-            InlineKeyboardButton(
-                text=UserService.t(user_id, 'menu_admin'),
-                callback_data=pack_callback(version, 'go', 'admin'),
-            )
+            text='🆘 Поддержка',
+            url=f'https://t.me/{settings.support_username.lstrip("@")}',
         )
+    )
     return markup
 
 

@@ -1,4 +1,4 @@
-# Boostora v3.3.0 — запуск на Bothost
+# Boostora v3.4.0 — запуск на Bothost
 
 ## Настройки проекта
 
@@ -25,7 +25,10 @@ MINI_APP_URL=
 WEBAPP_AUTH_MAX_AGE_SECONDS=86400
 SMART_BOTTOM_MENU=compact
 DROP_PENDING_UPDATES=0
+ENABLE_XTR_PAYMENTS=1
 ```
+
+Новых обязательных переменных относительно v3.3.1 нет.
 
 ## После деплоя
 
@@ -41,9 +44,11 @@ https://boostorabot.bothost.tech/
 ```text
 Embedded Mini App is listening on http://0.0.0.0:3000
 Telegram Mini App menu button configured
-Boostora v3.3.0 started with update guard
+Boostora v3.4.0 started with update guard
 ```
 
-Открой Mini App именно из Telegram. Обычный пользователь должен видеть только личные разделы. Администратор получает раздел «Управление», а первый ID из `ADMIN_IDS` дополнительно получает раздел владельца.
+Открой Boostora кнопкой Mini App внутри Telegram. Каталог, заказы, кампании, задания, кошелёк, профиль, Standard/PRO и закрытое управление работают внутри приложения. Бот остаётся точкой входа и принимает подтверждения платежей Telegram Stars.
+
+Обычный пользователь не должен видеть управление, внутренние тарифы поставщика, диагностику или релиз-центр. Администратор получает только админский кабинет, а первый ID из `ADMIN_IDS` — кабинет владельца.
 
 Рабочая база должна храниться в `/app/data/boostora.db`. Не загружай `.env`, базу, токены и `BOOSTORE_API_KEY` в GitHub.

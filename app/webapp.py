@@ -23,6 +23,7 @@ from app.services.engagement_modes import EngagementModeService
 from app.services.smart_hub import SmartHubService
 from app.services.users import UserService
 from app.services.wallets import WalletService
+from app.services.miniapp_api import MiniAppApiService, ensure_web_user
 
 
 LOGGER = logging.getLogger(__name__)
@@ -30,9 +31,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_ROOT = (PROJECT_ROOT / 'miniapp_example').resolve()
 MAX_JSON_BODY_BYTES = 64 * 1024
 
-# Mini App actions never execute privileged operations directly. They only create a
-# signed, role-checked deep link to an existing protected bot screen. The bot then
-# applies all community rules, legal documents, subscription and access gates again.
+# Compatibility deep links for older Mini App clients. The current v3.4.0 client
+# performs primary operations through /api/miniapp/query and server-side role gates.
 ACTION_START_PARAMS: dict[str, tuple[str, str]] = {
     'main': ('main_menu', 'user'),
     'hub': ('smart_hub', 'user'),
@@ -222,6 +222,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
     user_id = _user_id(user)
     if user_id is None:
         raise ValueError('invalid_user_id')
+    ensure_web_user(user)
     role = UserService.get_role(user_id) or ''
     is_owner = UserService.is_owner(user_id)
     is_admin = UserService.is_admin(user_id)
@@ -240,6 +241,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
             'allowed_actions': allowed_actions,
         },
         'dashboard': _safe_dashboard(user_id),
+        'bootstrap': MiniAppApiService.bootstrap(user),
     }
     # Technical release metadata is intentionally owner-only.
     if is_owner:
@@ -248,7 +250,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
 
 
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.3.0'
+    server_version = 'BoostoraWeb/3.4.0'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):
@@ -397,6 +399,35 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             return
         self._send_json(HTTPStatus.OK, {'ok': True, 'action': action, 'open_url': url})
 
+
+    def _handle_miniapp_query(self) -> None:
+        payload = self._read_json_body()
+        if payload is None:
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_json')
+            return
+        user, reason = self._validated_user_from_payload(payload)
+        if user is None:
+            self._send_json(HTTPStatus.UNAUTHORIZED, {'ok': False, 'authenticated': False, 'reason': reason})
+            return
+        operation = str(payload.get('operation') or '').strip()
+        data = payload.get('payload')
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_payload')
+            return
+        try:
+            result = MiniAppApiService.dispatch(user, operation, data)
+        except Exception:
+            LOGGER.exception('Mini App operation failed: operation=%s user_id=%s', operation, _user_id(user))
+            self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, 'operation_failed')
+            return
+        try:
+            status = HTTPStatus(result.status)
+        except ValueError:
+            status = HTTPStatus.INTERNAL_SERVER_ERROR
+        self._send_json(status, result.payload)
+
     def _handle_miniapp_open(self) -> None:
         payload = self._read_json_body()
         if payload is None:
@@ -450,6 +481,9 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
             return
         if path == '/api/miniapp/action':
             self._handle_miniapp_action()
+            return
+        if path == '/api/miniapp/query':
+            self._handle_miniapp_query()
             return
         if path == '/api/miniapp/open':
             self._handle_miniapp_open()

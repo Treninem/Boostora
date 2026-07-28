@@ -1,0 +1,24 @@
+Boostora v3.4.0 PATCH
+Base: Boostora v3.3.1
+
+Changed/new runtime files:
+app/db.py
+app/handlers/start.py
+app/keyboards/inline.py
+app/keyboards/reply.py
+app/router.py
+app/services/boostore_provider.py
+app/services/final_audit.py
+app/services/miniapp_api.py
+app/services/release_readiness.py
+app/texts.py
+app/version.py
+app/webapp.py
+miniapp_example/index.html
+
+Documentation:
+README.md
+BOTHOST_START.md
+HOTFIX_NOTES.md
+PATCH_INSTALL.md
+RELEASE_REPORT_v3.4.0.md

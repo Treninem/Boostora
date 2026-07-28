@@ -1,3 +1,4 @@
+import html
 import json
 import logging
 import math
@@ -458,14 +459,11 @@ def _perk_title(user_id: int, tier_code: str) -> str:
 
 def _build_main_menu_text(user_id: int) -> str:
     role = UserService.get_role(user_id)
-    if not role:
-        return UserService.t(user_id, 'choose_role')
-    return UserService.t(
-        user_id,
-        'main_menu',
-        brand=settings.brand_name,
-        language=UserService.language_label(UserService.get_language(user_id)),
-        role=UserService.role_label(user_id, role),
+    role_text = UserService.role_label(user_id, role) if role else 'не выбрана'
+    return (
+        f'<b>{settings.brand_name}</b>\n\n'
+        f'Роль: <b>{role_text}</b>\n\n'
+        'Каталог, заказы, задания, кошелёк, PRO, профиль и управление работают внутри Mini App.'
     )
 
 
@@ -557,7 +555,7 @@ def _build_marketplace_category_text(user_id: int, category: str) -> tuple[str, 
     return UserService.t(
         user_id,
         'marketplace_catalog_category',
-        category=current['label'],
+        category=html.escape(str(current['label'])),
         services=int(current['enabled']),
         folders=len(subcategories),
     ), subcategories
@@ -590,7 +588,7 @@ def _build_marketplace_services_text(
         rows.append(UserService.t(
             user_id,
             'marketplace_catalog_service_row',
-            name=str(row['name'] or '')[:80],
+            name=html.escape(str(row['name'] or '')[:80]),
             min_qty=int(row['min_quantity'] or 0),
             max_qty=int(row['max_quantity'] or 0),
         ))
@@ -598,8 +596,8 @@ def _build_marketplace_services_text(
     text = UserService.t(
         user_id,
         'marketplace_catalog_services',
-        category=category_item['label'],
-        subcategory=sub_item['label'],
+        category=html.escape(str(category_item['label'])),
+        subcategory=html.escape(str(sub_item['label'])),
         page=page,
         pages=total_pages,
         items=items,
@@ -781,7 +779,7 @@ def _build_owner_provider_category_text(user_id: int, category: str) -> tuple[st
     text = UserService.t(
         user_id,
         'owner_catalog_category',
-        category=current['label'],
+        category=html.escape(str(current['label'])),
         enabled=int(current['enabled']),
         total=int(current['total']),
         folders=len(subcategories),
@@ -819,17 +817,17 @@ def _build_owner_provider_services_text(
             user_id,
             'owner_catalog_service_row',
             enabled='✅' if int(row['is_enabled'] or 0) else '▫️',
-            sid=str(row['external_service_id']),
-            name=str(row['name'] or '')[:72],
-            rate=str(row['rate_text'] or '—'),
+            sid=html.escape(str(row['external_service_id'])),
+            name=html.escape(str(row['name'] or '')[:72]),
+            rate=html.escape(str(row['rate_text'] or '—')),
             min_qty=int(row['min_quantity'] or 0),
             max_qty=int(row['max_quantity'] or 0),
         ))
     text = UserService.t(
         user_id,
         'owner_catalog_services',
-        category=current['label'],
-        subcategory=sub['label'],
+        category=html.escape(str(current['label'])),
+        subcategory=html.escape(str(sub['label'])),
         enabled=int(sub['enabled']),
         total=int(sub['total']),
         page=page,
@@ -1270,6 +1268,7 @@ def _build_rewards_text(user_id: int) -> str:
                 user_id,
                 'reward_item_row',
                 title=UserService.t(user_id, str(item['title_key'])),
+                desc=UserService.t(user_id, str(item['desc_key'])),
                 price=int(item['price']),
                 internal_name=UserService.internal_currency_label(user_id),
             )

@@ -103,7 +103,7 @@ class FinalAuditService:
             'mini_app_cabinet',
             'final_audit_mini_app_cabinet',
             (PROJECT_ROOT / 'miniapp_example/index.html').exists()
-            and _source_contains('miniapp_example/index.html', 'Управляй активностью', 'Standard', 'PRO', 'assets/hero-growth.webp', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()', 'data-action="tasks"', 'data-action="campaigns"'),
+            and _source_contains('miniapp_example/index.html', 'Самостоятельный кабинет', 'Standard', 'PRO', 'assets/hero-growth.webp', 'telegram-web-app.js', 'tg.ready()', 'tg.expand()', "api('catalog.get'", "api('wallet.get'", "api('campaigns.get'", "api('tasks.get'"),
             action_ok='final_audit_action_mini_app_ok',
             action_bad='final_audit_action_mini_app_fix',
         )
@@ -133,11 +133,20 @@ class FinalAuditService:
             'final_audit_embedded_mini_app_runtime',
             settings.webapp_enabled
             and bool(settings.mini_app_url)
-            and _source_contains('app/webapp.py', 'ThreadingHTTPServer', "'/health'", "'/api/config'", "'/api/telegram/session'", "'/api/miniapp/action'", '_validate_telegram_init_data', 'hmac.compare_digest', '_can_use_action')
+            and _source_contains('app/webapp.py', 'ThreadingHTTPServer', "'/health'", "'/api/config'", "'/api/telegram/session'", "'/api/miniapp/query'", '_validate_telegram_init_data', 'hmac.compare_digest', 'MiniAppApiService.dispatch')
             and _source_contains('app/bot.py', 'start_webapp_server()', 'set_chat_menu_button', 'MenuButtonWebApp', 'webapp_runtime.stop()')
-            and _source_contains('miniapp_example/index.html', "fetch('/api/config'", "fetch('/api/telegram/session'", "fetch('/api/miniapp/action'", "fetch('/api/miniapp/open'", 'adminPanel', 'ownerPanel'),
+            and _source_contains('miniapp_example/index.html', "fetch('/api/telegram/session'", "fetch('/api/miniapp/query'", "fetch('/api/miniapp/open'", 'tg.openInvoice', 'renderManagement', 'owner.catalog_action'),
             action_ok='final_audit_action_embedded_mini_app_ok',
             action_bad='final_audit_action_embedded_mini_app_fix',
+        )
+        add(
+            'standalone_mini_app_operations',
+            'final_audit_mini_app_cabinet',
+            _source_contains('app/services/miniapp_api.py', 'class MiniAppApiService', "op == 'catalog.get'", "op == 'wallet.get'", "op == 'campaigns.get'", "op == 'tasks.get'", "op == 'admin.get'", "op == 'owner.catalog_action'")
+            and _source_contains('app/handlers/start.py', "kind == 'wasparks'", "kind == 'waengpro'", "kind == 'waboostore'")
+            and _source_contains('app/keyboards/reply.py', 'Открыть Boostora', 'WebAppInfo'),
+            action_ok='final_audit_action_mini_app_ok',
+            action_bad='final_audit_action_mini_app_fix',
         )
         add(
             'engagement_landing_presets',
@@ -190,7 +199,7 @@ class FinalAuditService:
             'boostore_provider_auto_orders',
             'final_audit_boostore_provider_auto_orders',
             _has_columns('provider_services', 'external_service_id', 'is_enabled', 'markup_percent')
-            and _has_columns('provider_orders', 'owner_user_id', 'provider_status', 'last_error', 'placed_at')
+            and _has_columns('provider_orders', 'owner_user_id', 'provider_status', 'last_error', 'placed_at', 'paid_at', 'telegram_payment_charge_id')
             and hasattr(BoostoreProviderService, 'live_diagnostics')
             and hasattr(BoostoreProviderService, 'prepare_order')
             and hasattr(BoostoreProviderService, 'place_prepared_order'),
@@ -203,7 +212,9 @@ class FinalAuditService:
             hasattr(BoostoreProviderService, 'catalog_categories')
             and hasattr(BoostoreProviderService, 'catalog_subcategories')
             and hasattr(BoostoreProviderService, 'set_catalog_enabled')
-            and _source_contains('app/router.py', 'SCREEN_MARKETPLACE_CATEGORY_PREFIX', 'SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX')
+            and hasattr(BoostoreProviderService, 'normalize_telegram_link')
+            and _source_contains('app/services/boostore_provider.py', 'current_only=True', 'last_synced_at IS NOT NULL', 'normalize_telegram_link')
+            and _source_contains('app/router.py', 'SCREEN_MARKETPLACE_CATEGORY_PREFIX', 'SCREEN_OWNER_PROVIDER_SUBCATEGORY_PREFIX', 'html.escape')
             and _source_contains('app/handlers/callbacks.py', "parsed.action == 'boostore_bulk'", 'get_public_service')
             and _source_contains('app/keyboards/inline.py', 'marketplace_category_keyboard', 'owner_provider_services_keyboard'),
             action_ok='final_audit_action_telegram_catalog_ok',

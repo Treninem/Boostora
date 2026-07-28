@@ -5,6 +5,7 @@ from telebot import types
 from telebot.types import Message, PreCheckoutQuery
 
 from app.config import settings
+from app import db
 from app.keyboards.reply import main_reply_keyboard
 from app.services.activity import ActivityService
 from app.services.bot_chats import BotChatService
@@ -260,6 +261,31 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         if user_id != query.from_user.id:
             bot.answer_pre_checkout_query(query.id, ok=False, error_message='Платёж предназначен другому пользователю')
             return
+        expected_amount = None
+        if kind in {'sparks', 'wasparks'} and code in SPARKS_PACKS:
+            expected_amount = int(SPARKS_PACKS[code].stars)
+        elif kind in {'sparks_custom', 'wasparks_custom'} and code.isdigit():
+            expected_amount = int(calculate_custom_stars_for_sparks(int(code)))
+        elif kind in {'engpro', 'waengpro'} and code == '30d':
+            expected_amount = int(EngagementModeService.pro_price_stars())
+        elif kind in {'boostore', 'waboostore'} and code.isdigit():
+            row = db.fetch_one(
+                'SELECT owner_user_id, charge_value, provider_status, paid_at FROM provider_orders WHERE id = ?',
+                (int(code),),
+            )
+            if not row or int(row['owner_user_id'] or 0) != query.from_user.id:
+                bot.answer_pre_checkout_query(query.id, ok=False, error_message='Заказ не найден')
+                return
+            if str(row['paid_at'] or '') or str(row['provider_status'] or '') not in {'draft', 'invoice_failed', 'failed'}:
+                bot.answer_pre_checkout_query(query.id, ok=False, error_message='Этот заказ уже оплачен')
+                return
+            expected_amount = int(round(float(row['charge_value'] or 0)))
+        if str(getattr(query, 'currency', '') or '') != 'XTR':
+            bot.answer_pre_checkout_query(query.id, ok=False, error_message='Неверная валюта платежа')
+            return
+        if expected_amount is not None and int(getattr(query, 'total_amount', 0) or 0) != expected_amount:
+            bot.answer_pre_checkout_query(query.id, ok=False, error_message='Сумма счёта изменилась. Откройте его заново.')
+            return
         bot.answer_pre_checkout_query(query.id, ok=True)
 
 
@@ -281,6 +307,38 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         kind, code, user_id = parsed
         if user_id != message.from_user.id:
             return
+        if kind == 'wasparks' and code in SPARKS_PACKS:
+            pack = SPARKS_PACKS[code]
+            WalletService.credit_internal_balance(
+                message.from_user.id,
+                pack.sparks,
+                entry_type='stars_topup',
+                note=f'Mini App Stars top up: {code}',
+            )
+            return
+        if kind == 'wasparks_custom' and code.isdigit():
+            sparks_amount = int(code)
+            WalletService.credit_internal_balance(
+                message.from_user.id,
+                sparks_amount,
+                entry_type='stars_topup',
+                note=f'Mini App custom Stars top up: {sparks_amount}',
+            )
+            return
+        if kind == 'waengpro' and code == '30d':
+            EngagementModeService.activate_pro(message.from_user.id, days=30, source='miniapp_stars_payment')
+            return
+        if kind == 'waboostore' and code.isdigit():
+            paid = BoostoreProviderService.mark_order_paid(
+                int(code),
+                message.from_user.id,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
+            )
+            if paid.ok and settings.boostore_auto_order_enabled:
+                BoostoreProviderService.place_prepared_order(int(code))
+            return
+
         if kind == 'sparks' and code in SPARKS_PACKS:
             pack = SPARKS_PACKS[code]
             WalletService.credit_internal_balance(
@@ -321,8 +379,17 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             render_screen(bot, message, 'engagement_growth', notice_text=UserService.t(message.from_user.id, 'engagement_pro_activated_notice'))
             return
         if kind == 'boostore' and code.isdigit():
-            result = BoostoreProviderService.place_prepared_order(int(code))
-            render_screen(bot, message, 'marketplace', notice_key='boostore_order_placed' if result.ok else 'boostore_temporarily_unavailable')
+            paid = BoostoreProviderService.mark_order_paid(
+                int(code),
+                message.from_user.id,
+                telegram_payment_charge_id=str(getattr(payment, 'telegram_payment_charge_id', '') or ''),
+                provider_payment_charge_id=str(getattr(payment, 'provider_payment_charge_id', '') or ''),
+            )
+            if paid.ok and settings.boostore_auto_order_enabled:
+                result = BoostoreProviderService.place_prepared_order(int(code))
+                render_screen(bot, message, 'marketplace', notice_key='boostore_order_placed' if result.ok else 'boostore_temporarily_unavailable')
+            else:
+                render_screen(bot, message, 'marketplace', notice_key='boostore_order_prepared')
             return
 
 
@@ -517,8 +584,8 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
         if mode == 'boostore_order_link' and session and session['payload']:
             _try_delete_user_message(bot, message)
-            link = (message.text or '').strip()
-            if not (link.startswith('http://') or link.startswith('https://') or link.startswith('t.me/') or link.startswith('@')):
+            link = BoostoreProviderService.normalize_telegram_link(message.text or '')
+            if not link:
                 render_screen(bot, message, 'marketplace', notice_key='boostore_order_link_invalid')
                 return
             payload = {'external_service_id': str(session['payload']), 'link': link}

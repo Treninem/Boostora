@@ -331,6 +331,7 @@ CREATE TABLE IF NOT EXISTS provider_services (
 CREATE TABLE IF NOT EXISTS provider_orders (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider_code TEXT NOT NULL DEFAULT 'boostore',
+    owner_user_id INTEGER,
     campaign_id INTEGER,
     external_order_id TEXT,
     external_service_id TEXT,
@@ -342,8 +343,14 @@ CREATE TABLE IF NOT EXISTS provider_orders (
     provider_status TEXT NOT NULL DEFAULT 'draft',
     last_payload_json TEXT,
     last_checked_at TEXT,
+    paid_at TEXT,
+    placed_at TEXT,
+    telegram_payment_charge_id TEXT,
+    provider_payment_charge_id TEXT,
+    last_error TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE SET NULL
 );
 
@@ -515,6 +522,9 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
         _ensure_column(connection, 'provider_orders', 'owner_user_id', 'INTEGER')
         _ensure_column(connection, 'provider_orders', 'placed_at', 'TEXT')
         _ensure_column(connection, 'provider_orders', 'last_error', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'paid_at', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'telegram_payment_charge_id', 'TEXT')
+        _ensure_column(connection, 'provider_orders', 'provider_payment_charge_id', 'TEXT')
     if _get_table_columns(connection, 'engagement_obligations'):
         _ensure_column(connection, 'engagement_obligations', 'reminder_sent_at', 'TEXT')
         _ensure_column(connection, 'engagement_obligations', 'warning_sent_at', 'TEXT')
