@@ -20,7 +20,7 @@ from app.services.campaigns import CampaignService
 from app.services.client_campaigns import ClientCampaignService
 from app.services.community_rules import CommunityRulesService
 from app.services.engagement_modes import EngagementModeService
-from app.services.economy import TASK_CATALOG, calculate_campaign_pricing
+from app.services.economy import TASK_CATALOG, calculate_campaign_pricing, creatable_task_types
 from app.services.final_audit import FinalAuditService
 from app.services.legal_docs import LegalDocsService
 from app.services.platform_agreement import PlatformAgreementService
@@ -88,6 +88,25 @@ class TelegramBotApiProxy:
 
 
 BOT_PROXY = TelegramBotApiProxy()
+
+
+
+def _bot_connect_links() -> dict[str, str]:
+    """Return one-click Telegram links for adding Boostora with useful rights."""
+    username = str(settings.support_username or '').strip().lstrip('@')
+    try:
+        username = str(getattr(BOT_PROXY.get_me(), 'username', '') or username).strip().lstrip('@')
+    except Exception:
+        LOGGER.warning('Could not resolve bot username for connect links; using configured support username')
+    if not username:
+        return {'connect_channel_url': '', 'connect_group_url': ''}
+    channel_rights = 'post_messages+edit_messages+delete_messages+invite_users+manage_chat'
+    group_rights = 'delete_messages+restrict_members+invite_users+pin_messages+manage_chat+manage_topics'
+    base = f'https://t.me/{username}'
+    return {
+        'connect_channel_url': f'{base}?startchannel&admin={channel_rights}',
+        'connect_group_url': f'{base}?startgroup&admin={group_rights}',
+    }
 
 
 def _row(row: Any, fields: tuple[str, ...] | None = None) -> dict[str, Any]:
@@ -210,7 +229,7 @@ def _task_type_items() -> list[dict[str, Any]]:
             'floor': int(meta.get('client_floor_price') or 0),
             'reward': int(meta.get('performer_reward') or 0),
         }
-        for code, meta in TASK_CATALOG.items()
+        for code, meta in TASK_CATALOG.items() if code in creatable_task_types()
     ]
 
 
@@ -346,11 +365,13 @@ def _tasks_payload(user_id: int) -> dict[str, Any]:
     return {
         'available': _rows(available, (
             'id', 'title', 'task_type', 'target_url', 'reward_amount', 'total_quantity',
-            'completed_quantity', 'status', 'updated_at',
+            'completed_quantity', 'status', 'auto_verify_enabled', 'retention_hours', 'updated_at',
         )),
         'submissions': _rows(submissions, (
             'id', 'campaign_id', 'campaign_title', 'campaign_task_type', 'status', 'target_url',
-            'proof_text', 'reward_amount', 'reject_reason', 'taken_at', 'submitted_at', 'updated_at',
+            'proof_text', 'reward_amount', 'reject_reason', 'verification_state', 'verification_attempts',
+            'verification_note', 'retention_check_at', 'auto_verify_enabled', 'retention_hours',
+            'taken_at', 'submitted_at', 'updated_at',
         )),
         'active_limit': PerformerService.get_active_task_limit(user_id),
         'active_count': PerformerService.get_active_submission_count(user_id),
@@ -625,7 +646,7 @@ class MiniAppApiService:
             return ApiResult(200, {'ok': True, 'orders': _provider_orders(user_id)})
 
         if op == 'network.get':
-            return ApiResult(200, {'ok': True, **AdvertisingNetworkService.user_summary(user_id)})
+            return ApiResult(200, {'ok': True, **AdvertisingNetworkService.user_summary(user_id), **_bot_connect_links()})
         if op == 'network.platform_update':
             try:
                 chat_id = int(payload.get('chat_id') or 0)
@@ -712,6 +733,10 @@ class MiniAppApiService:
             ok, key = ClientCampaignService.start_draft(user_id, task_type, engagement_mode=engagement_mode)
             if not ok:
                 return _result(False, key)
+            ok, key = ClientCampaignService.update_verification_options(user_id, payload)
+            if not ok:
+                ClientCampaignService.clear_draft(user_id)
+                return _result(False, key)
             ok, key, _ = ClientCampaignService.consume_target(user_id, target, bot=BOT_PROXY)
             if not ok:
                 ClientCampaignService.clear_draft(user_id)
@@ -743,7 +768,12 @@ class MiniAppApiService:
             role_gate = _gate(user_id, role='performer')
             if role_gate:
                 return role_gate
-            return ApiResult(200, {'ok': True, **_tasks_payload(user_id)})
+            try:
+                auto_check = PerformerService.auto_check_user(BOT_PROXY, user_id)
+            except Exception:
+                LOGGER.exception('Automatic task check failed while loading task list user_id=%s', user_id)
+                auto_check = {'checked': 0, 'verified': 0, 'results': []}
+            return ApiResult(200, {'ok': True, 'auto_check': auto_check, **_tasks_payload(user_id)})
         if op == 'tasks.take':
             role_gate = _gate(user_id, role='performer')
             if role_gate:
@@ -754,6 +784,24 @@ class MiniAppApiService:
                 campaign_id = 0
             ok, key, submission_id = PerformerService.take_task(user_id, campaign_id)
             return ApiResult(200 if ok else 400, {'ok': ok, 'result': key, 'submission_id': submission_id})
+        if op == 'tasks.open':
+            role_gate = _gate(user_id, role='performer')
+            if role_gate:
+                return role_gate
+            try:
+                submission_id = int(payload.get('submission_id') or 0)
+            except Exception:
+                submission_id = 0
+            ok, key, target_url, result_id = PerformerService.open_target(BOT_PROXY, user_id, submission_id)
+            return ApiResult(200 if ok else 400, {
+                'ok': ok, 'result': key, 'target_url': target_url, 'result_id': result_id,
+            })
+        if op == 'tasks.autocheck':
+            role_gate = _gate(user_id, role='performer')
+            if role_gate:
+                return role_gate
+            result = PerformerService.auto_check_user(BOT_PROXY, user_id)
+            return ApiResult(200, {'ok': True, **result})
         if op == 'tasks.submit':
             role_gate = _gate(user_id, role='performer')
             if role_gate:

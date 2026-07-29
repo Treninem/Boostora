@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.5.1'
-APP_STAGE = 'sparks_primary_core_provider_secondary'
+APP_VERSION = 'Boostora v3.6.0'
+APP_STAGE = 'automatic_task_verification_and_retention'

@@ -71,6 +71,11 @@ CREATE TABLE IF NOT EXISTS campaigns (
     reward_budget_total INTEGER NOT NULL DEFAULT 0,
     service_fee_total INTEGER NOT NULL DEFAULT 0,
     pricing_json TEXT,
+    auto_verify_enabled INTEGER NOT NULL DEFAULT 0,
+    verification_json TEXT,
+    retention_hours INTEGER NOT NULL DEFAULT 0,
+    target_chat_ref TEXT,
+    target_message_id INTEGER,
     is_funded INTEGER NOT NULL DEFAULT 0,
     total_quantity INTEGER NOT NULL DEFAULT 0,
     completed_quantity INTEGER NOT NULL DEFAULT 0,
@@ -95,6 +100,11 @@ CREATE TABLE IF NOT EXISTS task_submissions (
     reward_amount INTEGER NOT NULL DEFAULT 0,
     risk_score INTEGER NOT NULL DEFAULT 0,
     reject_reason TEXT,
+    verification_state TEXT NOT NULL DEFAULT 'pending',
+    verification_attempts INTEGER NOT NULL DEFAULT 0,
+    last_verification_at TEXT,
+    verification_note TEXT,
+    retention_check_at TEXT,
     taken_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     submitted_at TEXT,
     reviewed_at TEXT,
@@ -113,6 +123,10 @@ CREATE TABLE IF NOT EXISTS holds (
     amount INTEGER NOT NULL,
     currency_code TEXT NOT NULL DEFAULT 'XTR',
     status TEXT NOT NULL DEFAULT 'active',
+    verification_required INTEGER NOT NULL DEFAULT 0,
+    verification_status TEXT NOT NULL DEFAULT 'not_required',
+    verification_due_at TEXT,
+    verification_checked_at TEXT,
     release_at TEXT NOT NULL,
     released_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -600,7 +614,9 @@ CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id, cre
 CREATE INDEX IF NOT EXISTS idx_campaigns_owner_status ON campaigns(owner_user_id, status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_task_submissions_campaign_status ON task_submissions(campaign_id, status, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_task_submissions_performer_status ON task_submissions(performer_user_id, status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_task_submissions_verification ON task_submissions(verification_state, last_verification_at);
 CREATE INDEX IF NOT EXISTS idx_holds_user_status_release ON holds(user_id, status, release_at);
+CREATE INDEX IF NOT EXISTS idx_holds_verification_due ON holds(status, verification_required, verification_status, verification_due_at);
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_user_id);
 CREATE INDEX IF NOT EXISTS idx_vip_user_active ON vip_subscriptions(user_id, is_active, expires_at DESC);
 CREATE INDEX IF NOT EXISTS idx_admin_logs_target ON admin_logs(target_user_id, created_at DESC);
@@ -690,7 +706,21 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, 'campaigns', 'reward_budget_total', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'campaigns', 'service_fee_total', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'campaigns', 'pricing_json', 'TEXT')
+    _ensure_column(connection, 'campaigns', 'auto_verify_enabled', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'campaigns', 'verification_json', 'TEXT')
+    _ensure_column(connection, 'campaigns', 'retention_hours', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'campaigns', 'target_chat_ref', 'TEXT')
+    _ensure_column(connection, 'campaigns', 'target_message_id', 'INTEGER')
     _ensure_column(connection, 'campaigns', 'is_funded', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'task_submissions', 'verification_state', "TEXT NOT NULL DEFAULT 'pending'")
+    _ensure_column(connection, 'task_submissions', 'verification_attempts', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'task_submissions', 'last_verification_at', 'TEXT')
+    _ensure_column(connection, 'task_submissions', 'verification_note', 'TEXT')
+    _ensure_column(connection, 'task_submissions', 'retention_check_at', 'TEXT')
+    _ensure_column(connection, 'holds', 'verification_required', 'INTEGER NOT NULL DEFAULT 0')
+    _ensure_column(connection, 'holds', 'verification_status', "TEXT NOT NULL DEFAULT 'not_required'")
+    _ensure_column(connection, 'holds', 'verification_due_at', 'TEXT')
+    _ensure_column(connection, 'holds', 'verification_checked_at', 'TEXT')
     _ensure_column(connection, 'wallets', 'bonus_balance', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'holds', 'currency_code', "TEXT NOT NULL DEFAULT 'XTR'")
     if _get_table_columns(connection, 'provider_services'):

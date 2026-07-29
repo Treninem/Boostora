@@ -3,6 +3,7 @@ import sqlite3
 
 from app import db
 from app.services.runtime_settings import RuntimeSettingsService
+from app.services.activity import ActivityService
 from app.services.wallets import WalletService
 
 
@@ -24,42 +25,37 @@ class CampaignService:
         reward_budget_total: int = 0,
         service_fee_total: int = 0,
         pricing_snapshot: dict | None = None,
+        verification_rules: dict | None = None,
+        auto_verify_enabled: bool | None = None,
+        retention_hours: int | None = None,
         is_funded: bool = False,
     ) -> int:
         budget_total = int(reward_budget_total or reward_amount * total_quantity) + int(service_fee_total or 0)
+        target_info = ActivityService.parse_target(target_url)
+        rules = ActivityService.default_verification_rules(task_type)
+        if verification_rules:
+            rules.update(verification_rules)
+        auto_enabled = ActivityService.is_auto_verifiable(task_type) if auto_verify_enabled is None else bool(auto_verify_enabled)
+        rules['auto_verify'] = bool(auto_enabled)
+        effective_retention = ActivityService.default_retention_hours(task_type) if retention_hours is None else max(0, int(retention_hours))
+        rules['retention_hours'] = effective_retention
         return db.execute(
             '''
             INSERT INTO campaigns (
-                owner_user_id,
-                title,
-                task_type,
-                target_url,
-                reward_amount,
-                unit_price,
-                reward_budget_total,
-                service_fee_total,
-                pricing_json,
-                is_funded,
-                total_quantity,
-                budget_total,
-                status
+                owner_user_id, title, task_type, target_url, reward_amount, unit_price,
+                reward_budget_total, service_fee_total, pricing_json,
+                auto_verify_enabled, verification_json, retention_hours, target_chat_ref, target_message_id,
+                is_funded, total_quantity, budget_total, status
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''',
             (
-                owner_user_id,
-                title,
-                task_type,
-                target_url,
-                reward_amount,
-                int(unit_price or 0),
-                int(reward_budget_total or reward_amount * total_quantity),
-                int(service_fee_total or 0),
+                owner_user_id, title, task_type, target_url, reward_amount, int(unit_price or 0),
+                int(reward_budget_total or reward_amount * total_quantity), int(service_fee_total or 0),
                 json.dumps(pricing_snapshot or {}, ensure_ascii=False),
-                1 if is_funded else 0,
-                total_quantity,
-                budget_total,
-                status,
+                1 if auto_enabled else 0, json.dumps(rules, ensure_ascii=False), effective_retention,
+                target_info.chat_ref, target_info.message_id,
+                1 if is_funded else 0, total_quantity, budget_total, status,
             ),
         )
 

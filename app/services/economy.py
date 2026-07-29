@@ -12,16 +12,18 @@ INTERNAL_CURRENCY_NAME_RU = "Искры"
 TASK_CATALOG = {
     "channel_subscribe": {"client_floor_price": 26, "performer_reward": 18, "title": "Подписка на канал", "label_key": "campaign_task_type_channel_subscribe"},
     "chat_join": {"client_floor_price": 23, "performer_reward": 16, "title": "Вступление в чат", "label_key": "campaign_task_type_chat_join"},
-    "post_view": {"client_floor_price": 7, "performer_reward": 4, "title": "Просмотр поста", "label_key": "campaign_task_type_post_view"},
+    "post_view": {"client_floor_price": 6, "performer_reward": 3, "title": "Открыть публикацию", "label_key": "campaign_task_type_post_view"},
     "bot_start": {"client_floor_price": 20, "performer_reward": 14, "title": "Запуск бота", "label_key": "campaign_task_type_bot_start"},
     "mini_app_open": {"client_floor_price": 30, "performer_reward": 22, "title": "Открытие Mini App", "label_key": "campaign_task_type_mini_app_open"},
-    "post_like": {"client_floor_price": 9, "performer_reward": 6, "title": "Лайк поста", "label_key": "campaign_task_type_post_like"},
+    "post_like": {"client_floor_price": 9, "performer_reward": 6, "title": "Реакция 👍", "label_key": "campaign_task_type_post_like"},
     "post_reaction": {"client_floor_price": 8, "performer_reward": 5, "title": "Реакция на пост", "label_key": "campaign_task_type_post_reaction"},
     "story_view": {"client_floor_price": 8, "performer_reward": 5, "title": "Просмотр истории", "label_key": "campaign_task_type_story_view"},
-    "link_click": {"client_floor_price": 12, "performer_reward": 8, "title": "Переход по ссылке", "label_key": "campaign_task_type_link_click"},
+    "link_click": {"client_floor_price": 8, "performer_reward": 5, "title": "Открыть ссылку", "label_key": "campaign_task_type_link_click"},
     "post_share": {"client_floor_price": 16, "performer_reward": 11, "title": "Репост поста", "label_key": "campaign_task_type_post_share"},
     "post_comment": {"client_floor_price": 20, "performer_reward": 14, "title": "Комментарий под постом", "label_key": "campaign_task_type_post_comment"},
     "poll_vote": {"client_floor_price": 10, "performer_reward": 7, "title": "Голос в опросе", "label_key": "campaign_task_type_poll_vote"},
+    "chat_message": {"client_floor_price": 16, "performer_reward": 11, "title": "Сообщение в чате", "label_key": "campaign_task_type_chat_message"},
+    "join_request": {"client_floor_price": 18, "performer_reward": 12, "title": "Заявка на вступление", "label_key": "campaign_task_type_join_request"},
 }
 
 DISCOUNT_TIERS = (
@@ -56,6 +58,16 @@ def get_discount_percent(quantity: int) -> int:
 
 def supported_task_types() -> tuple[str, ...]:
     return tuple(TASK_CATALOG.keys())
+
+
+# New campaigns are restricted to actions that Boostora can tie to a concrete
+# Telegram user. Legacy story/share campaigns stay readable for compatibility.
+def creatable_task_types() -> tuple[str, ...]:
+    return (
+        "channel_subscribe", "chat_join", "join_request", "post_reaction",
+        "post_like", "post_comment", "chat_message", "poll_vote",
+        "post_view", "link_click", "bot_start", "mini_app_open",
+    )
 
 
 def task_meta(task_type: str) -> dict[str, int | str]:

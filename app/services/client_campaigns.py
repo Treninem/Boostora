@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from app.services.activity import ActivityService
 from app.services.bot_chats import BotChatService
 from app.services.campaigns import CampaignService
-from app.services.economy import calculate_campaign_pricing, recommend_unit_prices, supported_task_types, task_meta
+from app.services.economy import calculate_campaign_pricing, recommend_unit_prices, creatable_task_types, task_meta
 from app.services.engagement_modes import EngagementModeService
 from app.services.input_sessions import InputSessionService
 from app.services.wallets import WalletService
@@ -16,14 +16,14 @@ MODE_PRICE = 'campaign_price'
 MODE_CONFIRM = 'campaign_confirm'
 MODE_REWARD = MODE_PRICE
 
-TASK_TYPES = supported_task_types()
+TASK_TYPES = creatable_task_types()
 
 CHAT_REQUIRED_TASK_TYPES = {
-    'channel_subscribe', 'chat_join', 'post_view', 'post_like', 'post_reaction',
-    'story_view', 'post_share', 'post_comment', 'poll_vote'
+    'channel_subscribe', 'chat_join', 'join_request', 'post_view', 'post_like', 'post_reaction',
+    'post_comment', 'chat_message', 'poll_vote'
 }
-ADMIN_REQUIRED_TASK_TYPES = {'channel_subscribe', 'chat_join', 'post_reaction', 'poll_vote'}
-MESSAGE_LINK_TASK_TYPES = {'post_view', 'post_like', 'post_reaction', 'post_share', 'post_comment', 'poll_vote'}
+ADMIN_REQUIRED_TASK_TYPES = {'channel_subscribe', 'chat_join', 'join_request', 'post_reaction', 'post_like', 'chat_message', 'poll_vote'}
+MESSAGE_LINK_TASK_TYPES = {'post_view', 'post_like', 'post_reaction', 'post_comment', 'poll_vote'}
 
 
 class ClientCampaignService:
@@ -37,7 +37,10 @@ class ClientCampaignService:
     def start_draft(user_id: int, task_type: str, engagement_mode: str | None = None) -> tuple[bool, str]:
         if task_type not in TASK_TYPES:
             return False, 'campaign_invalid_task_type'
-        payload = {'task_type': task_type}
+        payload = {
+            'task_type': task_type,
+            'verification_rules': ActivityService.default_verification_rules(task_type),
+        }
         if engagement_mode:
             payload['engagement_mode'] = str(engagement_mode)
             payload['reciprocal_required_actions'] = EngagementModeService.required_actions() if str(engagement_mode) == 'standard' else 0
@@ -60,6 +63,7 @@ class ClientCampaignService:
             'task_type': task_type,
             'preset_code': str(preset_code or ''),
             'preset_quantity': int(quantity),
+            'verification_rules': ActivityService.default_verification_rules(task_type),
         }
         if engagement_mode:
             payload['engagement_mode'] = str(engagement_mode)
@@ -91,6 +95,44 @@ class ClientCampaignService:
         if not draft:
             return None
         return str(draft.get('mode') or '')
+
+    @staticmethod
+    def update_verification_options(user_id: int, options: dict[str, Any]) -> tuple[bool, str]:
+        draft = ClientCampaignService.get_draft(user_id)
+        if not draft:
+            return False, 'campaign_draft_missing'
+        task_type = str(draft.get('task_type') or '')
+        rules = ActivityService.default_verification_rules(task_type)
+        current = draft.get('verification_rules')
+        if isinstance(current, dict):
+            rules.update(current)
+
+        if task_type in {'post_reaction', 'post_like'}:
+            raw = str(options.get('required_reaction') or '').strip()
+            if task_type == 'post_like' and not raw:
+                raw = '👍'
+            rules['required_reactions'] = [raw] if raw else []
+        if task_type in {'post_comment', 'chat_message'}:
+            try:
+                minimum = int(options.get('comment_min_length') or rules.get('min_length') or 20)
+            except (TypeError, ValueError):
+                minimum = int(rules.get('min_length') or 20)
+            rules['min_length'] = max(5, min(minimum, 500))
+            rules['prompt'] = str(options.get('comment_prompt') or '').strip()[:500]
+            rules['required_keyword'] = str(options.get('required_keyword') or '').strip()[:80]
+            rules['allow_links'] = bool(options.get('allow_links', False))
+            rules['allow_emoji_only'] = False
+            rules['block_duplicate_text'] = True
+        if task_type == 'poll_vote':
+            raw_option = options.get('poll_option_id')
+            if raw_option not in {None, ''}:
+                try:
+                    rules['required_option_ids'] = [max(0, int(raw_option))]
+                except (TypeError, ValueError):
+                    return False, 'campaign_poll_option_invalid'
+        draft['verification_rules'] = rules
+        InputSessionService.set_session(user_id, str(draft.get('mode') or MODE_TARGET), json.dumps(draft, ensure_ascii=False))
+        return True, 'campaign_verification_options_saved'
 
     @staticmethod
     def _normalize_target(target: str) -> str:
@@ -147,6 +189,35 @@ class ClientCampaignService:
             # A verified channel/chat automatically becomes a candidate for the
             # advertising network once it meets the audience/activity rules.
             BotChatService.register_verified_platform(bot, info.chat_ref, user_id)
+            if bot is not None and task_type == 'join_request':
+                try:
+                    me = bot.get_me()
+                    api_ref = int(info.chat_ref) if info.chat_ref.lstrip('-').isdigit() else info.chat_ref
+                    membership = bot.get_chat_member(api_ref, int(me.id))
+                    if not bool(getattr(membership, 'can_invite_users', False) or getattr(membership, 'status', '') == 'creator'):
+                        return False, 'campaign_target_invite_right_required', MODE_TARGET
+                except Exception:
+                    return False, 'campaign_target_invite_right_required', MODE_TARGET
+            if bot is not None and task_type == 'post_comment':
+                try:
+                    api_ref = int(info.chat_ref) if info.chat_ref.lstrip('-').isdigit() else info.chat_ref
+                    target_chat = bot.get_chat(api_ref)
+                    linked_chat_id = getattr(target_chat, 'linked_chat_id', None)
+                    if not linked_chat_id:
+                        return False, 'campaign_comment_discussion_required', MODE_TARGET
+                    me = bot.get_me()
+                    linked_member = bot.get_chat_member(int(linked_chat_id), int(me.id))
+                    if str(getattr(linked_member, 'status', '') or '') not in {'administrator', 'creator'}:
+                        return False, 'campaign_comment_discussion_admin_required', MODE_TARGET
+                except Exception:
+                    return False, 'campaign_comment_discussion_required', MODE_TARGET
+            if bot is not None and task_type == 'poll_vote':
+                poll_id = ActivityService.observed_poll_id(bot, target)
+                if not poll_id:
+                    return False, 'campaign_poll_must_be_observed', MODE_TARGET
+                rules = draft.get('verification_rules') if isinstance(draft.get('verification_rules'), dict) else {}
+                rules['poll_id'] = poll_id
+                draft['verification_rules'] = rules
             if status_key:
                 result_key = status_key
 
@@ -278,6 +349,9 @@ class ClientCampaignService:
                 'engagement_mode': str(draft.get('engagement_mode') or ''),
                 'reciprocal_required_actions': int(draft.get('reciprocal_required_actions') or 0),
             },
+            verification_rules=dict(draft.get('verification_rules') or ActivityService.default_verification_rules(str(draft['task_type']))),
+            auto_verify_enabled=True,
+            retention_hours=ActivityService.default_retention_hours(str(draft['task_type'])),
             total_quantity=int(draft['total_quantity']),
             status='draft',
             is_funded=False,

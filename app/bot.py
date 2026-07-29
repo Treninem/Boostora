@@ -20,6 +20,7 @@ from app.services.engagement_modes import EngagementModeService
 from app.services.boostore_provider import BoostoreProviderService
 from app.services.advertising_network import AdvertisingNetworkService
 from app.services.bot_chats import BotChatService
+from app.services.performer import PerformerService
 from app.version import APP_VERSION
 from app.webapp import WebAppRuntime, start_webapp_server
 
@@ -29,7 +30,7 @@ LOGGER = logging.getLogger(__name__)
 ALLOWED_UPDATES = [
     'message', 'callback_query', 'pre_checkout_query', 'chat_member',
     'message_reaction', 'message_reaction_count', 'poll_answer',
-    'channel_post', 'my_chat_member', 'edited_channel_post'
+    'channel_post', 'my_chat_member', 'edited_channel_post', 'chat_join_request'
 ]
 
 POLL_TIMEOUT_SECONDS = 25
@@ -194,6 +195,8 @@ def _run_background_cycle(bot: telebot.TeleBot) -> None:
         ('ad_broadcast_expiry', lambda: AdBroadcastService.expire_unpaid_orders()),
         ('advertising_network', lambda: AdvertisingNetworkService.run_due_placements(bot)),
         ('network_metrics', lambda: BotChatService.refresh_network_metrics(bot, limit=100)),
+        ('task_retention_checks', lambda: PerformerService.review_due_verification_holds(bot)),
+        ('task_hold_releases', PerformerService.release_due_holds),
         ('engagement_reminders', lambda: EngagementModeService.run_due_reminders(
             bot,
             admin_ids=settings.admin_ids,

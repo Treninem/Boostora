@@ -431,10 +431,20 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
             return
 
 
+    def _auto_check_event_user(event_user_id: int | None) -> None:
+        if not event_user_id:
+            return
+        try:
+            PerformerService.auto_check_user(bot, int(event_user_id))
+        except Exception:
+            # Telegram may deliver the event before all related data becomes
+            # queryable. The Mini App and background checks will retry safely.
+            pass
+
     @bot.message_handler(func=lambda message: message.chat.type in {'group', 'supergroup'}, content_types=['text', 'photo', 'video', 'poll'])
     def handle_group_activity(message: Message) -> None:
         BotChatService.touch_from_message(message)
-        ActivityService.record_group_or_channel_message(message)
+        _auto_check_event_user(ActivityService.record_group_or_channel_message(message))
 
     @bot.channel_post_handler(func=lambda message: True, content_types=['text', 'photo', 'video', 'poll'])
     def handle_channel_post(message: Message) -> None:
@@ -443,7 +453,7 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
     @bot.chat_member_handler(func=lambda update: True)
     def handle_chat_member(update) -> None:
-        ActivityService.record_chat_member(update)
+        _auto_check_event_user(ActivityService.record_chat_member(update))
         try:
             from app.services.advertising_network import AdvertisingNetworkService
             AdvertisingNetworkService.track_join(update)
@@ -470,17 +480,22 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
 
     @bot.message_reaction_handler(func=lambda update: True)
     def handle_message_reaction(update) -> None:
-        ActivityService.record_reaction(update)
+        _auto_check_event_user(ActivityService.record_reaction(update))
 
     @bot.poll_answer_handler(func=lambda update: True)
     def handle_poll_answer(update) -> None:
-        ActivityService.record_poll_answer(update)
+        _auto_check_event_user(ActivityService.record_poll_answer(update))
+
+    if hasattr(bot, 'chat_join_request_handler'):
+        @bot.chat_join_request_handler(func=lambda update: True)
+        def handle_chat_join_request(update) -> None:
+            _auto_check_event_user(ActivityService.record_chat_join_request(update))
 
     @bot.message_handler(func=lambda message: True, content_types=['text'])
     def handle_fallback(message: Message) -> None:
         UserService.ensure_user(message.from_user)
         if message.chat.type in {'group', 'supergroup'}:
-            ActivityService.record_group_or_channel_message(message)
+            _auto_check_event_user(ActivityService.record_group_or_channel_message(message))
             return
         if not UserService.can_access_bot(message.from_user.id) and not UserService.is_admin(message.from_user.id):
             _try_delete_user_message(bot, message)

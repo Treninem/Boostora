@@ -139,8 +139,8 @@ class FinalAuditService:
         add(
             'sparks_core_priority',
             'final_audit_sparks_core_priority',
-            APP_VERSION == 'Boostora v3.5.1'
-            and APP_STAGE == 'sparks_primary_core_provider_secondary'
+            APP_VERSION == 'Boostora v3.6.0'
+            and APP_STAGE == 'automatic_task_verification_and_retention'
             and INTERNAL_CURRENCY_NAME_RU == 'Искры'
             and _source_contains('miniapp_example/index.html', 'Основные разделы', 'Заработать Искры', 'Сеть рекламных размещений', 'Дополнительные возможности', 'Дополнительные услуги')
             and _source_contains('app/texts.py', "'marketplace_button': '🧰 Дополнительные услуги'", "'wallet_topup_button': 'Купить Искры за ⭐'")

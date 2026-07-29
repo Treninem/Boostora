@@ -1238,6 +1238,64 @@ TEXTS['en'].update({
 })
 
 
+TEXTS['ru'].update({
+    'task_taken_auto': 'Задание взято. Нажмите «Выполнить», совершите действие и вернитесь — Boostora проверит результат сама.',
+    'task_verified_hold': 'Выполнение подтверждено. Искры начислены в состояние «На проверке» до окончания контрольного периода.',
+    'task_target_opened': 'Цель открыта. После выполнения вернитесь в Boostora — проверка запустится автоматически.',
+    'task_verify_unavailable': 'Автоматическая проверка временно недоступна. Задание сохранено; попробуйте ещё раз позже.',
+    'task_verify_manual_only': 'Для старого задания доступна ручная проверка по подтверждению.',
+    'task_join_request_not_found': 'Заявка на вступление пока не найдена.',
+    'task_message_not_found': 'Сообщение в чате пока не найдено.',
+    'task_comment_not_found': 'Комментарий пока не найден.',
+    'task_comment_too_short': 'Комментарий короче установленного условия.',
+    'task_comment_emoji_only': 'Нужен осмысленный комментарий, а не только эмодзи.',
+    'task_comment_link_blocked': 'В этом задании ссылки в комментарии запрещены.',
+    'task_comment_condition_missing': 'Комментарий не соответствует условию задания.',
+    'task_comment_duplicate': 'Такой же комментарий уже использовался.',
+    'task_reaction_not_found': 'Реакция пока не найдена.',
+    'task_reaction_removed': 'Реакция снята. Выполнение не подтверждено.',
+    'task_reaction_wrong': 'Нужная реакция не обнаружена.',
+    'task_poll_unavailable': 'Этот опрос нельзя надёжно проверить автоматически.',
+    'task_poll_vote_not_found': 'Голос в опросе пока не найден.',
+    'task_poll_vote_removed': 'Голос в опросе отменён.',
+    'task_poll_vote_wrong': 'Выбран не тот вариант опроса.',
+    'task_target_not_opened': 'Сначала откройте цель задания.',
+    'task_verification_failed': 'Выполнение пока не подтверждено. Проверьте действие и попробуйте снова.',
+    'tx_task_reward_hold_revoked': 'Награда отменена после контрольной проверки',
+    'campaign_task_type_post_view': 'Открытие публикации',
+    'campaign_task_type_post_like': 'Реакция 👍',
+    'campaign_task_type_link_click': 'Открытие ссылки',
+    'campaign_task_type_join_request': 'Заявка на вступление',
+    'campaign_task_type_chat_message': 'Сообщение в чате',
+})
+
+TEXTS['en'].update({
+    'task_taken_auto': 'Task taken. Open the target, complete the action and return; Boostora will check it automatically.',
+    'task_verified_hold': 'Completion confirmed. Sparks are pending until the retention check finishes.',
+    'task_target_opened': 'Target opened. Return to Boostora after completing the action.',
+    'task_verify_unavailable': 'Automatic verification is temporarily unavailable. The task was kept for a later retry.',
+    'task_verify_manual_only': 'This legacy task uses manual proof review.',
+    'task_join_request_not_found': 'The join request has not been found yet.',
+    'task_message_not_found': 'The chat message has not been found yet.',
+    'task_comment_not_found': 'The comment has not been found yet.',
+    'task_comment_too_short': 'The comment is shorter than required.',
+    'task_comment_emoji_only': 'A meaningful text comment is required.',
+    'task_comment_link_blocked': 'Links are not allowed in this comment task.',
+    'task_comment_condition_missing': 'The comment does not meet the task condition.',
+    'task_comment_duplicate': 'The same comment has already been used.',
+    'task_reaction_not_found': 'The reaction has not been found yet.',
+    'task_reaction_removed': 'The reaction was removed.',
+    'task_reaction_wrong': 'The required reaction was not found.',
+    'task_poll_unavailable': 'This poll cannot be verified reliably.',
+    'task_poll_vote_not_found': 'The poll vote has not been found yet.',
+    'task_poll_vote_removed': 'The poll vote was removed.',
+    'task_poll_vote_wrong': 'A different poll option was selected.',
+    'task_target_not_opened': 'Open the task target first.',
+    'task_verification_failed': 'Completion has not been confirmed yet. Check the action and retry.',
+    'tx_task_reward_hold_revoked': 'Reward revoked after retention verification',
+})
+
+
 for _lang in ('ru', 'en'):
     TEXTS.setdefault(_lang, {})
 
@@ -3535,6 +3593,19 @@ TEXTS['en'].update({
     'final_audit_action_sparks_priority_fix': 'check navigation order, section names, and user-facing currency wording.',
     'owner_release_screen': '<b>Boostora v3.5.1 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
     'version_text': '<b>{version}</b>\nBoostora core features are primary again. The provider catalogue is optional, and the internal currency is called Sparks.',
+})
+
+
+
+# Boostora v3.6.0 — automatic Telegram task verification.
+TEXTS['ru'].update({
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.6.0</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические потоки</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nАвтоматическая проверка Telegram-действий, повторный контроль наград и простой сценарий без обязательных скриншотов.',
+    'stable_contract_major_360_policy': 'v3.6.0: новые кампании используют автоматическую проверку доступных Telegram-действий; персональный просмотр не обещается; награда освобождается только после доступного контрольного подтверждения.',
+})
+TEXTS['en'].update({
+    'owner_release_screen': '<b>Boostora v3.6.0 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
+    'version_text': '<b>{version}</b>\nAutomatic Telegram action checks, reward retention verification and a no-screenshot flow for supported tasks.',
 })
 
 # Normalize legacy wording without renaming database fields or API payload keys.
