@@ -13,8 +13,6 @@ TASK_CATALOG = {
     "channel_subscribe": {"client_floor_price": 26, "performer_reward": 18, "title": "Подписка на канал", "label_key": "campaign_task_type_channel_subscribe"},
     "chat_join": {"client_floor_price": 23, "performer_reward": 16, "title": "Вступление в чат", "label_key": "campaign_task_type_chat_join"},
     "post_view": {"client_floor_price": 6, "performer_reward": 3, "title": "Открыть публикацию", "label_key": "campaign_task_type_post_view"},
-    "bot_start": {"client_floor_price": 20, "performer_reward": 14, "title": "Запуск бота", "label_key": "campaign_task_type_bot_start"},
-    "mini_app_open": {"client_floor_price": 30, "performer_reward": 22, "title": "Открытие Mini App", "label_key": "campaign_task_type_mini_app_open"},
     "post_like": {"client_floor_price": 9, "performer_reward": 6, "title": "Реакция 👍", "label_key": "campaign_task_type_post_like"},
     "post_reaction": {"client_floor_price": 8, "performer_reward": 5, "title": "Реакция на пост", "label_key": "campaign_task_type_post_reaction"},
     "story_view": {"client_floor_price": 8, "performer_reward": 5, "title": "Просмотр истории", "label_key": "campaign_task_type_story_view"},
@@ -37,6 +35,10 @@ DISCOUNT_TIERS = (
 
 CUSTOM_PRICE_PERFORMER_SHARE = 0.8
 MIN_SERVICE_FEE = 2
+
+# Эти задания удалены: без интеграции стороннего сервиса Boostora не может
+# честно подтвердить запуск чужого бота или открытие чужой Mini App.
+RETIRED_TASK_TYPES = frozenset({'bot_start', 'mini_app_open'})
 
 RECOMMENDED_PRICE_EXTRA_PERCENT = 18
 FAST_PRICE_EXTRA_PERCENT = 38
@@ -66,7 +68,7 @@ def creatable_task_types() -> tuple[str, ...]:
     return (
         "channel_subscribe", "chat_join", "join_request", "post_reaction",
         "post_like", "post_comment", "chat_message", "poll_vote",
-        "post_view", "link_click", "bot_start", "mini_app_open",
+        "post_view", "link_click",
     )
 
 

@@ -219,8 +219,6 @@ TASK_TYPE_LABEL_KEYS = {
     'channel_subscribe': 'campaign_task_type_channel_subscribe',
     'chat_join': 'campaign_task_type_chat_join',
     'post_view': 'campaign_task_type_post_view',
-    'bot_start': 'campaign_task_type_bot_start',
-    'mini_app_open': 'campaign_task_type_mini_app_open',
     'post_like': 'campaign_task_type_post_like',
     'post_reaction': 'campaign_task_type_post_reaction',
     'story_view': 'campaign_task_type_story_view',
@@ -1056,10 +1054,6 @@ def _build_campaign_input_text(user_id: int, step: str) -> str:
         target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_admin_rights')
     if task_type_code in {'post_view', 'post_like', 'post_reaction', 'post_share', 'post_comment', 'poll_vote'}:
         target_prompt += '\n' + UserService.t(user_id, 'campaign_target_require_post_link')
-    if task_type_code == 'bot_start':
-        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_bot_start')
-    if task_type_code == 'mini_app_open':
-        target_prompt += '\n\n' + UserService.t(user_id, 'campaign_target_require_miniapp_senddata')
     if task_type_code:
         target_prompt += '\n\n' + ProofGuideService.client_hint(task_type_code, language)
     prompt_map = {

@@ -19,8 +19,6 @@ AUTO_VERIFIABLE_TASK_TYPES = {
     'post_reaction',
     'post_like',
     'poll_vote',
-    'bot_start',
-    'mini_app_open',
     'post_view',
     'link_click',
 }
@@ -41,8 +39,6 @@ RETENTION_HOURS_BY_TASK = {
     'post_comment': 0,
     'chat_message': 0,
     'poll_vote': 0,
-    'bot_start': 0,
-    'mini_app_open': 0,
     'post_view': 0,
     'link_click': 0,
 }
@@ -329,14 +325,6 @@ class ActivityService:
         )
         return int(user.id)
 
-    @staticmethod
-    def record_bot_start(user_id: int, start_arg: str, bot_username: str | None) -> None:
-        ActivityService._insert_event(
-            user_id=int(user_id),
-            activity_type='bot_start',
-            target_value=(start_arg or '').strip(),
-            payload={'bot_username': (bot_username or '').lower()},
-        )
 
     @staticmethod
     def record_mini_app_open(
@@ -575,25 +563,6 @@ class ActivityService:
         return ActivityService._observed_poll_id(refs, info.message_id or 0)
 
     @staticmethod
-    def _bot_start_match(user_id: int, taken_at: str, start_param: str | None, bot_username: str | None) -> bool:
-        params: list[Any] = [user_id, taken_at]
-        query = '''
-            SELECT * FROM activity_events
-            WHERE user_id = ? AND activity_type = 'bot_start' AND created_at >= ?
-        '''
-        if start_param:
-            query += ' AND target_value = ?'
-            params.append(start_param)
-        query += ' ORDER BY id DESC LIMIT 3'
-        rows = db.fetch_all(query, tuple(params))
-        if not rows:
-            return False
-        if not bot_username:
-            return True
-        normalized = bot_username.lower()
-        return any(normalized in str(row['payload_json'] or '').lower() for row in rows)
-
-    @staticmethod
     def _mini_app_match(user_id: int, taken_at: str, hint: str | None) -> bool:
         rows = db.fetch_all(
             '''
@@ -684,15 +653,7 @@ class ActivityService:
                 return 'failed', 'task_poll_vote_wrong'
             return 'verified', 'task_auto_verified'
 
-        if task_type == 'bot_start':
-            if ActivityService._bot_start_match(user_id, taken_at, info.start_param, info.bot_username):
-                return 'verified', 'task_auto_verified'
-            return 'pending', 'task_bot_start_not_found'
 
-        if task_type == 'mini_app_open':
-            if ActivityService._mini_app_match(user_id, taken_at, info.webapp_hint):
-                return 'verified', 'task_auto_verified'
-            return 'pending', 'task_mini_app_not_found'
 
         if task_type in {'post_view', 'link_click'}:
             row = ActivityService._latest_event(

@@ -4,6 +4,7 @@ import sqlite3
 from app import db
 from app.services.runtime_settings import RuntimeSettingsService
 from app.services.activity import ActivityService
+from app.services.economy import RETIRED_TASK_TYPES
 from app.services.wallets import WalletService
 
 
@@ -30,6 +31,8 @@ class CampaignService:
         retention_hours: int | None = None,
         is_funded: bool = False,
     ) -> int:
+        if str(task_type or '') in RETIRED_TASK_TYPES:
+            raise ValueError('task type has been retired')
         budget_total = int(reward_budget_total or reward_amount * total_quantity) + int(service_fee_total or 0)
         target_info = ActivityService.parse_target(target_url)
         rules = ActivityService.default_verification_rules(task_type)

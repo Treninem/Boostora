@@ -698,6 +698,105 @@ def _ensure_column(connection: sqlite3.Connection, table_name: str, column_name:
 
 
 
+
+def _retire_unverifiable_launch_campaigns(connection: sqlite3.Connection) -> None:
+    """Archive removed launch/open campaigns and return all unspent Sparks."""
+    migration_key = 'migration_v361_retire_launch_tasks'
+    if connection.execute('SELECT 1 FROM app_meta WHERE key = ?', (migration_key,)).fetchone():
+        return
+
+    rows = connection.execute(
+        """
+        SELECT * FROM campaigns
+        WHERE task_type IN ('bot_start', 'mini_app_open')
+          AND status IN ('draft', 'active', 'paused')
+        """
+    ).fetchall()
+    for campaign in rows:
+        campaign_id = int(campaign['id'])
+        owner_user_id = int(campaign['owner_user_id'])
+        spent = max(0, int(campaign['budget_spent'] or 0))
+        total = max(0, int(campaign['budget_total'] or 0))
+        refund_total = max(total - spent, 0) if int(campaign['is_funded'] or 0) == 1 else 0
+
+        connection.execute(
+            """
+            UPDATE task_submissions
+            SET status = 'rejected', reject_reason = 'task_type_removed',
+                verification_state = 'failed', verification_note = 'task_type_removed',
+                reviewed_at = COALESCE(reviewed_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+            WHERE campaign_id = ? AND status IN ('taken', 'submitted', 'manual_review')
+            """,
+            (campaign_id,),
+        )
+
+        if refund_total > 0:
+            source = connection.execute(
+                """
+                SELECT
+                    COALESCE(SUM(CASE WHEN entry_type IN ('campaign_funding_bonus', 'campaign_boost_bonus')
+                                      AND direction = 'debit' THEN amount ELSE 0 END), 0) AS bonus_paid,
+                    COALESCE(SUM(CASE WHEN entry_type = 'campaign_retired_refund_bonus'
+                                      AND direction = 'credit' THEN amount ELSE 0 END), 0) AS bonus_refunded
+                FROM transactions WHERE related_campaign_id = ?
+                """,
+                (campaign_id,),
+            ).fetchone()
+            bonus_capacity = max(int(source['bonus_paid'] or 0) - int(source['bonus_refunded'] or 0), 0)
+            bonus_refund = min(refund_total, bonus_capacity)
+            internal_refund = refund_total - bonus_refund
+            connection.execute('INSERT INTO wallets (user_id) VALUES (?) ON CONFLICT(user_id) DO NOTHING', (owner_user_id,))
+            connection.execute(
+                """
+                UPDATE wallets
+                SET bonus_balance = bonus_balance + ?, internal_balance = internal_balance + ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ?
+                """,
+                (bonus_refund, internal_refund, owner_user_id),
+            )
+            if bonus_refund:
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        user_id, wallet_user_id, amount, currency_code, direction, entry_type,
+                        status, related_campaign_id, note
+                    ) VALUES (?, ?, ?, 'BST', 'credit', 'campaign_retired_refund_bonus',
+                              'completed', ?, 'Refund after removal of unverifiable task type')
+                    """,
+                    (owner_user_id, owner_user_id, bonus_refund, campaign_id),
+                )
+            if internal_refund:
+                connection.execute(
+                    """
+                    INSERT INTO transactions (
+                        user_id, wallet_user_id, amount, currency_code, direction, entry_type,
+                        status, related_campaign_id, note
+                    ) VALUES (?, ?, ?, 'BST', 'credit', 'campaign_retired_refund',
+                              'completed', ?, 'Refund after removal of unverifiable task type')
+                    """,
+                    (owner_user_id, owner_user_id, internal_refund, campaign_id),
+                )
+
+        connection.execute(
+            """
+            UPDATE campaigns
+            SET status = 'archived', auto_verify_enabled = 0, budget_reserved = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (campaign_id,),
+        )
+
+    connection.execute(
+        """
+        INSERT INTO app_meta (key, value, updated_at)
+        VALUES (?, 'done', CURRENT_TIMESTAMP)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP
+        """,
+        (migration_key,),
+    )
+
 def _run_migrations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, 'users', 'status', "TEXT NOT NULL DEFAULT 'active'")
     _ensure_column(connection, 'users', 'risk_score', 'INTEGER NOT NULL DEFAULT 0')
@@ -789,6 +888,8 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
         _ensure_column(connection, 'engagement_obligations', 'extended_at', 'TEXT')
         _ensure_column(connection, 'engagement_obligations', 'extended_by_user_id', 'INTEGER')
         _ensure_column(connection, 'engagement_obligations', 'last_manual_warning_at', 'TEXT')
+
+    _retire_unverifiable_launch_campaigns(connection)
 
 
 

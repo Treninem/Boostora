@@ -3,8 +3,6 @@ from __future__ import annotations
 VERIFICATION_BY_TASK = {
     'channel_subscribe': ('auto_strict', 'Авто: проверка подписки Telegram', 'Auto: Telegram membership check'),
     'chat_join': ('auto_strict', 'Авто: проверка вступления Telegram', 'Auto: Telegram membership check'),
-    'bot_start': ('semi_auto', 'Полуавто: нужен старт по deep-link', 'Semi-auto: requires deep-link start'),
-    'mini_app_open': ('semi_auto', 'Полуавто: нужен подписанный сигнал Mini App', 'Semi-auto: signed Mini App signal required'),
     'post_reaction': ('manual_plus', 'Ручная/событийная: нужны права и события', 'Manual/event-based: requires rights and updates'),
     'poll_vote': ('manual_plus', 'Ручная/событийная: нужны права и события', 'Manual/event-based: requires rights and updates'),
     'post_comment': ('manual_plus', 'Ручная: нужен контроль комментариев', 'Manual: comment moderation needed'),

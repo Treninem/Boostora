@@ -191,14 +191,6 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         referred_by = referrer_id if existing_user is None and referrer_exists else None
         UserService.ensure_user(message.from_user, referred_by_user_id=referred_by)
         start_arg = ((message.text or '').split(maxsplit=1)[1].strip() if len((message.text or '').split(maxsplit=1)) > 1 else '')
-        bot_username = None
-        try:
-            me = bot.get_me()
-            bot_username = f"@{me.username}" if getattr(me, 'username', None) else None
-        except Exception:
-            if settings.support_username.startswith('@'):
-                bot_username = settings.support_username
-        ActivityService.record_bot_start(message.from_user.id, start_arg, bot_username)
         if existing_user is None and referrer_exists and referrer_id is not None:
             ReferralService.try_bind_referral(referrer_id, message.from_user.id)
         InputSessionService.clear_session(message.from_user.id)

@@ -26,8 +26,6 @@ TASK_TYPE_TEXT_KEYS = {
     'channel_subscribe': 'campaign_task_type_channel_subscribe',
     'chat_join': 'campaign_task_type_chat_join',
     'post_view': 'campaign_task_type_post_view',
-    'bot_start': 'campaign_task_type_bot_start',
-    'mini_app_open': 'campaign_task_type_mini_app_open',
     'post_like': 'campaign_task_type_post_like',
     'post_reaction': 'campaign_task_type_post_reaction',
     'story_view': 'campaign_task_type_story_view',

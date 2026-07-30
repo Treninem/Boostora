@@ -206,24 +206,6 @@ class ProofGuideService:
             quality_warning={'ru': 'Если опрос не виден боту, проверка может уйти вручную.', 'en': 'If the bot cannot see the poll, review may be manual.'},
             auto_check_hint={'ru': 'Опросы могут проверяться автоматически по Telegram-событию ответа.', 'en': 'Polls can be auto-verified by Telegram poll answer events.'},
         ),
-        'bot_start': ProofGuide(
-            task_type='bot_start',
-            label={'ru': 'Старт бота', 'en': 'Bot start'},
-            client_hint={'ru': 'Укажи ссылку вида t.me/BotName?start=... чтобы бот понимал целевое действие.', 'en': 'Provide a link like t.me/BotName?start=... so the target action is clear.'},
-            performer_steps={'ru': ('Открой бота по ссылке.', 'Нажми Start/Запустить.', 'Не удаляй диалог до проверки.'), 'en': ('Open the bot link.', 'Press Start.', 'Do not delete the chat before verification.')},
-            proof_template={'ru': 'Запустил бота по ссылке: {target_url}. Мой @username/ID: _____.', 'en': 'Started bot via: {target_url}. My @username/ID: _____.'},
-            quality_warning={'ru': 'Для точной проверки важен start-параметр в ссылке.', 'en': 'A start parameter helps precise verification.'},
-            auto_check_hint={'ru': 'Старт бота может проверяться автоматически, если событие зарегистрировано.', 'en': 'Bot starts can be auto-verified when the event is recorded.'},
-        ),
-        'mini_app_open': ProofGuide(
-            task_type='mini_app_open',
-            label={'ru': 'Открытие Mini App', 'en': 'Mini App open'},
-            client_hint={'ru': 'Укажи ссылку на Mini App с startapp-подсказкой, если она есть.', 'en': 'Provide a Mini App link with a startapp hint if available.'},
-            performer_steps={'ru': ('Открой Mini App.', 'Дождись загрузки экрана.', 'Выполни действие внутри приложения, если оно указано.'), 'en': ('Open the Mini App.', 'Wait until it loads.', 'Complete the in-app action if requested.')},
-            proof_template={'ru': 'Открыл Mini App: {target_url}. Мой @username/ID: _____.', 'en': 'Opened Mini App: {target_url}. My @username/ID: _____.'},
-            quality_warning={'ru': 'Если приложение не отправляет событие, проверка может быть ручной.', 'en': 'If the app does not send an event, review may be manual.'},
-            auto_check_hint={'ru': 'Mini App может проверяться автоматически через подписанное серверное событие.', 'en': 'Mini App can be auto-verified through a signed server-side event.'},
-        ),
     }
 
     @staticmethod

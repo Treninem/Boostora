@@ -221,14 +221,7 @@ class ClientCampaignService:
             if status_key:
                 result_key = status_key
 
-        if task_type == 'bot_start':
-            if not info.bot_username or not info.start_param:
-                return False, 'campaign_target_bot_start_invalid', MODE_TARGET
 
-        if task_type == 'mini_app_open':
-            if not info.bot_username or not info.webapp_hint:
-                return False, 'campaign_target_mini_app_invalid', MODE_TARGET
-            result_key = 'campaign_target_saved_miniapp'
 
         draft['target_url'] = target
         preset_quantity = draft.get('preset_quantity')

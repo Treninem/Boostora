@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from app import db
 from app.config import settings
 from app.services.activity import ActivityService, AUTO_VERIFIABLE_TASK_TYPES
+from app.services.economy import RETIRED_TASK_TYPES
 from app.services.referrals import ReferralService
 from app.services.risk import RiskService
 from app.services.trust import TrustService
@@ -165,6 +166,7 @@ class PerformerService:
             WHERE c.status = 'active' AND c.is_funded = 1
               AND c.owner_user_id != ?
               AND c.total_quantity > c.completed_quantity
+              AND c.task_type NOT IN ('bot_start', 'mini_app_open')
               AND NOT EXISTS (
                     SELECT 1 FROM task_submissions s
                     WHERE s.campaign_id = c.id AND s.performer_user_id = ?
@@ -214,6 +216,8 @@ class PerformerService:
             if not campaign:
                 return False, 'task_not_found', None
             if str(campaign['status']) != 'active' or int(campaign['is_funded'] or 0) != 1:
+                return False, 'task_not_available', None
+            if str(campaign['task_type']) in RETIRED_TASK_TYPES:
                 return False, 'task_not_available', None
             if int(campaign['owner_user_id']) == user_id:
                 return False, 'task_not_available', None
