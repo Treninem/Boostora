@@ -1,34 +1,31 @@
-# PATCH Boostora v3.6.1
+# PATCH Boostora v3.6.2
 
-Быстрое обновление поверх **Boostora v3.6.0**.
+Быстрое обновление поверх **Boostora v3.6.1**.
 
 ## Что меняется
 
-- удаляются задания «Запуск бота» и «Открытие Mini App»;
-- удаляются их кнопки, подсказки, демо-кампании и проверка;
-- старые кампании архивируются с возвратом неизрасходованных Искр;
-- Mini App самой Boostora остаётся без изменений.
+- защищается чат `@Boostorachat`;
+- сообщения пользователей без нового личного `/start` мгновенно удаляются;
+- пользователь получает упоминание и кнопку запуска Boostora;
+- после `/start` доступ открывается автоматически;
+- правило применяется к новым и старым участникам;
+- добавляется проверка прав бота при запуске.
 
 ## Файлы
 
+- .env.example
+- BOTHOST_START.md
 - HOTFIX_NOTES.md
 - README.md
-- RELEASE_REPORT_v3.6.1.md
+- RELEASE_REPORT_v3.6.2.md
+- app/bot.py
+- app/config.py
 - app/db.py
 - app/handlers/start.py
-- app/keyboards/inline.py
-- app/router.py
-- app/services/activity.py
-- app/services/campaigns.py
-- app/services/client_campaigns.py
-- app/services/demo_campaigns.py
-- app/services/economy.py
-- app/services/performer.py
-- app/services/proof_guides.py
-- app/services/quality.py
+- app/services/chat_start_gate.py
+- app/services/final_audit.py
 - app/texts.py
 - app/version.py
-- miniapp_example/index.html
 - PATCH_INSTALL.md
 - PATCH_MANIFEST.md
 - DELETE_FILES.txt

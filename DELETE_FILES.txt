@@ -1,1 +1,0 @@
-RELEASE_REPORT_v3.6.0.md

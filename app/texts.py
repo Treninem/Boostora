@@ -3567,14 +3567,14 @@ TEXTS['en'].update({
 
 
 
-# Boostora v3.6.0 — automatic Telegram task verification.
+# Boostora v3.6.2 — automatic verification and Boostora Chat start gate.
 TEXTS['ru'].update({
-    'owner_release_screen': '<b>Релиз-центр Boostora v3.6.0</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические потоки</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
+    'owner_release_screen': '<b>Релиз-центр Boostora v3.6.2</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · блокеры: <b>{stable_blockers}</b> · предупреждения: <b>{stable_warnings}</b>\nСостояние кода: <b>{state}</b> · готовность: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Критические потоки</b>\n{flows}\n\n<b>Финальный чек-лист</b>\n{checklist}\n\n<b>Правила релиза</b>\n{stable_contract}',
     'version_text': '<b>{version}</b>\nАвтоматическая проверка Telegram-действий, повторный контроль наград и простой сценарий без обязательных скриншотов.',
     'stable_contract_major_360_policy': 'v3.6.0: новые кампании используют автоматическую проверку доступных Telegram-действий; персональный просмотр не обещается; награда освобождается только после доступного контрольного подтверждения.',
 })
 TEXTS['en'].update({
-    'owner_release_screen': '<b>Boostora v3.6.0 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
+    'owner_release_screen': '<b>Boostora v3.6.2 release center</b>\n\nStable gate: <b>{stable_state}</b> · <b>{stable_score}/100</b> · blockers: <b>{stable_blockers}</b> · warnings: <b>{stable_warnings}</b>\nCode state: <b>{state}</b> · readiness: <b>{score}/100</b>\nLaunch: <b>{launch_state}</b> · live: <b>{live_score}/100</b>\nRC1 gate: <b>{rc1_state}</b> · <b>{rc1_score}/100</b>\n\n<b>Stable gate</b>\n{stable_gate}\n\n<b>Critical flows</b>\n{flows}\n\n<b>Final checklist</b>\n{checklist}\n\n<b>Release rules</b>\n{stable_contract}',
     'version_text': '<b>{version}</b>\nAutomatic Telegram action checks, reward retention verification and a no-screenshot flow for supported tasks.',
 })
 

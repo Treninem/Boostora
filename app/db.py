@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
     status TEXT NOT NULL DEFAULT 'active',
     risk_score INTEGER NOT NULL DEFAULT 0,
     referred_by_user_id INTEGER,
+    chat_gate_started_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (referred_by_user_id) REFERENCES users(user_id)
@@ -213,6 +214,14 @@ CREATE TABLE IF NOT EXISTS required_chats (
     join_link TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS chat_start_gate_notices (
+    chat_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    warning_message_id INTEGER NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (chat_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS app_meta (
@@ -623,6 +632,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_logs_target ON admin_logs(target_user_id, c
 CREATE INDEX IF NOT EXISTS idx_risk_events_user_created ON risk_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_ui_sessions_chat_message ON ui_sessions(chat_id, message_id);
 CREATE INDEX IF NOT EXISTS idx_required_chats_ref ON required_chats(chat_ref);
+CREATE INDEX IF NOT EXISTS idx_chat_start_gate_notices_user ON chat_start_gate_notices(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_redemptions_user_status ON redemptions(user_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_observed_messages_chat_message ON observed_messages(chat_ref, message_id);
 CREATE INDEX IF NOT EXISTS idx_activity_events_user_type_created ON activity_events(user_id, activity_type, created_at DESC);
@@ -801,6 +811,7 @@ def _run_migrations(connection: sqlite3.Connection) -> None:
     _ensure_column(connection, 'users', 'status', "TEXT NOT NULL DEFAULT 'active'")
     _ensure_column(connection, 'users', 'risk_score', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'users', 'referred_by_user_id', 'INTEGER')
+    _ensure_column(connection, 'users', 'chat_gate_started_at', 'TEXT')
     _ensure_column(connection, 'campaigns', 'unit_price', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'campaigns', 'reward_budget_total', 'INTEGER NOT NULL DEFAULT 0')
     _ensure_column(connection, 'campaigns', 'service_fee_total', 'INTEGER NOT NULL DEFAULT 0')

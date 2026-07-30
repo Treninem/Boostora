@@ -299,6 +299,31 @@ def _remove_webhook_once(bot: telebot.TeleBot) -> None:
         bot.remove_webhook()
 
 
+def _validate_chat_start_gate(bot: telebot.TeleBot) -> None:
+    if not settings.chat_start_gate_enabled:
+        LOGGER.info('Boostora Chat start gate is disabled')
+        return
+    try:
+        chat = bot.get_chat(settings.chat_start_gate_chat_ref)
+        me = bot.get_me()
+        member = bot.get_chat_member(int(chat.id), int(me.id))
+        status = str(getattr(member, 'status', '') or '')
+        can_delete = status == 'creator' or bool(getattr(member, 'can_delete_messages', False))
+        if status not in {'administrator', 'creator'} or not can_delete:
+            LOGGER.error(
+                'Boostora Chat start gate is not ready for %s: grant the bot administrator rights with message deletion permission',
+                settings.chat_start_gate_chat_ref,
+            )
+            return
+        LOGGER.info('Boostora Chat start gate is ready for %s', settings.chat_start_gate_chat_ref)
+    except Exception as exc:
+        LOGGER.warning(
+            'Could not verify Boostora Chat start gate permissions for %s: %s',
+            settings.chat_start_gate_chat_ref,
+            _short_error(exc),
+        )
+
+
 def _prepare_bot(bot: telebot.TeleBot, stop_event: threading.Event | None = None) -> None:
     """Prepare polling without failing the whole bot on temporary Telegram timeouts."""
     delay = POLLING_BACKOFF_START_SECONDS
@@ -566,6 +591,7 @@ def run() -> None:
         _configure_telegram_menu(bot, shutdown_event)
         if shutdown_event.is_set():
             return
+        _validate_chat_start_gate(bot)
         promo_thread = _start_promo_worker(bot, shutdown_event)
         LOGGER.info('%s started with update guard', APP_VERSION)
         _poll_forever(bot, shutdown_event)

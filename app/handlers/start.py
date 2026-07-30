@@ -33,6 +33,7 @@ from app.router import (
 from app.services.admin import AdminService
 from app.services.ad_broadcasts import AdBroadcastService, MODE_CONFIRM as BROADCAST_MODE_CONFIRM, MODE_LINK as BROADCAST_MODE_LINK, MODE_TEXT as BROADCAST_MODE_TEXT
 from app.services.client_campaigns import ClientCampaignService, MODE_PRICE, MODE_QUANTITY, MODE_REWARD, MODE_TARGET
+from app.services.chat_start_gate import ChatStartGateService
 from app.services.community_rules import CommunityRulesService
 from app.services.legal_docs import LegalDocsService
 from app.services.platform_agreement import PlatformAgreementService
@@ -55,6 +56,12 @@ _BOTTOM_KEYBOARD_SENT_AT: dict[int, float] = {}
 
 
 WEBAPP_START_PREFIX = 'wa_'
+
+CHAT_START_GATE_CONTENT_TYPES = [
+    'text', 'audio', 'document', 'animation', 'game', 'photo', 'sticker',
+    'video', 'video_note', 'voice', 'contact', 'location', 'venue', 'poll',
+    'dice', 'invoice', 'story', 'paid_media', 'user_shared', 'chat_shared',
+]
 
 
 def _webapp_start_screen(start_arg: str) -> str | None:
@@ -183,13 +190,24 @@ def _send_direct_stars_invoice(bot: telebot.TeleBot, user_id: int, *, title: str
 
 
 def register_start_handlers(bot: telebot.TeleBot) -> None:
+    @bot.message_handler(
+        func=ChatStartGateService.should_block_message,
+        content_types=CHAT_START_GATE_CONTENT_TYPES,
+    )
+    def handle_chat_start_gate(message: Message) -> None:
+        ChatStartGateService.block_message(bot, message)
+
     @bot.message_handler(commands=['start'])
     def handle_start(message: Message) -> None:
+        if message.chat.type != 'private':
+            return
         existing_user = UserService.get_user(message.from_user.id)
         referrer_id = _extract_referrer_id(message)
         referrer_exists = bool(referrer_id and referrer_id != message.from_user.id and UserService.get_user(referrer_id))
         referred_by = referrer_id if existing_user is None and referrer_exists else None
         UserService.ensure_user(message.from_user, referred_by_user_id=referred_by)
+        chat_access_granted = ChatStartGateService.mark_started(message.from_user.id)
+        ChatStartGateService.clear_notices_for_user(bot, message.from_user.id)
         start_arg = ((message.text or '').split(maxsplit=1)[1].strip() if len((message.text or '').split(maxsplit=1)) > 1 else '')
         if existing_user is None and referrer_exists and referrer_id is not None:
             ReferralService.try_bind_referral(referrer_id, message.from_user.id)
@@ -197,6 +215,11 @@ def register_start_handlers(bot: telebot.TeleBot) -> None:
         accepted = PlatformAgreementService.is_accepted(message.from_user.id)
         if accepted:
             _ensure_bottom_keyboard(bot, message.chat.id, message.from_user.id, force=True)
+        if chat_access_granted:
+            try:
+                ChatStartGateService.send_access_granted(bot, message.chat.id)
+            except Exception:
+                pass
         requested_screen = _webapp_start_screen(start_arg)
         if requested_screen:
             gate_screen = resolve_next_screen(

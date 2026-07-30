@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.6.1'
-APP_STAGE = 'retire_unverifiable_launch_tasks'
+APP_VERSION = 'Boostora v3.6.2'
+APP_STAGE = 'boostorachat_start_gate'

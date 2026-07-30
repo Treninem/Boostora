@@ -29,6 +29,10 @@ class Settings:
     enable_xtr_payments: bool
     required_chat_id: str
     required_chat_invite_link: str
+    chat_start_gate_enabled: bool
+    chat_start_gate_chat_ref: str
+    chat_start_gate_chat_link: str
+    chat_start_gate_start_parameter: str
     run_command: str
     promo_interval_hours: int
     smart_bottom_menu: str
@@ -217,6 +221,10 @@ settings = Settings(
     enable_xtr_payments=_parse_bool(os.getenv('ENABLE_XTR_PAYMENTS', '1'), default=True),
     required_chat_id=_normalize_default_required_chat_ref(os.getenv('REQUIRED_CHAT_ID', DEFAULT_PUBLIC_REQUIRED_CHAT_REF)),
     required_chat_invite_link=_normalize_default_required_chat_link(os.getenv('REQUIRED_CHAT_INVITE_LINK', DEFAULT_PUBLIC_REQUIRED_CHAT_LINK)),
+    chat_start_gate_enabled=_parse_bool(os.getenv('CHAT_START_GATE_ENABLED', '1'), default=True),
+    chat_start_gate_chat_ref=_normalize_default_required_chat_ref(os.getenv('CHAT_START_GATE_CHAT_REF', DEFAULT_PUBLIC_REQUIRED_CHAT_REF)),
+    chat_start_gate_chat_link=_normalize_default_required_chat_link(os.getenv('CHAT_START_GATE_CHAT_LINK', DEFAULT_PUBLIC_REQUIRED_CHAT_LINK)),
+    chat_start_gate_start_parameter=os.getenv('CHAT_START_GATE_START_PARAMETER', 'chat_access').strip() or 'chat_access',
     run_command=os.getenv('RUN_COMMAND', 'python3 main.py').strip() or 'python3 main.py',
     promo_interval_hours=_parse_int_env('PROMO_INTERVAL_HOURS', 18, minimum=1, maximum=720),
     smart_bottom_menu=(os.getenv('SMART_BOTTOM_MENU', 'compact').strip().lower() or 'compact'),
