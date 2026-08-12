@@ -33,6 +33,7 @@ class Settings:
     chat_start_gate_chat_ref: str
     chat_start_gate_chat_link: str
     chat_start_gate_start_parameter: str
+    chat_start_gate_notice_cooldown_seconds: int
     run_command: str
     promo_interval_hours: int
     smart_bottom_menu: str
@@ -225,6 +226,7 @@ settings = Settings(
     chat_start_gate_chat_ref=_normalize_default_required_chat_ref(os.getenv('CHAT_START_GATE_CHAT_REF', DEFAULT_PUBLIC_REQUIRED_CHAT_REF)),
     chat_start_gate_chat_link=_normalize_default_required_chat_link(os.getenv('CHAT_START_GATE_CHAT_LINK', DEFAULT_PUBLIC_REQUIRED_CHAT_LINK)),
     chat_start_gate_start_parameter=os.getenv('CHAT_START_GATE_START_PARAMETER', 'chat_access').strip() or 'chat_access',
+    chat_start_gate_notice_cooldown_seconds=_parse_int_env('CHAT_START_GATE_NOTICE_COOLDOWN_SECONDS', 15, minimum=1, maximum=300),
     run_command=os.getenv('RUN_COMMAND', 'python3 main.py').strip() or 'python3 main.py',
     promo_interval_hours=_parse_int_env('PROMO_INTERVAL_HOURS', 18, minimum=1, maximum=720),
     smart_bottom_menu=(os.getenv('SMART_BOTTOM_MENU', 'compact').strip().lower() or 'compact'),

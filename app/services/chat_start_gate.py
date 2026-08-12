@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import html
 import logging
+import threading
+from datetime import datetime, timezone
 from urllib.parse import quote
 
 from telebot import types
@@ -11,6 +13,10 @@ from app.config import settings
 
 
 LOGGER = logging.getLogger(__name__)
+
+_NOTICE_LOCKS = tuple(threading.Lock() for _ in range(64))
+_BOT_USERNAME_CACHE: dict[int, str] = {}
+_BOT_USERNAME_CACHE_LOCK = threading.Lock()
 
 
 class ChatStartGateService:
@@ -78,13 +84,21 @@ class ChatStartGateService:
 
     @staticmethod
     def _bot_username(bot) -> str:  # noqa: ANN001
+        cache_key = id(bot)
+        with _BOT_USERNAME_CACHE_LOCK:
+            cached = _BOT_USERNAME_CACHE.get(cache_key)
+        if cached:
+            return cached
+        username = ''
         try:
             username = str(getattr(bot.get_me(), 'username', '') or '').strip().lstrip('@')
-            if username:
-                return username
         except Exception:
-            pass
-        return str(settings.support_username or 'BoostoraBot').strip().lstrip('@') or 'BoostoraBot'
+            username = ''
+        if not username:
+            username = str(settings.support_username or 'BoostoraBot').strip().lstrip('@') or 'BoostoraBot'
+        with _BOT_USERNAME_CACHE_LOCK:
+            _BOT_USERNAME_CACHE[cache_key] = username
+        return username
 
     @staticmethod
     def start_link(bot) -> str:  # noqa: ANN001
@@ -109,6 +123,42 @@ class ChatStartGateService:
         username = str(getattr(user, 'username', '') or '').strip().lstrip('@')
         label = first_name or (f'@{username}' if username else 'Пользователь')
         return f'<a href="tg://user?id={user_id}">{html.escape(label)}</a>'
+
+    @staticmethod
+    def _notice_lock(chat_id: int, user_id: int) -> threading.Lock:
+        return _NOTICE_LOCKS[hash((int(chat_id), int(user_id))) % len(_NOTICE_LOCKS)]
+
+    @staticmethod
+    def _notice_is_recent(chat_id: int, user_id: int) -> bool:
+        row = db.fetch_one(
+            'SELECT updated_at FROM chat_start_gate_notices WHERE chat_id=? AND user_id=?',
+            (int(chat_id), int(user_id)),
+        )
+        if not row or not row['updated_at']:
+            return False
+        try:
+            updated = datetime.fromisoformat(str(row['updated_at']).replace('Z', '+00:00'))
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=timezone.utc)
+            age = (datetime.now(timezone.utc) - updated).total_seconds()
+            return 0 <= age < int(settings.chat_start_gate_notice_cooldown_seconds)
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
+    def _delete_blocked_message(bot, chat_id: int, message_id: int, user_id: int) -> bool:  # noqa: ANN001
+        try:
+            bot.delete_message(chat_id=int(chat_id), message_id=int(message_id))
+            return True
+        except Exception as exc:
+            LOGGER.error(
+                'Chat start gate could not delete blocked message %s in chat %s from user %s: %s',
+                message_id,
+                chat_id,
+                user_id,
+                exc,
+            )
+            return False
 
     @staticmethod
     def _delete_previous_notice(bot, chat_id: int, user_id: int) -> None:  # noqa: ANN001
@@ -139,36 +189,38 @@ class ChatStartGateService:
     def block_message(bot, message) -> None:  # noqa: ANN001
         chat_id = int(message.chat.id)
         user_id = int(message.from_user.id)
-
-        try:
-            bot.delete_message(chat_id=chat_id, message_id=int(message.message_id))
-        except Exception as exc:
-            LOGGER.warning(
-                'Could not delete a message blocked by the chat start gate in chat %s from user %s: %s',
-                chat_id,
-                user_id,
-                exc,
-            )
-
-        ChatStartGateService._delete_previous_notice(bot, chat_id, user_id)
-        markup = types.InlineKeyboardMarkup(row_width=1)
-        markup.add(types.InlineKeyboardButton('🚀 Запустить Boostora', url=ChatStartGateService.start_link(bot)))
-        text = (
-            f'🔒 {ChatStartGateService._mention(message.from_user)}, ваше сообщение удалено.\n\n'
-            'Чтобы писать в этом чате, сначала запустите бота Boostora. '
-            'После нажатия Start доступ откроется автоматически.'
+        deleted = ChatStartGateService._delete_blocked_message(
+            bot,
+            chat_id,
+            int(message.message_id),
+            user_id,
         )
-        try:
-            sent = bot.send_message(
-                chat_id,
-                text,
-                parse_mode='HTML',
-                reply_markup=markup,
-                disable_web_page_preview=True,
+
+        # TeleBot may process updates concurrently. Serialize only the notice
+        # section, while every blocked user message is still deleted first.
+        with ChatStartGateService._notice_lock(chat_id, user_id):
+            if ChatStartGateService._notice_is_recent(chat_id, user_id):
+                return
+            ChatStartGateService._delete_previous_notice(bot, chat_id, user_id)
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(types.InlineKeyboardButton('🚀 Запустить Boostora', url=ChatStartGateService.start_link(bot)))
+            status_line = 'ваше сообщение удалено.' if deleted else 'доступ к сообщениям пока закрыт.'
+            text = (
+                f'🔒 {ChatStartGateService._mention(message.from_user)}, {status_line}\n\n'
+                'Чтобы писать в этом чате, сначала запустите бота Boostora. '
+                'После нажатия Start доступ откроется автоматически.'
             )
-            ChatStartGateService._save_notice(chat_id, user_id, int(sent.message_id))
-        except Exception as exc:
-            LOGGER.warning('Could not send chat start gate warning in chat %s: %s', chat_id, exc)
+            try:
+                sent = bot.send_message(
+                    chat_id,
+                    text,
+                    parse_mode='HTML',
+                    reply_markup=markup,
+                    disable_web_page_preview=True,
+                )
+                ChatStartGateService._save_notice(chat_id, user_id, int(sent.message_id))
+            except Exception as exc:
+                LOGGER.warning('Could not send chat start gate warning in chat %s: %s', chat_id, exc)
 
     @staticmethod
     def clear_notices_for_user(bot, user_id: int) -> None:  # noqa: ANN001

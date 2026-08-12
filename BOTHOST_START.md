@@ -1,8 +1,8 @@
-# Запуск Boostora v3.6.2 на Bothost
+# Запуск Boostora v3.6.3 на Bothost
 
 ## 1. Архив
 
-Для нового деплоя используйте `Boostora_v3.6.2_RUNTIME.zip`. Распакуйте его в корень репозитория.
+Для нового деплоя используйте `Boostora_v3.6.3_RUNTIME.zip`. Распакуйте его в корень репозитория.
 
 ## 2. Команда запуска
 
@@ -29,6 +29,7 @@ CHAT_START_GATE_ENABLED=1
 CHAT_START_GATE_CHAT_REF=@Boostorachat
 CHAT_START_GATE_CHAT_LINK=https://t.me/Boostorachat
 CHAT_START_GATE_START_PARAMETER=chat_access
+CHAT_START_GATE_NOTICE_COOLDOWN_SECONDS=15
 ```
 
 ## 4. Права в Boostora Chat
@@ -41,7 +42,7 @@ CHAT_START_GATE_START_PARAMETER=chat_access
 Boostora Chat start gate is ready for @Boostorachat
 ```
 
-После обновления даже участники, которые давно состоят в чате или раньше пользовались ботом, должны один раз нажать Start заново.
+Участники, которые ещё не подтверждали запуск после включения защиты чата, должны один раз нажать Start. При обновлении v3.6.2 → v3.6.3 уже выданный доступ сохраняется.
 
 Для необязательного раздела дополнительных услуг:
 
