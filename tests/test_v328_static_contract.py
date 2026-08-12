@@ -9,7 +9,7 @@ VERSION = (ROOT / 'app' / 'version.py').read_text(encoding='utf-8')
 
 
 def test_current_static_contract() -> None:
-    assert "Boostora v3.6.3" in VERSION
+    assert "Boostora v3.6.4" in VERSION
     assert "fetch('/api/miniapp/query'" in HTML
     assert "fetch('/api/miniapp/action'" not in HTML
     assert "sendData(" not in HTML

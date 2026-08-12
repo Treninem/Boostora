@@ -76,7 +76,7 @@ bot_user=SimpleNamespace(id=200,is_bot=True,first_name='Bot',username='helper')
 bot_message=SimpleNamespace(chat=chat,from_user=bot_user,message_id=99,content_type='text')
 assert not ChatStartGateService.should_block_message(bot_message)
 other_chat=SimpleNamespace(id=-100999,username='AnotherChat',type='supergroup')
-assert not ChatStartGateService.is_protected_chat(other_chat)
+assert ChatStartGateService.is_protected_chat(other_chat)
 print('V362_CHAT_START_GATE_OK')
 '''
     result = subprocess.run([sys.executable, '-c', script, str(ROOT)], cwd=ROOT, text=True, capture_output=True, timeout=60)
@@ -95,5 +95,5 @@ def test_v362_handler_priority_and_configuration() -> None:
     assert "message.chat.type != 'private'" in start
     assert 'CHAT_START_GATE_ENABLED' in config and 'CHAT_START_GATE_CHAT_REF' in config
     assert 'CHAT_START_GATE_ENABLED=1' in env and 'CHAT_START_GATE_CHAT_REF=@Boostorachat' in env
-    assert "APP_VERSION = 'Boostora v3.6.3'" in version
+    assert "APP_VERSION = 'Boostora v3.6.4'" in version
     assert "APP_STAGE = 'boostorachat_start_gate'" in version

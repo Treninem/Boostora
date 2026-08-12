@@ -20,7 +20,7 @@ _BOT_USERNAME_CACHE_LOCK = threading.Lock()
 
 
 class ChatStartGateService:
-    """Require a private /start before a user can write in the protected chat."""
+    """Require one private /start before a user can write in protected Telegram groups."""
 
     @staticmethod
     def _normalize_chat_ref(value: str | int | None) -> str:
@@ -39,16 +39,8 @@ class ChatStartGateService:
     def is_protected_chat(chat) -> bool:  # noqa: ANN001
         if not settings.chat_start_gate_enabled or chat is None:
             return False
-        configured = ChatStartGateService._normalize_chat_ref(settings.chat_start_gate_chat_ref)
-        if not configured:
-            return False
-        if configured.lstrip('-').isdigit():
-            try:
-                return int(configured) == int(getattr(chat, 'id', 0) or 0)
-            except (TypeError, ValueError):
-                return False
-        username = str(getattr(chat, 'username', '') or '').strip().lstrip('@').lower()
-        return bool(username and configured == f'@{username}')
+        chat_type = str(getattr(chat, 'type', '') or '').strip().lower()
+        return chat_type in {'group', 'supergroup'}
 
     @staticmethod
     def has_started(user_id: int) -> bool:
@@ -207,7 +199,7 @@ class ChatStartGateService:
             status_line = 'ваше сообщение удалено.' if deleted else 'доступ к сообщениям пока закрыт.'
             text = (
                 f'🔒 {ChatStartGateService._mention(message.from_user)}, {status_line}\n\n'
-                'Чтобы писать в этом чате, сначала запустите бота Boostora. '
+                'Чтобы писать в этой группе, сначала запустите бота Boostora. '
                 'После нажатия Start доступ откроется автоматически.'
             )
             try:
@@ -240,9 +232,9 @@ class ChatStartGateService:
         markup = types.InlineKeyboardMarkup(row_width=1)
         chat_link = ChatStartGateService.chat_link()
         if chat_link:
-            markup.add(types.InlineKeyboardButton('💬 Вернуться в Boostora Chat', url=chat_link))
+            markup.add(types.InlineKeyboardButton('💬 Открыть Boostora Chat', url=chat_link))
         bot.send_message(
             int(chat_id),
-            '✅ Доступ к сообщениям в Boostora Chat открыт. Теперь вы можете писать в чате.',
+            '✅ Доступ открыт. Теперь вы можете писать во всех группах и чатах, где работает Boostora.',
             reply_markup=markup,
         )
