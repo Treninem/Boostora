@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from app.time_utils import utcnow
 from app import db
 from app.config import settings
 from app.services.bot_chats import BotChatService
@@ -49,7 +50,7 @@ class PromoService:
             last_sent = datetime.fromisoformat(raw)
         except ValueError:
             return True
-        return datetime.utcnow() - last_sent >= timedelta(hours=PromoService._interval_hours())
+        return utcnow() - last_sent >= timedelta(hours=PromoService._interval_hours())
 
     @staticmethod
     def _next_text(chat_ref: str) -> str:
@@ -75,6 +76,6 @@ class PromoService:
                 bot.send_message(api_ref, PromoService._next_text(chat_ref), disable_web_page_preview=True)
             except Exception:
                 continue
-            PromoService._set_meta(chat_ref, 'last_sent_at', datetime.utcnow().isoformat(timespec='seconds'))
+            PromoService._set_meta(chat_ref, 'last_sent_at', utcnow().isoformat(timespec='seconds'))
             sent += 1
         return sent

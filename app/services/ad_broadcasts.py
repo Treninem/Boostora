@@ -6,6 +6,7 @@ import math
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
+from app.time_utils import utcnow
 from app import db
 from app.services.bot_chats import BotChatService
 from app.services.input_sessions import InputSessionService
@@ -329,7 +330,7 @@ class AdBroadcastService:
             )
         else:
             interval_hours = int(row['interval_hours'] or 24)
-            next_run = datetime.utcnow() + timedelta(hours=interval_hours)
+            next_run = utcnow() + timedelta(hours=interval_hours)
             db.execute(
                 '''UPDATE ad_broadcasts SET sent_runs = ?, last_run_at = CURRENT_TIMESTAMP, next_run_at = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?''',
                 (next_sent_runs, next_run.isoformat(timespec='seconds'), order_id),

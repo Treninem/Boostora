@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
+from app.time_utils import utcnow
 from app import db
 from app.config import settings
 from app.services.engagement_modes import EngagementModeService
@@ -28,9 +29,9 @@ class StandardAdminService:
         row = StandardAdminService.get_obligation(obligation_id)
         if not row or str(row['status']) != 'open':
             return False, 'standard_admin_obligation_not_found'
-        base = EngagementModeService._dt(str(row['due_at'] or '')) or datetime.utcnow()
-        if base < datetime.utcnow():
-            base = datetime.utcnow()
+        base = EngagementModeService._dt(str(row['due_at'] or '')) or utcnow()
+        if base < utcnow():
+            base = utcnow()
         new_due = base + timedelta(hours=max(1, int(hours)))
         db.execute(
             '''

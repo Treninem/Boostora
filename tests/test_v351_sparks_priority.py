@@ -11,7 +11,7 @@ KEYBOARDS = (ROOT / 'app' / 'keyboards' / 'inline.py').read_text(encoding='utf-8
 
 
 def test_version_and_currency_name():
-    assert APP_VERSION == 'Boostora v3.6.5'
+    assert APP_VERSION == 'Boostora v3.6.6'
     assert APP_STAGE == 'boostorachat_start_gate'
     assert INTERNAL_CURRENCY_NAME_RU == 'Искры'
     assert 'Кредитов за 1 Star' not in [spec.label for spec in RuntimeSettingsService.SPECS.values()]

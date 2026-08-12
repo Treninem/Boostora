@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
+from app.time_utils import utcnow
 from app import db
 from app.config import settings
 from app.services.activity import ActivityService, AUTO_VERIFIABLE_TASK_TYPES
@@ -70,7 +71,7 @@ class PerformerService:
     def release_due_holds(user_id: int | None = None) -> int:
         """Release only holds whose retention verification is complete."""
         def _run(connection: sqlite3.Connection) -> int:
-            now = datetime.utcnow().isoformat(timespec='seconds')
+            now = utcnow().isoformat(timespec='seconds')
             params: list[object] = [now]
             query = '''
                 SELECT * FROM holds
@@ -280,7 +281,7 @@ class PerformerService:
             if not campaign:
                 return False, 'task_not_found', None, 0
 
-            now_dt = datetime.utcnow()
+            now_dt = utcnow()
             now = now_dt.isoformat(timespec='seconds')
             reward_amount = int(submission['reward_amount'])
             owner_unit_price = int(campaign['unit_price'] or campaign['reward_amount'])
@@ -402,7 +403,7 @@ class PerformerService:
                 return False, 'task_not_found', None
             if str(submission['status']) != STATUS_TAKEN:
                 return False, 'proof_already_sent', None
-            now = datetime.utcnow().isoformat(timespec='seconds')
+            now = utcnow().isoformat(timespec='seconds')
             connection.execute(
                 '''
                 UPDATE task_submissions
@@ -514,7 +515,7 @@ class PerformerService:
 
     @staticmethod
     def _confirm_verification_hold(hold_id: int, submission_id: int) -> None:
-        now = datetime.utcnow().isoformat(timespec='seconds')
+        now = utcnow().isoformat(timespec='seconds')
         db.run_in_transaction(lambda connection: (
             connection.execute(
                 '''UPDATE holds SET verification_status='confirmed', verification_checked_at=?, updated_at=CURRENT_TIMESTAMP
@@ -530,7 +531,7 @@ class PerformerService:
 
     @staticmethod
     def _postpone_verification_hold(hold_id: int, submission_id: int, note: str, minutes: int = 15) -> None:
-        now_dt = datetime.utcnow()
+        now_dt = utcnow()
         next_due = (now_dt + timedelta(minutes=max(5, int(minutes)))).isoformat(timespec='seconds')
         now = now_dt.isoformat(timespec='seconds')
         db.run_in_transaction(lambda connection: (
@@ -558,7 +559,7 @@ class PerformerService:
                 return False
             amount = int(current['amount'])
             owner_unit_price = int(campaign['unit_price'] or campaign['reward_amount'])
-            now = datetime.utcnow().isoformat(timespec='seconds')
+            now = utcnow().isoformat(timespec='seconds')
             connection.execute(
                 '''UPDATE holds SET status='cancelled', verification_status='failed', verification_checked_at=?,
                    updated_at=CURRENT_TIMESTAMP WHERE id=?''',
@@ -602,7 +603,7 @@ class PerformerService:
 
     @staticmethod
     def review_due_verification_holds(bot, limit: int = 100) -> dict[str, int]:
-        now = datetime.utcnow().isoformat(timespec='seconds')
+        now = utcnow().isoformat(timespec='seconds')
         rows = db.fetch_all(
             '''
             SELECT h.*, s.performer_user_id, s.taken_at, s.status AS submission_status,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from app.time_utils import utcnow
 from app import db
 from app.services.trust import TrustService
 
@@ -78,7 +79,7 @@ class RiskService:
         if submission and submission['taken_at']:
             try:
                 taken_at = datetime.fromisoformat(str(submission['taken_at']))
-                delta_seconds = (datetime.utcnow() - taken_at).total_seconds()
+                delta_seconds = (utcnow() - taken_at).total_seconds()
                 if delta_seconds <= FAST_SUBMISSION_SECONDS:
                     reasons.append({
                         'event_type': 'fast_submission',
@@ -127,7 +128,7 @@ class RiskService:
                 'details': f"Rejected submissions in 30 days: {int(recent_rejections['cnt'])}",
             })
 
-        burst_since = (datetime.utcnow() - timedelta(minutes=BURST_SUBMISSIONS_WINDOW_MINUTES)).isoformat(timespec='seconds')
+        burst_since = (utcnow() - timedelta(minutes=BURST_SUBMISSIONS_WINDOW_MINUTES)).isoformat(timespec='seconds')
         recent_submissions = db.fetch_one(
             '''
             SELECT COUNT(*) AS cnt

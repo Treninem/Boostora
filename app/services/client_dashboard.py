@@ -3,6 +3,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from app.time_utils import utcnow
 from app import db
 from app.services.economy import calculate_campaign_pricing
 
@@ -294,7 +295,7 @@ def boost_campaign(owner_user_id: int, campaign_id: int, level: str) -> tuple[bo
         snapshot = pricing_snapshot(campaign)
         snapshot.update({
             'boost_level': level,
-            'boosted_at': datetime.utcnow().isoformat(timespec='seconds'),
+            'boosted_at': utcnow().isoformat(timespec='seconds'),
             'client_unit_price': _as_int(pricing['client_unit_price']),
             'performer_reward': _as_int(pricing['performer_reward']),
             'speed_index': _as_int(pricing['speed_index']),

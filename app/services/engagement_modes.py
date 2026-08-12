@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
+from app.time_utils import utcnow
 from app import db
 from app.config import settings
 from app.services.runtime_settings import RuntimeSettingsService
@@ -100,7 +101,7 @@ class EngagementModeService:
         if not expires:
             return False
         try:
-            return datetime.fromisoformat(expires) > datetime.utcnow()
+            return datetime.fromisoformat(expires) > utcnow()
         except ValueError:
             return False
 
@@ -130,7 +131,7 @@ class EngagementModeService:
 
     @staticmethod
     def activate_pro(user_id: int, *, days: int = 30, source: str = 'stars') -> None:
-        expires = datetime.utcnow() + timedelta(days=max(int(days), 1))
+        expires = utcnow() + timedelta(days=max(int(days), 1))
         db.execute(
             '''
             INSERT INTO engagement_memberships (user_id, mode, status, pro_expires_at, reciprocal_required_actions, selected_at, updated_at, source)
@@ -174,7 +175,7 @@ class EngagementModeService:
         if not row:
             EngagementModeService.set_standard(user_id, source='auto_standard_campaign')
         required = EngagementModeService.required_actions()
-        due = datetime.utcnow() + timedelta(hours=EngagementModeService.due_hours())
+        due = utcnow() + timedelta(hours=EngagementModeService.due_hours())
         return db.execute(
             '''
             INSERT INTO engagement_obligations (user_id, campaign_id, task_type, required_actions, status, due_at)
@@ -242,7 +243,7 @@ class EngagementModeService:
         remaining = max(required - done, 0)
         due_at = str(row['due_at'] or '')
         due_dt = EngagementModeService._dt(due_at)
-        now = datetime.utcnow()
+        now = utcnow()
         overdue = bool(due_dt and due_dt < now and remaining > 0)
         due_soon = bool(due_dt and due_dt <= now + timedelta(hours=6) and remaining > 0 and not overdue)
         if remaining <= 0:
@@ -314,7 +315,7 @@ class EngagementModeService:
             'completed_total': int(completed_total_row['cnt'] or 0) if completed_total_row else 0,
             'outgoing_30d': EngagementModeService.approved_outgoing_actions(
                 user_id,
-                since=(datetime.utcnow() - timedelta(days=30)).isoformat(timespec='seconds'),
+                since=(utcnow() - timedelta(days=30)).isoformat(timespec='seconds'),
             ),
         }
 
@@ -397,7 +398,7 @@ class EngagementModeService:
     def reminder_candidates(*, limit: int = 50) -> list[dict[str, Any]]:
         if not EngagementModeService.reminders_enabled():
             return []
-        before = (datetime.utcnow() + timedelta(hours=EngagementModeService.reminder_before_hours())).isoformat(timespec='seconds')
+        before = (utcnow() + timedelta(hours=EngagementModeService.reminder_before_hours())).isoformat(timespec='seconds')
         rows = db.fetch_all(
             """
             SELECT o.*, u.username, u.first_name, u.language_code
@@ -534,7 +535,7 @@ class EngagementModeService:
         obligations = EngagementModeService.open_obligations(user_id)
         outgoing_30d = EngagementModeService.approved_outgoing_actions(
             user_id,
-            since=(datetime.utcnow() - timedelta(days=30)).isoformat(timespec='seconds'),
+            since=(utcnow() - timedelta(days=30)).isoformat(timespec='seconds'),
         )
         restriction = EngagementModeService.soft_restriction(user_id)
         return {

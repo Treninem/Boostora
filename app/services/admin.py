@@ -2,6 +2,7 @@ import sqlite3
 from datetime import datetime
 from typing import Any
 
+from app.time_utils import utcnow
 from app import db
 from app.services.admin_logs import AdminLogService
 from app.services.admin_console import AdminConsoleService
@@ -182,7 +183,7 @@ class AdminService:
             if str(submission['status']) != STATUS_MANUAL_REVIEW:
                 return False, 'admin_submission_already_reviewed', int(submission['performer_user_id']), 0
 
-            now = datetime.utcnow().isoformat(timespec='seconds')
+            now = utcnow().isoformat(timespec='seconds')
             reward_amount = int(submission['reward_amount'])
             performer_user_id = int(submission['performer_user_id'])
             campaign_id = int(submission['campaign_id'])
@@ -465,5 +466,5 @@ class AdminService:
         from app.services.performer import PerformerService
 
         hold_minutes = PerformerService.get_hold_minutes_for_user(user_id)
-        release_at = datetime.utcnow().timestamp() + hold_minutes * 60
+        release_at = utcnow().timestamp() + hold_minutes * 60
         return datetime.utcfromtimestamp(release_at).isoformat(timespec='seconds')

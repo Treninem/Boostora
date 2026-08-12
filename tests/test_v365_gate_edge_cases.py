@@ -59,4 +59,4 @@ def test_v365_dependency_and_content_contract() -> None:
     version = (ROOT / 'app' / 'version.py').read_text(encoding='utf-8')
     assert 'pyTelegramBotAPI==4.36.0' in req
     assert 'is_automatic_forward' in service and "getattr(message, 'sender_chat', None)" in service
-    assert "APP_VERSION = 'Boostora v3.6.5'" in version
+    assert "APP_VERSION = 'Boostora v3.6.6'" in version

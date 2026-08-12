@@ -2,10 +2,9 @@ from __future__ import annotations
 
 """Compatibility entry point for the cumulative owner audit.
 
-The v3.6.3 audit contains an exact historical version equality check. v3.6.4
-keeps that audit as the cumulative baseline while adding the all-groups start
-gate separately, so a newer application version must not become a false
-blocker in the legacy checklist.
+The v3.6.3 audit contains an exact historical version equality check. Newer
+releases keep that audit as a cumulative baseline, so the current application
+version must not become a false blocker in the legacy checklist.
 """
 
 from app.services import _final_audit_v363 as _baseline

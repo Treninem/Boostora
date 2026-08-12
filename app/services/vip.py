@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from app.time_utils import utcnow
 from app import db
 from app.services.wallets import WalletService
 
@@ -40,7 +41,7 @@ class VipService:
         priority_level: int = 0,
         referral_rate_bonus_bps: int = 0,
     ) -> int:
-        starts_at = datetime.utcnow()
+        starts_at = utcnow()
         expires_at = starts_at + timedelta(days=duration_days)
         return db.execute(
             '''

@@ -73,4 +73,4 @@ def test_v363_configuration_and_release_contract() -> None:
     assert 'chat_start_gate_notice_cooldown_seconds' in config
     assert 'CHAT_START_GATE_NOTICE_COOLDOWN_SECONDS=15' in env
     assert '_NOTICE_LOCKS' in service and '_notice_is_recent' in service
-    assert "APP_VERSION = 'Boostora v3.6.5'" in version
+    assert "APP_VERSION = 'Boostora v3.6.6'" in version

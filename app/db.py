@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Iterator, Sequence, TypeVar
 
+from app.time_utils import utcnow
 from app.config import settings
 
 
@@ -938,7 +939,7 @@ def _quarantine_invalid_db(path: Path) -> Path | None:
             return None
         bad_dir = Path(settings.data_dir) / 'invalid-db'
         bad_dir.mkdir(parents=True, exist_ok=True)
-        stamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        stamp = utcnow().strftime('%Y%m%d_%H%M%S')
         target = bad_dir / f"{path.stem}_{stamp}{path.suffix}.bad"
         shutil.move(str(path), str(target))
         return target
@@ -1154,7 +1155,7 @@ def create_database_backup(*, max_files: int, min_interval_seconds: int = 0) -> 
     with _SNAPSHOT_LOCK:
         if _recent_backup_exists():
             return None
-        stamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
+        stamp = utcnow().strftime('%Y%m%d_%H%M%S_%f')
         backup_path = backup_dir / f"{db_path.stem}_{stamp}{db_path.suffix}.bak"
         if not _copy_sqlite_snapshot(db_path, backup_path):
             return None
