@@ -1,0 +1,33 @@
+name: Apply Boostora v3.6.6
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/apply-v366.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest
+      - name: Apply and verify v3.6.6
+        run: python apply_v366.py
+      - name: Commit verified release and remove one-shot updater
+        run: |
+          rm -f apply_v366.py .github/workflows/apply-v366.yml
+          git config user.name "Treninem"
+          git config user.email "trenin.98@gmail.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Boostora v3.6.6: modernize UTC handling"
+          git push origin HEAD:main
