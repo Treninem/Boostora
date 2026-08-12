@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/apply-v366.yml'
+      - 'apply_v366.py'
 
 permissions:
   contents: write
