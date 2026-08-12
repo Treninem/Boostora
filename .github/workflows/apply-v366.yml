@@ -1,3 +1,4 @@
+# One-shot verified release workflow; removes itself after success.
 name: Apply Boostora v3.6.6
 
 on:
