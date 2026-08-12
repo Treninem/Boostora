@@ -83,7 +83,7 @@ def test_catalog_is_current_only_and_external_html_is_escaped() -> None:
     env_example = (ROOT / '.env.example').read_text(encoding='utf-8')
     gitignore = (ROOT / '.gitignore').read_text(encoding='utf-8')
 
-    assert "APP_VERSION = 'Boostora v3.6.4'" in version
+    assert "APP_VERSION = 'Boostora v3.6.5'" in version
     assert 'current_only=True' in provider
     assert provider.count('last_synced_at IS NOT NULL') >= 4
     assert 'rows = data' in provider and 'data[:safe_limit]' in provider

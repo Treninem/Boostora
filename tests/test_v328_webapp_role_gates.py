@@ -77,7 +77,7 @@ for uid, action, expected in checks:
 status, client = post('/api/telegram/session', {'init_data': signed(2001)})
 assert status == 200 and 'owner_meta' not in client and not client['access']['is_admin']
 status, owner = post('/api/telegram/session', {'init_data': signed(1001)})
-assert status == 200 and owner['access']['is_owner'] and owner['owner_meta']['version'] == 'Boostora v3.6.4'
+assert status == 200 and owner['access']['is_owner'] and owner['owner_meta']['version'] == 'Boostora v3.6.5'
 
 server.shutdown(); server.server_close(); thread.join(timeout=2)
 '''

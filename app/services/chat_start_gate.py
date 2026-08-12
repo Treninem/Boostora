@@ -66,6 +66,18 @@ class ChatStartGateService:
         chat = getattr(message, 'chat', None)
         if not ChatStartGateService.is_protected_chat(chat):
             return False
+
+        # Automatic forwards from a linked channel into its discussion group are
+        # Telegram system behaviour, not a person trying to bypass the gate.
+        if bool(getattr(message, 'is_automatic_forward', False)):
+            return False
+
+        # Messages sent on behalf of a channel or by an anonymous administrator
+        # do not reveal the real Telegram user ID. They therefore cannot prove
+        # that the person behind them has started Boostora and must be blocked.
+        if getattr(message, 'sender_chat', None) is not None:
+            return True
+
         from_user = getattr(message, 'from_user', None)
         if from_user is None or bool(getattr(from_user, 'is_bot', False)):
             return False
@@ -180,28 +192,46 @@ class ChatStartGateService:
     @staticmethod
     def block_message(bot, message) -> None:  # noqa: ANN001
         chat_id = int(message.chat.id)
-        user_id = int(message.from_user.id)
+        sender_chat = getattr(message, 'sender_chat', None)
+        from_user = getattr(message, 'from_user', None)
+        anonymous_sender = sender_chat is not None
+        if anonymous_sender:
+            notice_user_id = int(getattr(sender_chat, 'id', 0) or 0)
+            if notice_user_id == 0:
+                notice_user_id = -1
+            log_user_id = notice_user_id
+        else:
+            notice_user_id = int(getattr(from_user, 'id', 0) or 0)
+            log_user_id = notice_user_id
+
         deleted = ChatStartGateService._delete_blocked_message(
             bot,
             chat_id,
             int(message.message_id),
-            user_id,
+            log_user_id,
         )
 
         # TeleBot may process updates concurrently. Serialize only the notice
         # section, while every blocked user message is still deleted first.
-        with ChatStartGateService._notice_lock(chat_id, user_id):
-            if ChatStartGateService._notice_is_recent(chat_id, user_id):
+        with ChatStartGateService._notice_lock(chat_id, notice_user_id):
+            if ChatStartGateService._notice_is_recent(chat_id, notice_user_id):
                 return
-            ChatStartGateService._delete_previous_notice(bot, chat_id, user_id)
+            ChatStartGateService._delete_previous_notice(bot, chat_id, notice_user_id)
             markup = types.InlineKeyboardMarkup(row_width=1)
             markup.add(types.InlineKeyboardButton('🚀 Запустить Boostora', url=ChatStartGateService.start_link(bot)))
-            status_line = 'ваше сообщение удалено.' if deleted else 'доступ к сообщениям пока закрыт.'
-            text = (
-                f'🔒 {ChatStartGateService._mention(message.from_user)}, {status_line}\n\n'
-                'Чтобы писать в этой группе, сначала запустите бота Boostora. '
-                'После нажатия Start доступ откроется автоматически.'
-            )
+            if anonymous_sender:
+                text = (
+                    '🔒 Сообщение от имени канала или анонимного администратора удалено.\n\n'
+                    'Boostora не может определить Telegram ID человека за таким сообщением. '
+                    'Запустите бота и отправьте сообщение от своего личного профиля.'
+                )
+            else:
+                status_line = 'ваше сообщение удалено.' if deleted else 'доступ к сообщениям пока закрыт.'
+                text = (
+                    f'🔒 {ChatStartGateService._mention(from_user)}, {status_line}\n\n'
+                    'Чтобы писать в этой группе, сначала запустите бота Boostora. '
+                    'После нажатия Start доступ откроется автоматически.'
+                )
             try:
                 sent = bot.send_message(
                     chat_id,
@@ -210,7 +240,7 @@ class ChatStartGateService:
                     reply_markup=markup,
                     disable_web_page_preview=True,
                 )
-                ChatStartGateService._save_notice(chat_id, user_id, int(sent.message_id))
+                ChatStartGateService._save_notice(chat_id, notice_user_id, int(sent.message_id))
             except Exception as exc:
                 LOGGER.warning('Could not send chat start gate warning in chat %s: %s', chat_id, exc)
 

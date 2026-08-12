@@ -7,14 +7,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_v364_all_groups_start_gate_in_isolated_process() -> None:
-    script = r'''
+def test_v365_sender_chat_edges_in_isolated_process() -> None:
+    script = r"""
 import os, sys, tempfile, types
 from pathlib import Path
 from types import SimpleNamespace
 root=Path(sys.argv[1]); sys.path.insert(0,str(root))
 os.environ.update({
-    'BOT_TOKEN':'123456:TESTTOKEN','ADMIN_IDS':'999','BOT_DATA_DIR':tempfile.mkdtemp(prefix='boostora-v364-'),
+    'BOT_TOKEN':'123456:TESTTOKEN','ADMIN_IDS':'999','BOT_DATA_DIR':tempfile.mkdtemp(prefix='boostora-v365-'),
     'DB_PATH':'test.db','WEBAPP_ENABLED':'0','LEGACY_DB_MIRROR_ENABLED':'0','SUPPORT_USERNAME':'@BoostoraTestBot',
     'CHAT_START_GATE_ENABLED':'1','CHAT_START_GATE_CHAT_REF':'@Boostorachat',
     'CHAT_START_GATE_CHAT_LINK':'https://t.me/Boostorachat','CHAT_START_GATE_START_PARAMETER':'chat_access',
@@ -33,35 +33,30 @@ from app import db
 from app.services.chat_start_gate import ChatStartGateService
 
 db.init_db(); db.upsert_user(100,'ivan','Иван',None)
+chat=SimpleNamespace(id=-100123,username='AnyGroup',type='supergroup')
 user=SimpleNamespace(id=100,is_bot=False,first_name='Иван',username='ivan')
-for chat in (
-    SimpleNamespace(id=-10,username='',type='group'),
-    SimpleNamespace(id=-10020,username='OtherPublicGroup',type='supergroup'),
-):
-    msg=SimpleNamespace(chat=chat,from_user=user,message_id=1,content_type='text')
-    assert ChatStartGateService.is_protected_chat(chat)
-    assert ChatStartGateService.should_block_message(msg)
+normal=SimpleNamespace(chat=chat,from_user=user,sender_chat=None,is_automatic_forward=False,message_id=1,content_type='text')
+assert ChatStartGateService.should_block_message(normal)
 
-assert not ChatStartGateService.is_protected_chat(SimpleNamespace(id=100,username='',type='private'))
-assert not ChatStartGateService.is_protected_chat(SimpleNamespace(id=-10030,username='News',type='channel'))
+anon_bot=SimpleNamespace(id=1087968824,is_bot=True,first_name='Group',username='GroupAnonymousBot')
+sender_chat=SimpleNamespace(id=-100777,title='Channel')
+anon=SimpleNamespace(chat=chat,from_user=anon_bot,sender_chat=sender_chat,is_automatic_forward=False,message_id=2,content_type='text')
+assert ChatStartGateService.should_block_message(anon)
 
-assert ChatStartGateService.mark_started(100)
-assert ChatStartGateService.has_started(100)
-for chat in (
-    SimpleNamespace(id=-10,username='',type='group'),
-    SimpleNamespace(id=-10020,username='OtherPublicGroup',type='supergroup'),
-):
-    msg=SimpleNamespace(chat=chat,from_user=user,message_id=2,content_type='text')
-    assert not ChatStartGateService.should_block_message(msg)
-print('V364_ALL_GROUPS_GATE_OK')
-'''
+auto=SimpleNamespace(chat=chat,from_user=anon_bot,sender_chat=sender_chat,is_automatic_forward=True,message_id=3,content_type='text')
+assert not ChatStartGateService.should_block_message(auto)
+
+print('V365_GATE_EDGES_OK')
+"""
     result = subprocess.run([sys.executable, '-c', script, str(ROOT)], cwd=ROOT, text=True, capture_output=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
-    assert 'V364_ALL_GROUPS_GATE_OK' in result.stdout
+    assert 'V365_GATE_EDGES_OK' in result.stdout
 
 
-def test_v364_all_groups_release_contract() -> None:
+def test_v365_dependency_and_content_contract() -> None:
+    req = (ROOT / 'requirements.txt').read_text(encoding='utf-8')
     service = (ROOT / 'app' / 'services' / 'chat_start_gate.py').read_text(encoding='utf-8')
     version = (ROOT / 'app' / 'version.py').read_text(encoding='utf-8')
-    assert "return chat_type in {'group', 'supergroup'}" in service
+    assert 'pyTelegramBotAPI==4.36.0' in req
+    assert 'is_automatic_forward' in service and "getattr(message, 'sender_chat', None)" in service
     assert "APP_VERSION = 'Boostora v3.6.5'" in version
