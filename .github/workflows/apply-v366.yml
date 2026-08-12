@@ -10,6 +10,13 @@ on:
 permissions:
   contents: write
 
+env:
+  BOT_TOKEN: '123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghi'
+  BOT_DATA_DIR: '/tmp/boostora-ci'
+  DB_PATH: 'boostora-ci.db'
+  ENABLE_XTR_PAYMENTS: '0'
+  BOOSTORE_ENABLED: '0'
+
 jobs:
   apply:
     runs-on: ubuntu-latest
