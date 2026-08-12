@@ -47,4 +47,4 @@ write(Path('RELEASE_REPORT_v3.6.6.md'), '''# Boostora v3.6.6 — совмест�
 p=Path('app/services/final_audit.py'); s=read(p).replace('The v3.6.3 audit contains an exact historical version equality check. v3.6.4\nkeeps that audit as the cumulative baseline while adding the all-groups start\ngate separately, so a newer application version must not become a false\nblocker in the legacy checklist.', 'The v3.6.3 audit contains an exact historical version equality check. Newer\nreleases keep that audit as a cumulative baseline, so the current application\nversion must not become a false blocker in the legacy checklist.'); write(p,s)
 
 subprocess.run(['python','-m','compileall','-q','app','tests'],check=True)
-subprocess.run(['python','-m','pytest','-q','-W','error::DeprecationWarning'],check=True)
+subprocess.run(['python','-m','pytest','-q','tests','-W','error::DeprecationWarning'],check=True)
