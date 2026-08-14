@@ -12,6 +12,7 @@ from telebot.apihelper import ApiTelegramException
 
 from app.config import settings
 from app.db import create_periodic_backup, init_db
+from app.services.system_health import SystemHealthService
 from app.handlers.start import register_start_handlers
 from app.handlers.callbacks import register_callback_handlers
 from app.services.promo import PromoService
@@ -212,6 +213,7 @@ def _run_background_cycle(bot: telebot.TeleBot) -> None:
         result = _run_background_job(name, callback)
         if name == 'database_backup' and result is not None:
             LOGGER.info('Periodic SQLite backup created: %s', result)
+    _run_background_job('runtime_heartbeat', SystemHealthService.record_heartbeat)
 
 
 def _start_promo_worker(bot: telebot.TeleBot, stop_event: threading.Event) -> threading.Thread:
@@ -569,6 +571,10 @@ def run() -> None:
     shutdown_event = threading.Event()
     _install_shutdown_handlers(shutdown_event)
     init_db()
+    try:
+        SystemHealthService.record_startup()
+    except Exception:
+        LOGGER.exception('Could not record runtime startup health marker')
 
     lock_fd: int | None = None
     promo_thread: threading.Thread | None = None

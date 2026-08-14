@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.6.6'
-APP_STAGE = 'boostorachat_start_gate'
+APP_VERSION = 'Boostora v3.7.0'
+APP_STAGE = 'simplified_shell_hardened_core'

@@ -11,8 +11,8 @@ KEYBOARDS = (ROOT / 'app' / 'keyboards' / 'inline.py').read_text(encoding='utf-8
 
 
 def test_version_and_currency_name():
-    assert APP_VERSION == 'Boostora v3.6.6'
-    assert APP_STAGE == 'boostorachat_start_gate'
+    assert APP_VERSION == 'Boostora v3.7.0'
+    assert APP_STAGE == 'simplified_shell_hardened_core'
     assert INTERNAL_CURRENCY_NAME_RU == 'Искры'
     assert 'Кредитов за 1 Star' not in [spec.label for spec in RuntimeSettingsService.SPECS.values()]
     assert any('Искр за 1 Star' == spec.label for spec in RuntimeSettingsService.SPECS.values())
@@ -20,12 +20,13 @@ def test_version_and_currency_name():
 
 def test_miniapp_core_precedes_optional_catalogue():
     nav = HTML.split('<nav class="bottom"', 1)[1].split('</nav>', 1)[0]
-    assert nav.index('data-page="work"') < nav.index('data-page="services"')
+    assert nav.index('data-page="work"') < nav.index('data-page="cabinet"')
+    assert 'data-page="services"' not in nav
     assert 'Сеть рекламных размещений' in HTML
-    assert 'Заработать Искры' in HTML
-    assert 'Дополнительные возможности' in HTML
+    assert 'Зарабатывай Искры' in HTML
     assert 'Дополнительные услуги' in HTML
-    assert '>Доп.<' in HTML
+    assert '>Кабинет</button>' in HTML
+    assert 'всё второстепенное здесь' in HTML
 
 
 def test_user_visible_currency_is_sparks():

@@ -49,7 +49,7 @@ report = UserService.t(2097006037, 'boostore_check_report', state='ok', score=10
 assert 'abc…xyz' in report
 release = _build_owner_release_text(2097006037)
 assert len(release) < 4096, len(release)
-assert 'Boostora v3.6.6' in release
+assert 'Boostora v3.7.0' in release
 oversized = '<b>Title</b>\n' + ('очень длинная строка\n' * 500)
 fitted = _fit_telegram_text(oversized, screen_key='test')
 assert len(fitted) <= 4096

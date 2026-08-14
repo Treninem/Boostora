@@ -38,6 +38,7 @@ from app.services.referrals import ReferralService
 from app.services.release_readiness import ReleaseReadinessService
 from app.services.runtime_settings import RuntimeSettingsService
 from app.services.subscriptions import SubscriptionService
+from app.services.system_health import SystemHealthService
 from app.services.star_payments import StarPaymentService
 from app.services.transactions import TransactionService
 from app.services.users import UserService
@@ -891,6 +892,10 @@ class MiniAppApiService:
             else:
                 return ApiResult(400, {'ok': False, 'error': 'unknown_owner_action'})
             return ApiResult(200 if result.ok else 400, {'ok': result.ok, 'result': result.result_key, 'data': result.data})
+        if op == 'owner.system_health':
+            if not UserService.is_owner(user_id):
+                return ApiResult(403, {'ok': False, 'error': 'access_denied'})
+            return ApiResult(200, {'ok': True, **SystemHealthService.snapshot()})
         if op == 'owner.runtime_settings':
             if not UserService.is_owner(user_id):
                 return ApiResult(403, {'ok': False, 'error': 'access_denied'})

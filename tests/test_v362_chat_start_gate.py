@@ -95,5 +95,5 @@ def test_v362_handler_priority_and_configuration() -> None:
     assert "message.chat.type != 'private'" in start
     assert 'CHAT_START_GATE_ENABLED' in config and 'CHAT_START_GATE_CHAT_REF' in config
     assert 'CHAT_START_GATE_ENABLED=1' in env and 'CHAT_START_GATE_CHAT_REF=@Boostorachat' in env
-    assert "APP_VERSION = 'Boostora v3.6.6'" in version
-    assert "APP_STAGE = 'boostorachat_start_gate'" in version
+    assert "APP_VERSION = 'Boostora v3.7.0'" in version
+    assert "APP_STAGE = 'simplified_shell_hardened_core'" in version

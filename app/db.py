@@ -672,6 +672,7 @@ CREATE INDEX IF NOT EXISTS idx_star_payments_status ON star_payments(status, cre
 T = TypeVar('T')
 
 _SNAPSHOT_LOCK = threading.Lock()
+_TX_LOCAL = threading.local()
 _LAST_LEGACY_MIRROR_MONOTONIC = 0.0
 
 
@@ -685,6 +686,14 @@ def get_connection() -> Iterator[sqlite3.Connection]:
     connection.execute('PRAGMA busy_timeout = 5000')
     try:
         connection.execute('PRAGMA journal_mode = WAL')
+    except sqlite3.DatabaseError:
+        pass
+    # Balanced durability for a WAL database: committed transactions survive
+    # normal process/container restarts without forcing a full fsync per page.
+    try:
+        connection.execute('PRAGMA synchronous = NORMAL')
+        connection.execute('PRAGMA wal_autocheckpoint = 1000')
+        connection.execute('PRAGMA journal_size_limit = 67108864')
     except sqlite3.DatabaseError:
         pass
     try:
@@ -1205,19 +1214,32 @@ def init_db() -> None:
 
 
 
+def _active_transaction_connection() -> sqlite3.Connection | None:
+    connection = getattr(_TX_LOCAL, 'connection', None)
+    return connection if isinstance(connection, sqlite3.Connection) else None
+
+
 def fetch_one(query: str, params: Sequence[Any] = ()) -> sqlite3.Row | None:
+    active = _active_transaction_connection()
+    if active is not None:
+        return active.execute(query, params).fetchone()
     with get_connection() as connection:
         return connection.execute(query, params).fetchone()
 
 
-
 def fetch_all(query: str, params: Sequence[Any] = ()) -> list[sqlite3.Row]:
+    active = _active_transaction_connection()
+    if active is not None:
+        return active.execute(query, params).fetchall()
     with get_connection() as connection:
         return connection.execute(query, params).fetchall()
 
 
-
 def execute(query: str, params: Sequence[Any] = ()) -> int:
+    active = _active_transaction_connection()
+    if active is not None:
+        cursor = active.execute(query, params)
+        return int(cursor.lastrowid or 0)
     with get_connection() as connection:
         cursor = connection.execute(query, params)
         result = int(cursor.lastrowid or 0)
@@ -1225,19 +1247,59 @@ def execute(query: str, params: Sequence[Any] = ()) -> int:
     return result
 
 
-
 def execute_many(query: str, params_list: list[Sequence[Any]]) -> None:
+    active = _active_transaction_connection()
+    if active is not None:
+        active.executemany(query, params_list)
+        return
     with get_connection() as connection:
         connection.executemany(query, params_list)
     mirror_db_to_legacy_locations()
 
 
-
 def run_in_transaction(callback: Callable[[sqlite3.Connection], T]) -> T:
+    # Reuse the same connection for nested service calls. This lets the outer
+    # transaction reserve SQLite's writer slot without nested db.execute()/fetch
+    # opening a competing connection and deadlocking itself.
+    active = _active_transaction_connection()
+    if active is not None:
+        return callback(active)
     with get_connection() as connection:
-        result = callback(connection)
+        connection.execute('BEGIN IMMEDIATE')
+        _TX_LOCAL.connection = connection
+        try:
+            result = callback(connection)
+        finally:
+            _TX_LOCAL.connection = None
     mirror_db_to_legacy_locations()
     return result
+
+
+def health_status() -> dict[str, Any]:
+    """Cheap readiness probe for the persistent SQLite core."""
+    started = time.monotonic()
+    try:
+        with get_connection() as connection:
+            check = connection.execute('PRAGMA quick_check(1)').fetchone()
+            journal = connection.execute('PRAGMA journal_mode').fetchone()
+            connection.execute('SELECT 1').fetchone()
+        ok = bool(check) and str(check[0]).lower() == 'ok'
+        return {
+            'ok': ok,
+            'quick_check': str(check[0]) if check else 'missing',
+            'journal_mode': str(journal[0]).lower() if journal else 'unknown',
+            'latency_ms': max(0, int((time.monotonic() - started) * 1000)),
+            'path_exists': Path(settings.db_path).exists(),
+        }
+    except Exception as exc:
+        return {
+            'ok': False,
+            'quick_check': 'failed',
+            'journal_mode': 'unknown',
+            'latency_ms': max(0, int((time.monotonic() - started) * 1000)),
+            'path_exists': Path(settings.db_path).exists(),
+            'error': exc.__class__.__name__,
+        }
 
 
 

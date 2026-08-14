@@ -31,6 +31,15 @@ LOGGER = logging.getLogger(__name__)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 STATIC_ROOT = (PROJECT_ROOT / 'miniapp_example').resolve()
 MAX_JSON_BODY_BYTES = 64 * 1024
+MINIAPP_USER_LOCK_STRIPES = 64
+_MINIAPP_USER_LOCKS = tuple(threading.RLock() for _ in range(MINIAPP_USER_LOCK_STRIPES))
+_READ_ONLY_MINIAPP_OPERATIONS = frozenset({
+    'admin.get', 'campaigns.get', 'campaigns.quote', 'catalog.get', 'catalog.quote_order',
+    'dashboard.get', 'documents.get', 'engagement.get', 'network.get', 'network.quote',
+    'orders.get', 'owner.catalog', 'owner.get', 'owner.operations', 'owner.orders',
+    'owner.recent_operations', 'owner.runtime_settings', 'owner.star_payments',
+    'owner.system_health', 'owner.user_lookup', 'profile.get', 'referrals.get', 'wallet.get',
+})
 
 # Compatibility deep links for older Mini App clients. The current v3.5.0 client
 # performs primary operations through /api/miniapp/query and server-side role gates.
@@ -251,7 +260,7 @@ def _session_payload(user: dict[str, Any]) -> dict[str, Any]:
 
 
 class BoostoraWebHandler(BaseHTTPRequestHandler):
-    server_version = 'BoostoraWeb/3.5.0'
+    server_version = 'BoostoraWeb/3.7.0'
 
     def log_message(self, fmt: str, *args: Any) -> None:
         if self.path.startswith('/health'):
@@ -341,6 +350,16 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
 
     def _handle_health(self, *, head_only: bool = False) -> None:
         self._send_json(HTTPStatus.OK, {'ok': True, 'service': 'boostora', 'version': APP_VERSION, 'webapp': True, 'time': datetime.now(timezone.utc).isoformat()}, head_only=head_only)
+
+    def _handle_health_ready(self, *, head_only: bool = False) -> None:
+        database = db.health_status()
+        static_ready = STATIC_ROOT.joinpath('index.html').is_file()
+        ready = bool(database.get('ok')) and static_ready
+        self._send_json(
+            HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE,
+            {'ok': ready, 'service': 'boostora', 'version': APP_VERSION, 'database': database, 'miniapp_assets': static_ready},
+            head_only=head_only,
+        )
 
     def _handle_config(self, *, head_only: bool = False) -> None:
         # Public config deliberately contains no owner/admin details or provider state.
@@ -437,10 +456,24 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
         if not isinstance(data, dict):
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_payload')
             return
+        user_id = _user_id(user)
+        if user_id is None:
+            self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_user_id')
+            return
+        normalized_operation = operation.lower()
+        # ThreadingHTTPServer can receive two taps at once. Read requests remain
+        # concurrent, while mutations for the same user are serialized before
+        # they reach wallet/campaign logic. A fixed stripe pool keeps memory
+        # bounded even with a large user base.
+        lock = None if normalized_operation in _READ_ONLY_MINIAPP_OPERATIONS else _MINIAPP_USER_LOCKS[user_id % MINIAPP_USER_LOCK_STRIPES]
         try:
-            result = MiniAppApiService.dispatch(user, operation, data)
+            if lock is None:
+                result = MiniAppApiService.dispatch(user, operation, data)
+            else:
+                with lock:
+                    result = MiniAppApiService.dispatch(user, operation, data)
         except Exception:
-            LOGGER.exception('Mini App operation failed: operation=%s user_id=%s', operation, _user_id(user))
+            LOGGER.exception('Mini App operation failed: operation=%s user_id=%s', operation, user_id)
             self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, 'operation_failed')
             return
         try:
@@ -480,6 +513,9 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
         if path in {'/health', '/healthz'}:
             self._handle_health()
             return
+        if path in {'/health/ready', '/ready'}:
+            self._handle_health_ready()
+            return
         if path == '/api/config':
             self._handle_config()
             return
@@ -492,6 +528,9 @@ class BoostoraWebHandler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if path in {'/health', '/healthz'}:
             self._handle_health(head_only=True)
+            return
+        if path in {'/health/ready', '/ready'}:
+            self._handle_health_ready(head_only=True)
             return
         if path == '/api/config':
             self._handle_config(head_only=True)

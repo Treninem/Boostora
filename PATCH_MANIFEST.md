@@ -1,24 +1,18 @@
-# PATCH Boostora v3.6.6
+# PATCH Boostora v3.7.0
 
-Быстрое обновление поверх **Boostora v3.6.5**.
+Поверх **Boostora v3.6.6**.
 
-## Файлы в архиве PATCH
-
-- `app/time_utils.py`
-- `app/db.py`
-- `app/services/ad_broadcasts.py`
-- `app/services/admin.py`
-- `app/services/client_dashboard.py`
-- `app/services/engagement_modes.py`
-- `app/services/holds.py`
-- `app/services/performer.py`
-- `app/services/promo.py`
-- `app/services/risk.py`
-- `app/services/standard_admin.py`
-- `app/services/vip.py`
 - `app/version.py`
+- `app/db.py`
+- `app/bot.py`
+- `app/webapp.py`
+- `app/services/miniapp_api.py`
+- `app/services/system_health.py`
+- `miniapp_example/index.html`
+- `README.md`
 - `HOTFIX_NOTES.md`
-- `RELEASE_REPORT_v3.6.6.md`
+- `RELEASE_REPORT_v3.7.0.md`
+- `TRANSFER_NOTES.md`
 - `PATCH_INSTALL.md`
 - `PATCH_MANIFEST.md`
-- `DELETE_FILES.txt` — пустой.
+- `DELETE_FILES.txt` — удалять рабочие файлы не требуется.

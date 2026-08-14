@@ -64,4 +64,4 @@ def test_v364_all_groups_release_contract() -> None:
     service = (ROOT / 'app' / 'services' / 'chat_start_gate.py').read_text(encoding='utf-8')
     version = (ROOT / 'app' / 'version.py').read_text(encoding='utf-8')
     assert "return chat_type in {'group', 'supergroup'}" in service
-    assert "APP_VERSION = 'Boostora v3.6.6'" in version
+    assert "APP_VERSION = 'Boostora v3.7.0'" in version

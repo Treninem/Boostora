@@ -9,12 +9,14 @@ VERSION = (ROOT / 'app' / 'version.py').read_text(encoding='utf-8')
 
 
 def test_current_static_contract() -> None:
-    assert "Boostora v3.6.6" in VERSION
-    assert "fetch('/api/miniapp/query'" in HTML
+    assert "Boostora v3.7.0" in VERSION
+    assert "'/api/miniapp/query'" in HTML
     assert "fetch('/api/miniapp/action'" not in HTML
     assert "sendData(" not in HTML
-    for page in ('home', 'services', 'work', 'wallet', 'profile'):
+    for page in ('home', 'work', 'cabinet'):
         assert f'data-page="{page}"' in HTML
+    for internal in ('renderServices()', 'renderWallet()', 'renderProfile()'):
+        assert internal in HTML
     assert "session.access.is_admin" in HTML
     assert "session.access.is_owner" in HTML
     assert "owner.get" in HTML

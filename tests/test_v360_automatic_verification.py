@@ -99,7 +99,7 @@ def test_v360_static_contract() -> None:
     api=(ROOT/'app/services/miniapp_api.py').read_text(encoding='utf-8')
     bot=(ROOT/'app/bot.py').read_text(encoding='utf-8')
     html=(ROOT/'miniapp_example/index.html').read_text(encoding='utf-8')
-    assert "APP_VERSION = 'Boostora v3.6.6'" in version
+    assert "APP_VERSION = 'Boostora v3.7.0'" in version
     assert "'chat_join_request'" in bot
     assert 'task_retention_checks' in bot and 'task_hold_releases' in bot
     assert "op == 'tasks.open'" in api and "op == 'tasks.autocheck'" in api
