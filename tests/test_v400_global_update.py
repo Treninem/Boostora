@@ -41,6 +41,12 @@ class ApiGuardTests(unittest.TestCase):
         self.assertTrue(guard.allow(7, read_only=False).allowed)
         self.assertFalse(guard.allow(7, read_only=False).allowed)
 
+    def test_rate_bucket_memory_is_bounded(self) -> None:
+        guard = ApiGuard(read_limit=10, mutation_limit=10, max_rate_buckets=256)
+        for user_id in range(1000, 1500):
+            self.assertTrue(guard.allow(user_id, read_only=True).allowed)
+        self.assertLessEqual(guard.snapshot()['active_rate_buckets'], 256)
+
     def test_idempotency_is_scoped_and_expires(self) -> None:
         clock = MutableClock()
         guard = ApiGuard(idempotency_ttl_seconds=30, clock=clock)
@@ -69,6 +75,8 @@ class GlobalRuntimeContractTests(unittest.TestCase):
         version_source = ROOT.joinpath('app', 'version.py').read_text(encoding='utf-8')
         runtime_source = ROOT.joinpath('app', 'runtime_v4.py').read_text(encoding='utf-8')
         gateway_source = ROOT.joinpath('app', 'webapp_v4.py').read_text(encoding='utf-8')
+        client_source = ROOT.joinpath('miniapp_example', 'v4-client.js').read_text(encoding='utf-8')
+        health_source = ROOT.joinpath('app', 'services', 'system_health.py').read_text(encoding='utf-8')
 
         self.assertIn('from app.runtime_v4 import run', main_source)
         self.assertIn("Boostora v4.0.0", version_source)
@@ -77,6 +85,23 @@ class GlobalRuntimeContractTests(unittest.TestCase):
         self.assertIn('mutation_idempotency', gateway_source)
         self.assertIn('/health/live', gateway_source)
         self.assertIn('/api/capabilities', gateway_source)
+        self.assertIn('v4-client.js?v=400', gateway_source)
+        self.assertIn('body.request_id = mutationKey', client_source)
+        self.assertIn('pendingMutationKeys', client_source)
+        self.assertIn("'gateway': GLOBAL_API_GUARD.snapshot()", health_source)
+        self.assertIn("'runtime': RUNTIME_METRICS.snapshot()", health_source)
+
+    def test_v4_environment_contract_is_documented(self) -> None:
+        env_source = ROOT.joinpath('.env.example').read_text(encoding='utf-8')
+        for variable in (
+            'BOOSTORA_API_READS_PER_MINUTE',
+            'BOOSTORA_API_MUTATIONS_PER_MINUTE',
+            'BOOSTORA_API_RATE_WINDOW_SECONDS',
+            'BOOSTORA_IDEMPOTENCY_TTL_SECONDS',
+            'BOOSTORA_IDEMPOTENCY_CACHE_MAX',
+            'BOOSTORA_RATE_BUCKETS_MAX',
+        ):
+            self.assertIn(variable, env_source)
 
     def test_test_databases_are_not_shipped(self) -> None:
         self.assertFalse(ROOT.joinpath('storage', 'start_profile_wallet_smoke_test.db').exists())
