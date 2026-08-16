@@ -1,2 +1,2 @@
-APP_VERSION = 'Boostora v3.7.0'
-APP_STAGE = 'simplified_shell_hardened_core'
+APP_VERSION = 'Boostora v4.0.0'
+APP_STAGE = 'global_runtime_hardening'
