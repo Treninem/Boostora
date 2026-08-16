@@ -43,6 +43,14 @@ def _data_dir_writable(path: Path) -> bool:
         return False
 
 
+def _database_ok() -> bool:
+    try:
+        return bool(db.health_status().get('ok'))
+    except Exception:
+        LOGGER.exception('Startup guard could not query SQLite health')
+        return False
+
+
 def run_startup_guard(static_root: Path) -> StartupReport:
     global _LAST_REPORT
 
@@ -50,7 +58,7 @@ def run_startup_guard(static_root: Path) -> StartupReport:
     data_dir = Path(settings.data_dir)
     checks: dict[str, bool] = {
         'data_dir_writable': _data_dir_writable(data_dir),
-        'database': bool(db.health_status().get('ok')),
+        'database': _database_ok(),
         'miniapp_index': static_root.joinpath('index.html').is_file(),
         'bot_token_shape': ':' in settings.bot_token and len(settings.bot_token) >= 20,
     }
