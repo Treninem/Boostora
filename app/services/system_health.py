@@ -7,12 +7,14 @@ from typing import Any
 
 from app import db
 from app.config import settings
+from app.services.api_guard import GLOBAL_API_GUARD
+from app.services.runtime_metrics import RUNTIME_METRICS
 from app.time_utils import utcnow
 from app.version import APP_VERSION
 
 
 class SystemHealthService:
-    """Small, local-only health view for owner diagnostics and readiness."""
+    """Local health view used by readiness and the owner-only diagnostics screen."""
 
     HEARTBEAT_KEY = 'runtime_background_heartbeat'
     STARTED_KEY = 'runtime_started_at'
@@ -58,13 +60,19 @@ class SystemHealthService:
             data_path.mkdir(parents=True, exist_ok=True)
             usage = shutil.disk_usage(data_path)
             disk = {
-                'ok': usage.free >= 64 * 1024 * 1024,
+                'ok': usage.free >= 128 * 1024 * 1024,
                 'free_bytes': int(usage.free),
                 'total_bytes': int(usage.total),
                 'used_percent': round((usage.used / usage.total) * 100, 1) if usage.total else 0.0,
             }
         except Exception as exc:
-            disk = {'ok': False, 'free_bytes': 0, 'total_bytes': 0, 'used_percent': 0.0, 'error': exc.__class__.__name__}
+            disk = {
+                'ok': False,
+                'free_bytes': 0,
+                'total_bytes': 0,
+                'used_percent': 0.0,
+                'error': exc.__class__.__name__,
+            }
 
         heartbeat = cls._meta(cls.HEARTBEAT_KEY)
         heartbeat_age = cls._age_seconds(heartbeat)
@@ -99,6 +107,8 @@ class SystemHealthService:
             },
             'started_at': cls._meta(cls.STARTED_KEY) or None,
             'counts': counts,
+            'gateway': GLOBAL_API_GUARD.snapshot(),
+            'runtime': RUNTIME_METRICS.snapshot(),
             'provider_enabled': bool(settings.boostore_enabled),
             'webapp_enabled': bool(settings.webapp_enabled),
         }
