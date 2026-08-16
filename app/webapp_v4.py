@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from hashlib import sha256
 from http import HTTPStatus
+import json
 import logging
 import secrets
-import time
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -39,9 +40,8 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
 
     server_version = 'BoostoraWeb/4.0.0'
 
-    def _start_request_trace(self) -> float:
+    def _start_request_trace(self) -> None:
         self._request_id = secrets.token_hex(8)
-        return time.monotonic()
 
     def _common_headers(self, *, content_type: str, content_length: int, cache_control: str) -> None:
         super()._common_headers(
@@ -63,6 +63,15 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         return GLOBAL_API_GUARD.normalize_idempotency_key(
             body.get('request_id') or body.get('idempotency_key') or self.headers.get('Idempotency-Key', '')
         )
+
+    @staticmethod
+    def _idempotency_scope(operation: str, payload: dict[str, Any]) -> str:
+        try:
+            raw = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(',', ':'), default=str)
+        except Exception:
+            raw = repr(payload)
+        fingerprint = sha256(raw.encode('utf-8', errors='replace')).hexdigest()[:24]
+        return f'{operation}|{fingerprint}'
 
     def _handle_miniapp_query(self) -> None:
         body = self._read_json_body()
@@ -103,8 +112,9 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             return
 
         idempotency_key = '' if read_only else self._client_idempotency_key(body)
+        idempotency_scope = self._idempotency_scope(normalized_operation, data)
         if idempotency_key:
-            cached = GLOBAL_API_GUARD.lookup(user_id, normalized_operation, idempotency_key)
+            cached = GLOBAL_API_GUARD.lookup(user_id, idempotency_scope, idempotency_key)
             if cached is not None:
                 replay_payload = dict(cached.payload)
                 replay_payload['idempotent_replay'] = True
@@ -123,9 +133,9 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             else:
                 with lock:
                     # Re-check after taking the mutation lock so two concurrent
-                    # requests with the same idempotency key cannot both execute.
+                    # identical requests with the same key cannot both execute.
                     if idempotency_key:
-                        cached = GLOBAL_API_GUARD.lookup(user_id, normalized_operation, idempotency_key)
+                        cached = GLOBAL_API_GUARD.lookup(user_id, idempotency_scope, idempotency_key)
                         if cached is not None:
                             replay_payload = dict(cached.payload)
                             replay_payload['idempotent_replay'] = True
@@ -148,11 +158,15 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         except (TypeError, ValueError):
             status = HTTPStatus.INTERNAL_SERVER_ERROR
 
-        result_payload = dict(result.payload) if isinstance(result.payload, dict) else {'ok': False, 'error': 'invalid_service_payload'}
+        result_payload = (
+            dict(result.payload)
+            if isinstance(result.payload, dict)
+            else {'ok': False, 'error': 'invalid_service_payload'}
+        )
         if idempotency_key and 200 <= int(status) < 300:
             GLOBAL_API_GUARD.store(
                 user_id,
-                normalized_operation,
+                idempotency_scope,
                 idempotency_key,
                 status=int(status),
                 payload=result_payload,
@@ -161,7 +175,11 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         self._send_json(status, result_payload)
 
     def _handle_health_ready(self, *, head_only: bool = False) -> None:
-        database = db.health_status()
+        try:
+            database_ok = bool(db.health_status().get('ok'))
+        except Exception:
+            LOGGER.exception('Could not query database readiness')
+            database_ok = False
         static_ready = STATIC_ROOT.joinpath('index.html').is_file()
         startup = last_startup_report()
         try:
@@ -175,26 +193,30 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
 
         # Worker heartbeat is reported but is not a hard readiness dependency:
         # the web server starts before the background worker during deployment.
-        ready = bool(database.get('ok')) and static_ready and startup.ok and disk_ok
+        ready = database_ok and static_ready and startup.ok and disk_ok
         self._send_json(
             HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE,
             {
                 'ok': ready,
                 'service': 'boostora',
                 'version': APP_VERSION,
-                'database': {'ok': bool(database.get('ok'))},
+                'database': {'ok': database_ok},
                 'miniapp_assets': static_ready,
                 'disk': {'ok': disk_ok},
                 'worker': {'ok': worker_ok},
                 'startup': startup.public_payload(),
-                'gateway': GLOBAL_API_GUARD.snapshot(),
-                'runtime': RUNTIME_METRICS.snapshot(),
+                'gateway': {
+                    'ok': True,
+                    'rate_limit': True,
+                    'idempotency': True,
+                    'request_trace': True,
+                },
             },
             head_only=head_only,
         )
 
     def do_GET(self) -> None:  # noqa: N802
-        started = self._start_request_trace()
+        self._start_request_trace()
         error = False
         try:
             path = urlsplit(self.path).path
@@ -224,13 +246,27 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             error = True
             raise
         finally:
-            _ = started
             RUNTIME_METRICS.record_request(error=error)
 
     def do_HEAD(self) -> None:  # noqa: N802
         self._start_request_trace()
         error = False
         try:
+            path = urlsplit(self.path).path
+            if path == '/health/live':
+                self._send_json(
+                    HTTPStatus.OK,
+                    {'ok': True, 'service': 'boostora', 'version': APP_VERSION, 'live': True},
+                    head_only=True,
+                )
+                return
+            if path == '/api/capabilities':
+                self._send_json(
+                    HTTPStatus.OK,
+                    {'ok': True, 'api_version': '4.0'},
+                    head_only=True,
+                )
+                return
             super().do_HEAD()
         except Exception:
             error = True
