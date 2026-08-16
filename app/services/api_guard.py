@@ -26,7 +26,7 @@ class ApiGuard:
 
     The guard deliberately keeps no Telegram init data, usernames, tokens or other
     personal payloads. Rate buckets are keyed only by numeric Telegram user id and
-    request class. Idempotency entries are short lived and bounded.
+    request class. Both rate and idempotency state are bounded in memory.
     """
 
     def __init__(
@@ -37,6 +37,7 @@ class ApiGuard:
         window_seconds: int = 60,
         idempotency_ttl_seconds: int = 180,
         max_idempotency_entries: int = 4096,
+        max_rate_buckets: int = 20000,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
         self.read_limit = max(1, int(read_limit))
@@ -44,9 +45,10 @@ class ApiGuard:
         self.window_seconds = max(1, int(window_seconds))
         self.idempotency_ttl_seconds = max(1, int(idempotency_ttl_seconds))
         self.max_idempotency_entries = max(128, int(max_idempotency_entries))
+        self.max_rate_buckets = max(256, int(max_rate_buckets))
         self._clock = clock
         self._lock = threading.RLock()
-        self._buckets: dict[tuple[int, str], deque[float]] = {}
+        self._buckets: OrderedDict[tuple[int, str], deque[float]] = OrderedDict()
         self._idempotency: OrderedDict[tuple[int, str, str], tuple[float, CachedResponse]] = OrderedDict()
 
     @staticmethod
@@ -68,7 +70,20 @@ class ApiGuard:
             window_seconds=cls._env_int('BOOSTORA_API_RATE_WINDOW_SECONDS', 60, 10, 300),
             idempotency_ttl_seconds=cls._env_int('BOOSTORA_IDEMPOTENCY_TTL_SECONDS', 180, 30, 1800),
             max_idempotency_entries=cls._env_int('BOOSTORA_IDEMPOTENCY_CACHE_MAX', 4096, 128, 50000),
+            max_rate_buckets=cls._env_int('BOOSTORA_RATE_BUCKETS_MAX', 20000, 256, 200000),
         )
+
+    def _purge_rate_buckets_locked(self, cutoff: float) -> None:
+        stale: list[tuple[int, str]] = []
+        for key, bucket in self._buckets.items():
+            while bucket and bucket[0] <= cutoff:
+                bucket.popleft()
+            if not bucket:
+                stale.append(key)
+        for key in stale:
+            self._buckets.pop(key, None)
+        while len(self._buckets) > self.max_rate_buckets:
+            self._buckets.popitem(last=False)
 
     def allow(self, user_id: int, *, read_only: bool) -> RateDecision:
         now = self._clock()
@@ -78,7 +93,10 @@ class ApiGuard:
         cutoff = now - self.window_seconds
 
         with self._lock:
+            if len(self._buckets) >= self.max_rate_buckets:
+                self._purge_rate_buckets_locked(cutoff)
             bucket = self._buckets.setdefault(key, deque())
+            self._buckets.move_to_end(key)
             while bucket and bucket[0] <= cutoff:
                 bucket.popleft()
             if len(bucket) >= limit:
@@ -86,8 +104,8 @@ class ApiGuard:
                 return RateDecision(False, 0, retry_after)
             bucket.append(now)
             remaining = max(0, limit - len(bucket))
-            if not bucket:
-                self._buckets.pop(key, None)
+            if len(self._buckets) > self.max_rate_buckets:
+                self._purge_rate_buckets_locked(cutoff)
             return RateDecision(True, remaining, 0)
 
     @staticmethod
@@ -143,6 +161,7 @@ class ApiGuard:
         now = self._clock()
         with self._lock:
             self._purge_expired_locked(now)
+            self._purge_rate_buckets_locked(now - self.window_seconds)
             return {
                 'active_rate_buckets': len(self._buckets),
                 'idempotency_entries': len(self._idempotency),
