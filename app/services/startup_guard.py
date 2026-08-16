@@ -60,6 +60,7 @@ def run_startup_guard(static_root: Path) -> StartupReport:
         'data_dir_writable': _data_dir_writable(data_dir),
         'database': _database_ok(),
         'miniapp_index': static_root.joinpath('index.html').is_file(),
+        'miniapp_v4_client': static_root.joinpath('v4-client.js').is_file(),
         'bot_token_shape': ':' in settings.bot_token and len(settings.bot_token) >= 20,
     }
 
@@ -76,7 +77,14 @@ def run_startup_guard(static_root: Path) -> StartupReport:
     if not settings.admin_ids:
         warnings.append('ADMIN_IDS is empty; owner/admin tools may be unavailable')
 
-    critical = ('data_dir_writable', 'database', 'miniapp_index', 'bot_token_shape', 'disk_free')
+    critical = (
+        'data_dir_writable',
+        'database',
+        'miniapp_index',
+        'miniapp_v4_client',
+        'bot_token_shape',
+        'disk_free',
+    )
     ok = all(checks.get(name, False) for name in critical)
     _LAST_REPORT = StartupReport(ok, checks, tuple(warnings))
 
