@@ -5,6 +5,7 @@ from http import HTTPStatus
 import json
 import logging
 import secrets
+import threading
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -29,13 +30,14 @@ from app.webapp import (
 
 
 LOGGER = logging.getLogger(__name__)
+V4_CLIENT_TAG = '<script src="/v4-client.js?v=400"></script>'
 
 
 class BoostoraWebHandlerV4(BoostoraWebHandler):
     """v4 gateway layered over the proven v3.7 API contract.
 
     Existing routes and payloads remain compatible. The layer adds bounded per-user
-    rate protection, optional idempotency keys, request tracing and richer readiness.
+    rate protection, mutation idempotency, request tracing and deeper readiness.
     """
 
     server_version = 'BoostoraWeb/4.0.0'
@@ -58,6 +60,31 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             payload = dict(payload)
             payload.setdefault('request_id', getattr(self, '_request_id', ''))
         super()._send_json(status, payload, head_only=head_only)
+
+    def _serve_static(self, *, head_only: bool = False) -> None:
+        path = self._static_file_for_path(self.path)
+        if path is None or path.name != 'index.html':
+            super()._serve_static(head_only=head_only)
+            return
+        try:
+            html = path.read_text(encoding='utf-8')
+        except (OSError, UnicodeError):
+            LOGGER.exception('Could not read Mini App index for v4 client injection')
+            self._send_error_json(HTTPStatus.INTERNAL_SERVER_ERROR, 'asset_read_failed', head_only=head_only)
+            return
+        if V4_CLIENT_TAG not in html:
+            if '</body>' in html:
+                html = html.replace('</body>', f'{V4_CLIENT_TAG}\n</body>', 1)
+            else:
+                html = f'{html}\n{V4_CLIENT_TAG}\n'
+        payload = html.encode('utf-8')
+        self._send_bytes(
+            HTTPStatus.OK,
+            payload,
+            content_type='text/html; charset=utf-8',
+            cache_control='no-store',
+            head_only=head_only,
+        )
 
     def _client_idempotency_key(self, body: dict[str, Any]) -> str:
         return GLOBAL_API_GUARD.normalize_idempotency_key(
@@ -90,7 +117,6 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         if not isinstance(data, dict):
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_payload')
             return
-
         user_id = _user_id(user)
         if user_id is None:
             self._send_error_json(HTTPStatus.BAD_REQUEST, 'invalid_user_id')
@@ -103,11 +129,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             RUNTIME_METRICS.record_api(operation, rate_limited=True)
             self._send_json(
                 HTTPStatus.TOO_MANY_REQUESTS,
-                {
-                    'ok': False,
-                    'error': 'rate_limited',
-                    'retry_after': decision.retry_after_seconds,
-                },
+                {'ok': False, 'error': 'rate_limited', 'retry_after': decision.retry_after_seconds},
             )
             return
 
@@ -132,8 +154,6 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
                 result = MiniAppApiService.dispatch(user, operation, data)
             else:
                 with lock:
-                    # Re-check after taking the mutation lock so two concurrent
-                    # identical requests with the same key cannot both execute.
                     if idempotency_key:
                         cached = GLOBAL_API_GUARD.lookup(user_id, idempotency_scope, idempotency_key)
                         if cached is not None:
@@ -157,7 +177,6 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             status = HTTPStatus(result.status)
         except (TypeError, ValueError):
             status = HTTPStatus.INTERNAL_SERVER_ERROR
-
         result_payload = (
             dict(result.payload)
             if isinstance(result.payload, dict)
@@ -180,7 +199,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         except Exception:
             LOGGER.exception('Could not query database readiness')
             database_ok = False
-        static_ready = STATIC_ROOT.joinpath('index.html').is_file()
+        static_ready = STATIC_ROOT.joinpath('index.html').is_file() and STATIC_ROOT.joinpath('v4-client.js').is_file()
         startup = last_startup_report()
         try:
             runtime = SystemHealthService.snapshot()
@@ -191,8 +210,8 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
             disk_ok = False
             worker_ok = False
 
-        # Worker heartbeat is reported but is not a hard readiness dependency:
-        # the web server starts before the background worker during deployment.
+        # Worker heartbeat is visible but not a hard dependency because the web
+        # server starts before the background worker during deployment.
         ready = database_ok and static_ready and startup.ok and disk_ok
         self._send_json(
             HTTPStatus.OK if ready else HTTPStatus.SERVICE_UNAVAILABLE,
@@ -205,12 +224,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
                 'disk': {'ok': disk_ok},
                 'worker': {'ok': worker_ok},
                 'startup': startup.public_payload(),
-                'gateway': {
-                    'ok': True,
-                    'rate_limit': True,
-                    'idempotency': True,
-                    'request_trace': True,
-                },
+                'gateway': {'ok': True, 'rate_limit': True, 'idempotency': True, 'request_trace': True},
             },
             head_only=head_only,
         )
@@ -221,10 +235,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
         try:
             path = urlsplit(self.path).path
             if path == '/health/live':
-                self._send_json(
-                    HTTPStatus.OK,
-                    {'ok': True, 'service': 'boostora', 'version': APP_VERSION, 'live': True},
-                )
+                self._send_json(HTTPStatus.OK, {'ok': True, 'service': 'boostora', 'version': APP_VERSION, 'live': True})
                 return
             if path == '/api/capabilities':
                 self._send_json(
@@ -232,12 +243,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
                     {
                         'ok': True,
                         'api_version': '4.0',
-                        'features': [
-                            'per_user_rate_limit',
-                            'mutation_idempotency',
-                            'request_trace',
-                            'deep_readiness',
-                        ],
+                        'features': ['per_user_rate_limit', 'mutation_idempotency', 'request_trace', 'deep_readiness'],
                     },
                 )
                 return
@@ -261,11 +267,7 @@ class BoostoraWebHandlerV4(BoostoraWebHandler):
                 )
                 return
             if path == '/api/capabilities':
-                self._send_json(
-                    HTTPStatus.OK,
-                    {'ok': True, 'api_version': '4.0'},
-                    head_only=True,
-                )
+                self._send_json(HTTPStatus.OK, {'ok': True, 'api_version': '4.0'}, head_only=True)
                 return
             super().do_HEAD()
         except Exception:
@@ -290,8 +292,8 @@ def start_webapp_server_v4() -> WebAppRuntime | None:
     if not settings.webapp_enabled:
         LOGGER.info('Embedded Mini App web server is disabled by WEBAPP_ENABLED=0')
         return None
-    if not STATIC_ROOT.joinpath('index.html').is_file():
-        message = f'Mini App index not found: {STATIC_ROOT / "index.html"}'
+    if not STATIC_ROOT.joinpath('index.html').is_file() or not STATIC_ROOT.joinpath('v4-client.js').is_file():
+        message = f'Mini App v4 assets are incomplete in {STATIC_ROOT}'
         if settings.webapp_required:
             raise RuntimeError(message)
         LOGGER.error(message)
@@ -300,18 +302,13 @@ def start_webapp_server_v4() -> WebAppRuntime | None:
     run_startup_guard(STATIC_ROOT)
 
     try:
-        server = _ReusableThreadingHTTPServer(
-            (settings.webapp_host, settings.webapp_port),
-            BoostoraWebHandlerV4,
-        )
+        server = _ReusableThreadingHTTPServer((settings.webapp_host, settings.webapp_port), BoostoraWebHandlerV4)
     except OSError as exc:
         message = f'Could not bind Mini App v4 server on {settings.webapp_host}:{settings.webapp_port}: {exc}'
         if settings.webapp_required:
             raise RuntimeError(message) from exc
         LOGGER.error(message)
         return None
-
-    import threading
 
     thread = threading.Thread(target=server.serve_forever, name='webapp-v4-server', daemon=True)
     thread.start()
